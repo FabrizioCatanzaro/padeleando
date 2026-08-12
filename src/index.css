@@ -59,14 +59,22 @@ body {
 }
 
 /* Portada: el negro plano dejaba todas las secciones leyéndose como un bloque
-   único. Estas capas van sobre --color-base y sirven igual en claro y oscuro. */
+   único. Estas capas van sobre --color-base y sirven igual en claro y oscuro.
+   Se aplica en App.jsx sobre la fila completa (no sobre <main>) para que cubra
+   también los costados de los banners.
+
+   El cierre es --color-base y no --color-surface a propósito: la franja clara
+   del final terminaba de golpe en el borde del contenedor y entre ese corte y
+   el footer quedaba una banda oscura —el padding del <main> más el margen
+   superior del footer—, así que el glow se leía cortado. Ahora el único brillo
+   de abajo es el radial, que se apaga solo antes de llegar al borde. */
 .home-bg {
   background:
     radial-gradient(90% 26% at 50% 0%,   color-mix(in srgb, var(--color-brand) 9%, transparent) 0%, transparent 62%),
     radial-gradient(70% 16% at 100% 24%, color-mix(in srgb, var(--color-cyan)  6%, transparent) 0%, transparent 70%),
     radial-gradient(80% 18% at 0% 58%,   color-mix(in srgb, var(--color-brand) 6%, transparent) 0%, transparent 70%),
-    radial-gradient(85% 20% at 65% 88%,  color-mix(in srgb, var(--color-cyan)  5%, transparent) 0%, transparent 70%),
-    linear-gradient(180deg, var(--color-surface) 0%, var(--color-base) 26%, var(--color-base) 74%, var(--color-surface) 100%);
+    radial-gradient(85% 22% at 65% 90%,  color-mix(in srgb, var(--color-cyan)  7%, transparent) 0%, transparent 72%),
+    linear-gradient(180deg, var(--color-surface) 0%, var(--color-base) 26%, var(--color-base) 100%);
 }
 
 input[type=number]::-webkit-outer-spin-button,

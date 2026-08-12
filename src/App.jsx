@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate, Outlet, useParams } from 'react-router-dom'
+import { Routes, Route, Navigate, Outlet, useParams, useLocation } from 'react-router-dom'
 import { useAuth } from './context/useAuth'
 import { Titled } from './hooks/useDocumentTitle'
 import useScrollToTop from './hooks/useScrollToTop'
@@ -54,6 +54,13 @@ function RedirectToView() {
 function Layout() {
   useScrollToTop()
 
+  // El degradado de la portada se pinta acá y no dentro de HomeView: colgado
+  // del <main> quedaba encerrado en la columna central y, en desktop, se
+  // cortaba con dos franjas negras a los costados —justo donde van los
+  // banners—. Sobre la fila entera llega de borde a borde y además cubre el
+  // padding inferior del <main>, que antes empujaba el glow lejos del footer.
+  const isHome = useLocation().pathname === '/'
+
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
@@ -63,7 +70,7 @@ function Layout() {
         <AdBanner slot="mobile-top" />
       </div> */}
 
-      <div className="flex-1 flex justify-center">
+      <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
         {/* Banner lateral izquierdo — solo desktop */}
         <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
           <AdBanner slot="sidebar" />

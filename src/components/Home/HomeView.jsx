@@ -338,7 +338,7 @@ export default function HomeView() {
   }
 
   if (loading) return (
-    <div className="home-bg text-content font-sans pb-16">
+    <div className="text-content font-sans pb-16">
       <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
         <Skeleton className="h-11 w-full rounded-lg mb-8" />
         <div className="flex items-center justify-between mb-4">
@@ -374,7 +374,7 @@ export default function HomeView() {
   }
 
   return (
-    <div className="home-bg text-content font-sans pb-16">
+    <div className="text-content font-sans pb-16">
       <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
 
         {/* ── Hero (visitante no logueado) ── */}
