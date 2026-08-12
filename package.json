@@ -1,7 +1,7 @@
 {
   "name": "padeliando",
   "private": true,
-  "version": "1.58.1",
+  "version": "1.58.2",
   "type": "module",
   "scripts": {
     "predev": "npm run tutorial:index",

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Check, Copy, MoreHorizontal, X } from 'lucide-react';
 import { Tile, WhatsAppIcon } from './ShareModal';
 
@@ -42,7 +43,10 @@ export default function ShareAppModal({ onClose }) {
     }
   };
 
-  return (
+  // El header lo renderiza dentro de un contenedor con `translate`, y un
+  // `translate` distinto de `none` es bloque contenedor de los `fixed` que
+  // cuelgan de él: sin portal el overlay se ancla a la barra del header.
+  return createPortal(
     <div
       className="fixed inset-0 z-1000 bg-black/75 flex items-end sm:items-center justify-center sm:p-5"
       onClick={onClose}
@@ -86,6 +90,7 @@ export default function ShareAppModal({ onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
