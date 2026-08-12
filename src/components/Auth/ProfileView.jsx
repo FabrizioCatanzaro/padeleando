@@ -897,7 +897,7 @@ export default function ProfileView() {
                 <label style={label}>NOMBRE</label>
                 <input
                   className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 rounded text-sm outline-none font-sans"
-                  value={editName} onChange={e => setEditName(e.target.value)} minLength={6} maxLength={20}
+                  value={editName} onChange={e => setEditName(e.target.value)} minLength={3} maxLength={50}
                   autoComplete="off" name="profile-name"
                 />
 

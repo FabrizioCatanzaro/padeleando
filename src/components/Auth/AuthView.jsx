@@ -455,7 +455,7 @@ export default function AuthView({ mode: initialMode }) {
               <>
                 <div>
                   <label className={labelBase}>Nombre</label>
-                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={6} maxLength={20}
+                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={3} maxLength={50}
                     className={inputCls} />
                 </div>
 
