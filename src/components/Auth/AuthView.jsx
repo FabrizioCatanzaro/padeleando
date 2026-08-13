@@ -129,6 +129,9 @@ export default function AuthView({ mode: initialMode }) {
   const [verificationSent, setVerificationSent] = useState(null) // email pendiente tras registro
   const [needsVerification, setNeedsVerification] = useState(false)
   const [resendStatus, setResendStatus] = useState(null) // 'sending' | 'sent'
+  const [attemptsLeft, setAttemptsLeft] = useState(null) // intentos que quedan antes del bloqueo
+  const [lockedUntil, setLockedUntil] = useState(null)   // timestamp en ms, null si no está bloqueada
+  const [lockRemaining, setLockRemaining] = useState(0)  // segundos, refrescado cada segundo
 
   const { login } = useAuth()
   const navigate  = useNavigate()
@@ -211,6 +214,32 @@ export default function AuthView({ mode: initialMode }) {
     return () => { cancelled = true }
   }, [])
 
+  // Cuenta regresiva del bloqueo. La API manda los segundos exactos que faltan
+  // (la ventana desliza, así que casi nunca son los 15 min completos); mostrarlos
+  // corriendo evita que la persona se quede sin saber cuánto esperar.
+  useEffect(() => {
+    if (!lockedUntil) { setLockRemaining(0); return }
+    function tick() {
+      const s = Math.max(0, Math.ceil((lockedUntil - Date.now()) / 1000))
+      setLockRemaining(s)
+      if (s === 0) { setLockedUntil(null); setError(null); setAttemptsLeft(null) }
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [lockedUntil])
+
+  const isLocked = lockedUntil !== null && lockRemaining > 0
+  // Desde el segundo fallo conviene ofrecer el reset: la mayoría de los bloqueos
+  // son gente que no se acuerda la contraseña, y esperar no se la va a recordar.
+  const suggestReset = !isRegister && (isLocked || (attemptsLeft !== null && attemptsLeft <= 3))
+
+  function openForgot() {
+    setForgotEmail(prev => prev || email)
+    setError(null)
+    setShowForgot(true)
+  }
+
   function getFormError() {
     if (!isRegister) return null
     const u = username.trim().toLowerCase()
@@ -225,6 +254,7 @@ export default function AuthView({ mode: initialMode }) {
   }
 
   async function handleSubmit() {
+    if (isLocked) return
     setError(null)
     setNeedsVerification(false)
     const formErr = getFormError()
@@ -241,11 +271,18 @@ export default function AuthView({ mode: initialMode }) {
         }
       } else {
         const { user } = await api.auth.login({ email, password })
+        setAttemptsLeft(null)
         login(user)
         navigate(afterAuth)
       }
     } catch (e) {
       if (e.data?.needs_verification) setNeedsVerification(true)
+      if (e.data?.retry_after_seconds) {
+        setLockedUntil(Date.now() + e.data.retry_after_seconds * 1000)
+        setAttemptsLeft(0)
+      } else if (typeof e.data?.attempts_left === 'number') {
+        setAttemptsLeft(e.data.attempts_left)
+      }
       setError(e.message)
     } finally {
       setLoading(false)
@@ -283,6 +320,15 @@ export default function AuthView({ mode: initialMode }) {
     setMode(m); setError(null); setPassword(''); setPassword2(''); setShowForgot(false)
     setVerificationSent(null); setNeedsVerification(false); setResendStatus(null)
     setUsername(''); setUsernameStatus(null); usernameEdited.current = false
+    // El bloqueo vive en el servidor: cambiar de pestaña no lo levanta, pero el
+    // contador tampoco tiene sentido fuera del formulario de ingreso.
+    setAttemptsLeft(null); setLockedUntil(null)
+  }
+
+  function formatWait(seconds) {
+    const m = Math.floor(seconds / 60)
+    const s = seconds % 60
+    return `${m}:${String(s).padStart(2, '0')}`
   }
 
   const labelBase = 'block text-[11px] uppercase tracking-wide font-semibold text-secondary mb-1.5'
@@ -409,7 +455,7 @@ export default function AuthView({ mode: initialMode }) {
               <>
                 <div>
                   <label className={labelBase}>Nombre</label>
-                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={6} maxLength={20}
+                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={3} maxLength={50}
                     className={inputCls} />
                 </div>
 
@@ -473,14 +519,29 @@ export default function AuthView({ mode: initialMode }) {
 
           {!isRegister && (
             <div className="text-right mt-2">
-              <button onClick={() => setShowForgot(true)}
+              <button onClick={openForgot}
                 className="text-secondary text-xs hover:text-soft transition-colors cursor-pointer">
                 ¿Olvidaste tu contraseña?
               </button>
             </div>
           )}
 
-          {error && <p className="text-danger text-xs mt-3">{error}</p>}
+          {isLocked ? (
+            <div className="mt-3 px-3.5 py-2.5 rounded-lg border border-danger/30 bg-danger/10 text-danger text-xs">
+              Demasiados intentos fallidos. Vas a poder probar de nuevo en{' '}
+              <span className="font-mono font-semibold tabular-nums">{formatWait(lockRemaining)}</span>.
+            </div>
+          ) : error && (
+            <p className="text-danger text-xs mt-3">{error}</p>
+          )}
+
+          {suggestReset && (
+            <button onClick={openForgot}
+              className="mt-2 text-brand text-xs hover:underline cursor-pointer">
+              ¿No te acordás la contraseña? Restablecela ahora →
+            </button>
+          )}
+
           {needsVerification && !isRegister && (
             <button
               onClick={() => handleResendVerification(email)}
@@ -493,9 +554,11 @@ export default function AuthView({ mode: initialMode }) {
             </button>
           )}
 
-          <button onClick={handleSubmit} disabled={loading}
-            className="w-full mt-5 bg-brand text-base font-condensed font-black tracking-widest py-3 rounded-lg text-sm disabled:opacity-50 hover:brightness-95 transition-[filter,opacity] cursor-pointer">
-            {loading ? 'CARGANDO...' : isRegister ? 'REGISTRARSE' : 'INGRESAR'}
+          <button onClick={handleSubmit} disabled={loading || isLocked}
+            className="w-full mt-5 bg-brand text-base font-condensed font-black tracking-widest py-3 rounded-lg text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:brightness-95 transition-[filter,opacity] cursor-pointer">
+            {loading ? 'CARGANDO...'
+              : isLocked ? `ESPERÁ ${formatWait(lockRemaining)}`
+              : isRegister ? 'REGISTRARSE' : 'INGRESAR'}
           </button>
 
           <div className="flex items-center gap-3 my-5 text-muted text-xs">

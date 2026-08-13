@@ -43,7 +43,13 @@ export default function PlayerAvatar({ name, src, size = 32, premium = false, cl
     <div style={{
       width: '100%', height: '100%', borderRadius: '50%',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: premium ? `${color}33` : `${color}1a`,
+      // Sin foto y sin premium el fondo era translúcido, así que el avatar se
+      // transparentaba sobre cualquier cosa que tuviera detrás (la portada del
+      // perfil, un mapa, una foto). El color-mix da el mismo tono exacto que el
+      // alfa anterior sobre un fondo liso, pero opaco. El caso premium sigue
+      // translúcido a propósito: apoya sobre el degradado dorado del anillo, que
+      // ya es opaco, y es lo que hace legible el texto negro de las iniciales.
+      backgroundColor: premium ? `${color}33` : `color-mix(in srgb, ${color} 10%, var(--color-base))`,
       color: premium ? '#000' : color,
       fontSize: Math.round(size * 0.38),
       fontFamily: "'Unbounded', sans-serif",

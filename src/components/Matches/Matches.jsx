@@ -316,7 +316,7 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">
-          {sorted.map((m) =>
+          {sorted.map((m, i) =>
             editId === m.id && editForm ? (
               <MatchForm
                 key={m.id}
@@ -330,7 +330,8 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
               />
             ) : (
               <MatchCard key={m.id} match={m} tournament={tournament} isOwner={canEdit}
-                onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)} />
+                onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)}
+                matchNum={sorted.length - i} />
             )
           )}
         </div>

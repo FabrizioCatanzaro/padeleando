@@ -1,10 +1,13 @@
 {
   "name": "padeliando",
   "private": true,
-  "version": "1.57.4",
+  "version": "1.61.1",
   "type": "module",
   "scripts": {
+    "predev": "npm run tutorial:index",
     "dev": "vite",
+    "tutorial:index": "node scripts/build-tutorial-index.mjs",
+    "prebuild": "npm run tutorial:index",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview"

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { api } from '../../utils/api';
 import { fmt, calcNivel } from '../../utils/helpers';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -22,6 +22,8 @@ import AvatarCropper from '../shared/AvatarCropper';
 import ShareProfileModal from '../shared/ShareProfileModal';
 import SnapshotModal from '../Snapshot/SnapshotModal';
 import ProfileStory from '../Snapshot/ProfileStory';
+import useHideOnScroll from '../../hooks/useHideOnScroll';
+import coverMark from '../../assets/cover-mark.webp';
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -36,7 +38,10 @@ function SiIcon({ icon, size = 14 }) {
 
 const NETWORKS = [
   { id: 'instagram', label: 'Instagram',  prefix: 'https://www.instagram.com/', color: `#${siInstagram.hex}`, Icon: ({ size }) => <SiIcon icon={siInstagram} size={size} /> },
-  { id: 'twitter',   label: 'Twitter / X', prefix: 'https://x.com/',            color: `#${siX.hex}`,         Icon: ({ size }) => <SiIcon icon={siX}         size={size} /> },
+  // El color de marca de X es negro puro: sobre el fondo oscuro no se veía ni
+  // el icono ni el handle. Se usa el color de texto del tema, que en claro
+  // vuelve a ser prácticamente el negro original.
+  { id: 'twitter',   label: 'Twitter / X', prefix: 'https://x.com/',            color: 'var(--color-content)', Icon: ({ size }) => <SiIcon icon={siX}         size={size} /> },
   { id: 'facebook',  label: 'Facebook',   prefix: 'https://www.facebook.com/',  color: `#${siFacebook.hex}`,  Icon: ({ size }) => <SiIcon icon={siFacebook}  size={size} /> },
   { id: 'whatsapp',  label: 'WhatsApp',   prefix: 'https://wa.me/54',             color: `#${siWhatsapp.hex}`,  Icon: ({ size }) => <SiIcon icon={siWhatsapp}  size={size} /> },
   { id: 'other',     label: 'Otro',       prefix: '',                           color: '#888',                Icon: ({ size }) => <Link size={size} /> },
@@ -48,6 +53,14 @@ const EMPTY_LINK = { network: '', url: '' };
 function avatarZoomUrl(src) {
   if (!src?.includes('/upload/')) return src;
   return src.replace('/upload/', '/upload/f_auto,q_auto,w_512,c_limit/');
+}
+
+// La cabecera nunca dibuja el avatar a más de 128 px, así que pedir los 512
+// originales era traer 4× de píxeles. Se pide al doble del tamaño de render
+// para que se vea nítido en pantallas 2x.
+function avatarThumbUrl(src, px) {
+  if (!src?.includes('/upload/')) return src;
+  return src.replace('/upload/', `/upload/f_auto,q_auto,w_${px * 2},c_limit/`);
 }
 
 function ensureTrailingEmpty(links) {
@@ -158,26 +171,46 @@ function SocialLinksEditor({ value, onChange }) {
   );
 }
 
+// En mobile la columna es demasiado angosta para píldoras con texto: cuatro
+// redes se apilaban en cuatro filas y mostraban cosas como un teléfono suelto o
+// una URL cortada a la mitad. Ahí van sólo los iconos, en una fila. En desktop
+// sobra ancho, así que se conserva el handle visible.
 function SocialLinksDisplay({ links }) {
   if (!links?.length) return null;
   const filtered = links.filter(l => l.url?.trim());
   if (!filtered.length) return null;
+
+  const items = filtered.map((l, i) => {
+    const net = NETWORKS.find(n => n.id === l.network);
+    const prefix = net?.prefix ?? '';
+    const display = prefix && l.url.startsWith(prefix) ? l.url.slice(prefix.length) : l.url;
+    const title = `${net?.label ?? 'Enlace'}${display ? `: ${display}` : ''}`;
+    return { key: i, url: l.url, net, display, title };
+  });
+
   return (
-    <div className="flex flex-wrap gap-2 mt-3">
-      {filtered.map((l, i) => {
-        const net = NETWORKS.find(n => n.id === l.network);
-        const prefix = net?.prefix ?? '';
-        const display = prefix && l.url.startsWith(prefix) ? l.url.slice(prefix.length) : l.url;
-        return (
-          <a key={i} href={l.url} target="_blank" rel="noopener noreferrer"
+    <>
+      <div className="flex sm:hidden flex-wrap justify-center gap-2 mt-3">
+        {items.map(({ key, url, net, title }) => (
+          <a key={key} href={url} target="_blank" rel="noopener noreferrer"
+            title={title} aria-label={title}
+            className="w-9 h-9 flex items-center justify-center bg-surface border border-border-mid rounded-full hover:border-border-strong transition-colors"
+            style={{ color: net?.color ?? '#888' }}>
+            {net ? <net.Icon size={15} /> : <Link size={15} />}
+          </a>
+        ))}
+      </div>
+      <div className="hidden sm:flex flex-wrap gap-2 mt-3">
+        {items.map(({ key, url, net, display, title }) => (
+          <a key={key} href={url} target="_blank" rel="noopener noreferrer" title={title}
             className="inline-flex items-center gap-1.5 bg-surface border border-border-mid rounded-full px-3 py-1 text-xs font-mono hover:border-border-strong transition-colors max-w-[200px] overflow-hidden"
             style={{ color: net?.color ?? '#888', textDecoration: 'none' }}>
             {net && <net.Icon size={12} className="shrink-0" />}
-            <span className="truncate">{display || l.url}</span>
+            <span className="truncate">{display || url}</span>
           </a>
-        );
-      })}
-    </div>
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -283,6 +316,41 @@ export default function ProfileView() {
   const [advancedBusy,   setAdvancedBusy]   = useState(false);
   const [advancedError,  setAdvancedError]  = useState(null);
 
+  const [bioOpen,         setBioOpen]         = useState(false);
+
+  // El avatar necesita dos tamaños reales (no sólo CSS) porque PlayerAvatar
+  // deriva de `size` el cuerpo de las iniciales y el borde premium. El valor
+  // inicial sale de matchMedia, así que en el primer pintado ya es el correcto
+  // y no hay salto de layout.
+  const [isDesktop, setIsDesktop] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 640px)');
+    const onChange = e => setIsDesktop(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // Mini cabecera pegajosa: aparece cuando la cabecera real ya salió de
+  // pantalla. El observador se engancha con un ref de callback porque el
+  // centinela no existe durante el estado de carga.
+  const [pastHeader, setPastHeader] = useState(false);
+  const sentinelObs = useRef(null);
+  const setSentinel = useCallback(node => {
+    sentinelObs.current?.disconnect();
+    sentinelObs.current = null;
+    if (!node) return;
+    const io = new IntersectionObserver(([entry]) => setPastHeader(!entry.isIntersecting));
+    io.observe(node);
+    sentinelObs.current = io;
+  }, []);
+  useEffect(() => () => sentinelObs.current?.disconnect(), []);
+
+  // La cabecera global usa el mismo gesto para esconderse: al bajar se va ella
+  // y entra ésta, al subir vuelve ella y ésta se va. Nunca se pisan.
+  const scrolledDown = useHideOnScroll();
+
   const [showShare,       setShowShare]       = useState(false);
   const [showStory,       setShowStory]       = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -327,6 +395,13 @@ export default function ProfileView() {
   const { owner, groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
   const isOwnProfile  = user?.username === owner.username;
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
+
+  const avatarSize  = isDesktop ? 128 : 104;
+  const headerPct   = stats?.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : null;
+  const headerNivel = calcNivel(stats?.partidos ?? 0, headerPct ?? 0);
+  // 140 caracteres es lo que entra en tres líneas al ancho de la bio en mobile.
+  // Medir el desborde real obligaría a leer el layout después de pintar.
+  const bioLong     = (owner.bio?.length ?? 0) > 140;
 
   // El plan manda: sin premium no hay avanzadas ni para el dueño. Publicarlas
   // las abre a cualquier visitante, incluida la captura del perfil.
@@ -533,13 +608,78 @@ export default function ProfileView() {
 
   return (
     <div className="bg-base text-content font-sans pb-15">
-      <div className="p-6">
+
+      {/* Mini cabecera pegajosa. El contenedor tiene alto 0 a propósito: si
+          ocupara lugar en el flujo dejaría un hueco permanente arriba de la
+          página, esté la barra visible o no. Así no aporta ni un píxel de CLS.
+          Aparece con el mismo gesto con el que la cabecera global se esconde,
+          de modo que siempre hay exactamente una de las dos en pantalla. */}
+      <div className="sticky top-0 z-30 h-0">
+        <div className={`flex items-center gap-3 px-4 py-2 border-b border-border bg-base transition-all duration-200 ${
+          scrolledDown && pastHeader ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none'
+        }`}>
+          <PlayerAvatar
+            name={owner.name}
+            src={avatarThumbUrl(displayAvatar, 28)}
+            size={28}
+            premium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
+          />
+          <div className="min-w-0 flex-1">
+            <div className="font-condensed font-bold text-[13px] text-white leading-tight truncate">{owner.name}</div>
+            <div className="text-[10px] text-muted font-mono truncate">@{owner.username}</div>
+          </div>
+          {!isOwnProfile && (
+            <button
+              onClick={user ? handleFollowToggle : () => setShowInviteModal(true)}
+              disabled={followBusy}
+              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded font-condensed font-bold text-[11px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
+                isFollowing
+                  ? 'border-border-strong text-muted bg-transparent'
+                  : 'bg-brand text-base border-brand'
+              }`}
+            >
+              {isFollowing ? <UserCheck size={12} /> : <UserPlus size={12} />}
+              {isFollowing ? 'SIGUIENDO' : 'SEGUIR'}
+            </button>
+          )}
+          <button
+            onClick={() => setShowShare(true)}
+            aria-label="Compartir perfil"
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded border border-border-strong text-muted hover:border-brand hover:text-brand bg-transparent transition-colors cursor-pointer"
+          >
+            <Share2 size={13} />
+          </button>
+        </div>
+      </div>
+
+      <div className="p-4 sm:p-6">
 
         {/* Cabecera */}
-        <div className="mb-6">
-          <div className="flex items-start gap-4">
-            {/* Avatar */}
-            <div className="relative shrink-0">
+        <div className="mb-5 sm:mb-6">
+          {/* Banda superior: da un fondo sobre el que apoyar el avatar y corta
+              el bloque de identidad del de estadísticas. Sangra hasta los
+              bordes del contenedor. La marca en diagonal va a muy poco
+              contraste: es textura, no un elemento que compita con el nombre.
+              El giro lo hace la capa interna y no el fondo, porque CSS no puede
+              rotar un background: por eso la baldosa se repite derecha y se
+              inclina el div que la contiene, sobredimensionado para que las
+              esquinas queden cubiertas después de girar. */}
+          <div className="relative overflow-hidden -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 h-20 sm:h-32 bg-surface border-b border-border">
+            <div
+              className="profile-cover-mark absolute inset-[-50%]"
+              style={{ backgroundImage: `url(${coverMark})`, backgroundRepeat: 'repeat', backgroundSize: '200px auto' }}
+            />
+          </div>
+
+          {/* En mobile la columna de la derecha quedaba en ~190 px: el nombre se
+              partía en dos, la bio caía en siete líneas y las redes se apilaban
+              una por fila. Debajo de sm la cabecera pasa a una sola columna
+              centrada y todo dispone del ancho completo. */}
+          <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-5">
+            {/* Avatar. El aro del color de la página es lo que hace que el
+                recorte sobre la portada se lea como intencional y no como una
+                foto apoyada encima. */}
+            <div className="relative shrink-0 -mt-13 sm:-mt-20 rounded-full bg-base p-1">
               <button
                 type="button"
                 onClick={() => displayAvatar && setAvatarZoom(true)}
@@ -549,8 +689,8 @@ export default function ProfileView() {
               >
                 <PlayerAvatar
                   name={owner.name}
-                  src={displayAvatar}
-                  size={130}
+                  src={avatarThumbUrl(displayAvatar, avatarSize)}
+                  size={avatarSize}
                   premium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
                 />
               </button>
@@ -574,26 +714,39 @@ export default function ProfileView() {
             </div>
 
             {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="font-condensed font-bold text-[28px] text-white leading-tight">{owner.name}</div>
-              <div className="text-[12px] text-muted font-mono mt-1">
-                @{owner.username} · Padeleando desde {fmt(owner.created_at)}
+            <div className="w-full min-w-0 mt-3 sm:mt-0 sm:flex-1 sm:pt-4">
+              <h1 className="font-condensed font-bold text-[22px] sm:text-[28px] text-white leading-tight m-0 break-words">{owner.name}</h1>
+              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 mt-1.5">
+                <span className="text-[12px] text-muted font-mono">@{owner.username}</span>
+                {headerNivel && (
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-mono tracking-widest"
+                    style={{ color: headerNivel.color, borderColor: `${headerNivel.color}44`, background: `${headerNivel.color}10` }}>
+                    {headerNivel.label.toUpperCase()}
+                  </span>
+                )}
               </div>
+              <div className="text-[11px] text-dim font-mono mt-1">Padeleando desde {fmt(owner.created_at)}</div>
               {owner.bio && (
-                <div className="text-[13px] text-secondary font-sans mt-2 leading-snug">{owner.bio}</div>
+                // El recorte es sólo cosa de mobile: en desktop una bio de 200
+                // caracteres entra en dos o tres líneas, así que cortarla y
+                // ofrecer "ver más" era prometer algo que ya estaba a la vista.
+                <div className="mt-3 sm:max-w-[62ch]">
+                  <p className={`text-[13px] text-secondary font-sans leading-relaxed m-0 sm:line-clamp-none ${bioOpen ? '' : 'line-clamp-3'}`}>
+                    {owner.bio}
+                  </p>
+                  {bioLong && (
+                    <button
+                      type="button"
+                      onClick={() => setBioOpen(v => !v)}
+                      className="sm:hidden mt-1 text-[11px] font-mono text-brand bg-transparent border-0 p-0 cursor-pointer hover:underline"
+                    >
+                      {bioOpen ? 'ver menos' : 'ver más'}
+                    </button>
+                  )}
+                </div>
               )}
-              {(() => {
-                const pct = stats?.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : 0;
-                const nivel = calcNivel(stats?.partidos ?? 0, pct);
-                return nivel ? (
-                  <div className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full border text-[10px] font-mono tracking-widest"
-                    style={{ color: nivel.color, borderColor: `${nivel.color}44`, background: `${nivel.color}10` }}>
-                    {nivel.label.toUpperCase()}
-                  </div>
-                ) : null;
-              })()}
               {isOwnProfile && (
-                <div className="mt-1">
+                <div className="mt-2 flex flex-col items-center sm:items-start">
                   {user?.subscription?.plan === 'premium' ? (
                     <button
                       type="button"
@@ -610,50 +763,55 @@ export default function ProfileView() {
                       )}
                     </button>
                   ) : (
-                    <div className="flex flex-col gap-1">
-                      <button
-                        type="button"
-                        onClick={() => setShowPremiumModal(true)}
-                        className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted hover:text-brand transition-colors bg-transparent p-0 cursor-pointer group border border-muted rounded px-1.5 py-0.5 self-start"
-                      >
-                        <Badge size={11} className="text-muted group-hover:text-brand transition-colors" />
-                        Plan FREE
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setShowClaimHelp(true)}
-                        className="text-[10px] text-dim hover:text-secondary transition-colors bg-transparent p-0 cursor-pointer underline underline-offset-2 self-start"
-                      >
-                        ¿Pagaste y no se activó tu Premium?
-                      </button>
-                    </div>
+                    // Un solo chip, del mismo tamaño que el de premium. El
+                    // rescate de "pagué y no se activó" bajó al panel de editar
+                    // perfil: es un trámite de cuenta, no parte de la identidad
+                    // pública, y colgando acá partía la cabecera en dos.
+                    <button
+                      type="button"
+                      onClick={() => setShowPremiumModal(true)}
+                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted hover:text-brand transition-colors bg-transparent cursor-pointer group border border-muted rounded px-1.5 py-0.5"
+                    >
+                      <Badge size={11} className="text-muted group-hover:text-brand transition-colors" />
+                      Plan FREE
+                    </button>
                   )}
                 </div>
               )}
-              <div className="flex items-center gap-3 mt-2">
+              {avatarError && <div className="text-[11px] text-danger font-mono mt-2">{avatarError}</div>}
+              <SocialLinksDisplay links={savedLinks} />
+
+              {/* Contadores. En mobile forman una tira a todo el ancho con
+                  divisores: el número pesa y la etiqueta acompaña, en vez de
+                  tres textos grises del mismo tamaño. */}
+              <div className="flex mt-4 border-y border-border sm:border-0 sm:mt-3 sm:gap-7 sm:justify-start">
                 <button
                   onClick={() => openFollowModal('followers')}
-                  className="text-[12px] font-mono hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0"
-                  style={{ color: '#888' }}
+                  className="flex-1 sm:flex-none py-2.5 sm:py-0 border-r border-border sm:border-0 bg-transparent cursor-pointer text-center sm:text-left"
                 >
-                  <span className="text-white font-semibold">{followersCount}</span> seguidores
+                  <div className="text-[16px] sm:text-[20px] font-semibold text-white leading-none">{followersCount}</div>
+                  <div className="text-[10px] font-mono tracking-widest text-muted mt-1">SEGUIDORES</div>
                 </button>
-                <span className="text-[#333]">·</span>
                 <button
                   onClick={() => openFollowModal('following')}
-                  className="text-[12px] font-mono hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0"
-                  style={{ color: '#888' }}
+                  className={`flex-1 sm:flex-none py-2.5 sm:py-0 bg-transparent cursor-pointer text-center sm:text-left ${headerPct !== null ? 'border-r border-border sm:border-0' : ''}`}
                 >
-                  <span className="text-white font-semibold">{followingCount}</span> seguidos
+                  <div className="text-[16px] sm:text-[20px] font-semibold text-white leading-none">{followingCount}</div>
+                  <div className="text-[10px] font-mono tracking-widest text-muted mt-1">SEGUIDOS</div>
                 </button>
+                {headerPct !== null && (
+                  <div className="flex-1 sm:flex-none py-2.5 sm:py-0 text-center sm:text-left">
+                    <div className="text-[16px] sm:text-[20px] font-semibold leading-none" style={{ color: headerPct >= 60 ? '#4af07a' : headerPct >= 40 ? '#e8f04a' : '#f07a4a' }}>
+                      {headerPct}%
+                    </div>
+                    <div className="text-[10px] font-mono tracking-widest text-muted mt-1">VICTORIAS</div>
+                  </div>
+                )}
               </div>
-              {avatarError && <div className="text-[11px] text-danger font-mono mt-1">{avatarError}</div>}
-              <SocialLinksDisplay links={savedLinks} />
             </div>
 
-            {/* Compartir: un solo botón, en todos los perfiles y en todos los
-                anchos. El de seguir lo acompaña sólo en desktop. */}
-            <div className="flex items-center gap-2 shrink-0">
+            {/* Acciones — desktop */}
+            <div className="hidden sm:flex items-center gap-2 shrink-0 pt-2">
               <button
                 onClick={() => setShowShare(true)}
                 title="Compartir perfil"
@@ -668,7 +826,7 @@ export default function ProfileView() {
                   onMouseEnter={() => setFollowHover(true)}
                   onMouseLeave={() => setFollowHover(false)}
                   disabled={followBusy}
-                  className={`hidden sm:flex items-center gap-2 px-4 py-2 rounded font-condensed font-bold text-[13px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
+                  className={`flex items-center gap-2 px-4 py-2 rounded font-condensed font-bold text-[13px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
                     isFollowing
                       ? followHover
                         ? 'border-danger text-danger bg-transparent'
@@ -687,9 +845,10 @@ export default function ProfileView() {
             </div>
           </div>
 
-          {/* Seguir — mobile: fila completa debajo */}
-          {!isOwnProfile && (
-            <div className="flex sm:hidden gap-2 mt-4">
+          {/* Acciones — mobile: seguir y compartir en la misma fila, al final
+              del bloque de identidad y no flotando arriba a la derecha. */}
+          <div className="flex sm:hidden gap-2 mt-4">
+            {!isOwnProfile && (
               <button
                 onClick={user ? handleFollowToggle : () => setShowInviteModal(true)}
                 disabled={followBusy}
@@ -704,13 +863,26 @@ export default function ProfileView() {
                   : <><UserPlus size={14} /> SEGUIR</>
                 }
               </button>
-            </div>
-          )}
+            )}
+            <button
+              onClick={() => setShowShare(true)}
+              aria-label="Compartir perfil"
+              className={`flex items-center justify-center gap-2 py-2.5 rounded border border-border-strong text-muted bg-transparent transition-colors cursor-pointer ${
+                isOwnProfile ? 'flex-1 font-condensed font-bold text-[13px] tracking-widest' : 'w-12'
+              }`}
+            >
+              <Share2 size={14} />
+              {isOwnProfile && 'COMPARTIR PERFIL'}
+            </button>
+          </div>
+
+          {/* Centinela de la mini cabecera: cuando sale de pantalla, entra la barra. */}
+          <div ref={setSentinel} aria-hidden="true" className="h-px" />
         </div>
 
         {/* Editar perfil (colapsable) */}
         {isOwnProfile && (
-          <div className="bg-surface border border-border-mid rounded-lg mb-6 overflow-hidden">
+          <div className="bg-surface border border-border-mid rounded-lg mb-4 sm:mb-6 overflow-hidden">
             <button
               type="button"
               onClick={() => setEditOpen(v => !v)}
@@ -725,7 +897,7 @@ export default function ProfileView() {
                 <label style={label}>NOMBRE</label>
                 <input
                   className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 rounded text-sm outline-none font-sans"
-                  value={editName} onChange={e => setEditName(e.target.value)} minLength={6} maxLength={20}
+                  value={editName} onChange={e => setEditName(e.target.value)} minLength={3} maxLength={50}
                   autoComplete="off" name="profile-name"
                 />
 
@@ -765,6 +937,18 @@ export default function ProfileView() {
 
                 <label style={label}>REDES SOCIALES</label>
                 <SocialLinksEditor value={socialLinks} onChange={setSocialLinks} />
+
+                {user?.subscription?.plan !== 'premium' && (
+                  <div className="mt-5 pt-4 border-t border-border-mid">
+                    <button
+                      type="button"
+                      onClick={() => setShowClaimHelp(true)}
+                      className="text-[12px] text-dim hover:text-secondary transition-colors bg-transparent border-0 p-0 cursor-pointer underline underline-offset-2"
+                    >
+                      ¿Pagaste y no se activó tu Premium?
+                    </button>
+                  </div>
+                )}
 
                 <div style={{ borderTop: '1px solid #222', marginTop: 20, paddingTop: 4 }}>
                   <div style={{ fontSize: 11, color: '#444', fontFamily: "'Albert Sans',monospace", marginBottom: 4 }}>
@@ -839,34 +1023,34 @@ export default function ProfileView() {
           const pct = stats.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : 0;
           const pctColor = pct >= 60 ? '#4af07a' : pct >= 40 ? '#e8f04a' : '#f07a4a';
           return (
-            <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+            <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
               <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-4">
                 <BarChart3 size={13} className="shrink-0" />ESTADÍSTICAS PERSONALES
               </div>
 
               {/* Torneos · Partidos · Racha actual — misma fila */}
               <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
+                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
                   <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.torneos}</div>
-                  <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>TORNEOS</div>
+                  <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>TORNEOS</div>
                   <div className="text-[10px] font-mono mt-0.5" style={{ color: stats.torneos_este_mes > 0 ? '#4ab8f0' : '#555' }}>
                     {stats.torneos_este_mes > 0 ? `${stats.torneos_este_mes} este mes` : 'ninguno este mes'}
                   </div>
                   <div className="h-0.5 rounded-full mt-2" style={{ background: '#4ab8f0', opacity: 0.35 }} />
                 </div>
-                <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
+                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
                   <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.partidos}</div>
-                  <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>PARTIDOS</div>
+                  <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>PARTIDOS</div>
                   <div className="h-0.5 rounded-full mt-2" style={{ background: '#4af07a', opacity: 0.35 }} />
                 </div>
-                <div className="rounded-lg px-4 py-3 border flex flex-col justify-between"
+                <div className="rounded-lg px-3 sm:px-4 py-3 border flex flex-col justify-between"
                   style={{ background: stats.racha > 0 ? '#e8f04a08' : undefined, borderColor: stats.racha > 0 ? '#e8f04a33' : '#1e1e1e' }}>
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="font-condensed font-black text-[32px] leading-none" style={{ color: stats.racha > 0 ? '#e8f04a' : '#333' }}>
                         {stats.racha}
                       </div>
-                      <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>RACHA ACTUAL</div>
+                      <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>RACHA ACTUAL</div>
                     </div>
                     <Flame size={16} style={{ color: stats.racha > 0 ? '#e8f04a' : '#2a2a2a', marginTop: 2 }} />
                   </div>
@@ -875,7 +1059,7 @@ export default function ProfileView() {
 
               {/* Win percentage */}
               {stats.partidos > 0 && (
-                <div className="bg-base rounded-lg px-4 py-3 border border-border-strong mb-4">
+                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong mb-4">
                   <div className="flex justify-between items-end mb-2">
                     <span className="text-[10px] font-mono tracking-widest" style={{ color: '#555' }}>% VICTORIAS</span>
                     <span className="font-condensed font-black text-[22px] leading-none" style={{ color: pctColor }}>{pct}%</span>
@@ -892,7 +1076,7 @@ export default function ProfileView() {
               {/* Títulos de cualquier formato, no sólo el americano. */}
               {(stats.titulos_liga > 0 || stats.torneos_americanos > 0) && (
                 <div className={`grid gap-3 ${stats.torneos_americanos > 0 ? 'grid-cols-3' : 'grid-cols-1'}`}>
-                  <div className="bg-base rounded-lg px-4 py-3 border"
+                  <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border"
                     style={{ borderColor: stats.titulos_liga > 0 ? '#f0d04a44' : undefined }}>
                     <div className="flex items-start justify-between">
                       <div className="font-condensed font-black text-[32px] leading-none"
@@ -901,20 +1085,20 @@ export default function ProfileView() {
                       </div>
                       {stats.titulos_liga > 0 && <Trophy size={16} style={{ color: '#f0d04a', marginTop: 2 }} />}
                     </div>
-                    <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>
+                    <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>
                       {stats.titulos_liga === 1 ? 'LIGA GANADA' : 'LIGAS GANADAS'}
                     </div>
                     <div className="h-0.5 rounded-full mt-2" style={{ background: '#f0d04a', opacity: stats.titulos_liga > 0 ? 0.35 : 0.08 }} />
                   </div>
                   {stats.torneos_americanos > 0 && (
                     <>
-                      <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
+                      <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
                         <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.torneos_americanos}</div>
-                        <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>AMERICANOS</div>
+                        <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>AMERICANOS</div>
                         <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>jugados</div>
                         <div className="h-0.5 rounded-full mt-2" style={{ background: '#a84af0', opacity: 0.35 }} />
                       </div>
-                      <div className="bg-base rounded-lg px-4 py-3 border"
+                      <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border"
                         style={{ borderColor: stats.campeon_americano > 0 ? '#a84af044' : undefined }}>
                         <div className="flex items-start justify-between">
                           <div className="font-condensed font-black text-[32px] leading-none"
@@ -923,7 +1107,7 @@ export default function ProfileView() {
                           </div>
                           {stats.campeon_americano > 0 && <Trophy size={16} style={{ color: '#a84af0', marginTop: 2 }} />}
                         </div>
-                        <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>
+                        <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>
                           {stats.campeon_americano === 1 ? 'AMERICANO GANADO' : 'AMERICANOS GANADOS'}
                         </div>
                         <div className="h-0.5 rounded-full mt-2" style={{ background: '#a84af0', opacity: stats.campeon_americano > 0 ? 0.35 : 0.08 }} />
@@ -938,7 +1122,7 @@ export default function ProfileView() {
 
         {/* Últimos partidos */}
         {recent_matches?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555]">
                 <Swords size={13} className="shrink-0" />ÚLTIMOS PARTIDOS
@@ -1000,7 +1184,7 @@ export default function ProfileView() {
 
         {/* Compañeros frecuentes */}
         {frequent_partners?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
             <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
               <Handshake size={13} className="shrink-0" />COMPAÑEROS FRECUENTES
             </div>
@@ -1039,7 +1223,7 @@ export default function ProfileView() {
 
         {/* Ranking entre la gente que sigue. Sólo lo ve el dueño del perfil. */}
         {isOwnProfile && follow_ranking?.length > 1 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
             <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
               <Users size={13} className="shrink-0" />ENTRE TUS SEGUIDOS
             </div>
@@ -1075,7 +1259,7 @@ export default function ProfileView() {
 
         {/* Sólo los torneos con club asignado, así que el total puede ser menor. */}
         {club_stats?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
             <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
               <MapPin size={13} className="shrink-0" />CLUBES FRECUENTES
             </div>
@@ -1122,7 +1306,7 @@ export default function ProfileView() {
             {isOwnProfile ? 'Todavía no creaste ninguna categoría.' : 'Este usuario no tiene categorías públicas.'}
           </div>
         )}
-        <div className="flex flex-col gap-2.5 mb-6">
+        <div className="flex flex-col gap-2.5 mb-4 sm:mb-6">
           {groups.map((g, i) => (
             <GroupCard key={g.id} g={g} delay={i * 60} onClick={() => navigate(`/cat/${g.id}`)} />
           ))}
