@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { api } from '../../utils/api';
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
@@ -11,6 +11,7 @@ import VisitorShowcase from './VisitorShowcase';
 import AppPreview from './AppPreview';
 import { Skeleton, CardSkeleton } from '../shared/Skeleton';
 import ClubSelector from '../shared/ClubSelector';
+import { fmt } from '../../utils/helpers';
 import SignupEditor from '../shared/SignupEditor';
 import StepBar from '../shared/StepBar';
 import { profileContacts } from '../../utils/signup';
@@ -87,14 +88,17 @@ export default function HomeView() {
   const [showEmojiModal, setShowEmojiModal] = useState(false);
   const [club,           setClub]           = useState(null);
   const [searchQ,        setSearchQ]        = useState('');
+  const searchInputRef = useRef(null);
   const [searchUsers,    setSearchUsers]    = useState([]);
   const [searchGroups,   setSearchGroups]   = useState([]);
   const [searchClubs,    setSearchClubs]    = useState([]);
+  const [searchTours,    setSearchTours]    = useState([]);
   const [searching,      setSearching]      = useState(false);
   const [committedQ,     setCommittedQ]     = useState('');
   const [committedUsers, setCommittedUsers] = useState([]);
   const [committedGroups,setCommittedGroups]= useState([]);
   const [committedClubs, setCommittedClubs] = useState([]);
+  const [committedTours, setCommittedTours] = useState([]);
   const [committing,     setCommitting]     = useState(false);
   const [error,             setError]             = useState(null)
   const [showPremiumModal,  setShowPremiumModal]  = useState(false)
@@ -173,22 +177,25 @@ export default function HomeView() {
 
   // Búsqueda de perfiles, categorías y clubes con debounce
   useEffect(() => {
-    if (!searchQ.trim() || searchQ.length < 2) { setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); return; }
+    if (!searchQ.trim() || searchQ.length < 2) { setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); return; }
     const t = setTimeout(async () => {
       setSearching(true);
       try {
-        const [users, groups, clubs] = await Promise.all([
+        const [users, groups, clubs, tours] = await Promise.all([
           api.auth.search(searchQ),
           api.groups.search(searchQ),
           api.clubs.list(searchQ),
+          api.tournaments.search(searchQ),
         ]);
         setSearchUsers(users);
         setSearchGroups(groups);
         setSearchClubs(clubs);
+        setSearchTours(tours);
       } catch {
         setSearchUsers([]);
         setSearchGroups([]);
         setSearchClubs([]);
+        setSearchTours([]);
       } finally { setSearching(false); }
     }, 300);
     return () => clearTimeout(t);
@@ -205,22 +212,26 @@ export default function HomeView() {
     if (q.length < 2) return;
     setCommitting(true);
     try {
-      const [users, groups, clubs] = await Promise.all([
+      const [users, groups, clubs, tours] = await Promise.all([
         api.auth.search(q),
         api.groups.search(q),
         api.clubs.list(q),
+        api.tournaments.search(q),
       ]);
       setCommittedQ(q);
       setCommittedUsers(users);
       setCommittedGroups(groups);
       setCommittedClubs(clubs);
+      setCommittedTours(tours);
       setSearchUsers([]);
       setSearchGroups([]);
       setSearchClubs([]);
+      setSearchTours([]);
     } catch {
       setCommittedUsers([]);
       setCommittedGroups([]);
       setCommittedClubs([]);
+      setCommittedTours([]);
     } finally { setCommitting(false); }
   }
 
@@ -230,9 +241,11 @@ export default function HomeView() {
     setCommittedUsers([]);
     setCommittedGroups([]);
     setCommittedClubs([]);
+    setCommittedTours([]);
     setSearchUsers([]);
     setSearchGroups([]);
     setSearchClubs([]);
+    setSearchTours([]);
   }
 
   function fetchNearbyClubs() {
@@ -440,12 +453,25 @@ export default function HomeView() {
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
               <input
-                className="w-full bg-surface border border-border-mid text-white pl-10 pr-4 py-3 rounded-lg text-sm outline-none font-sans placeholder:text-muted focus:border-border-strong transition-colors"
-                placeholder="Buscar jugadores, categorías o clubes..."
+                ref={searchInputRef}
+                className={`w-full bg-surface border border-border-mid text-white pl-10 ${searchQ ? 'pr-10' : 'pr-4'} py-3 rounded-lg text-sm outline-none font-sans placeholder:text-muted focus:border-border-strong transition-colors`}
+                placeholder="Buscar jugadores, torneos, categorías o clubes..."
                 value={searchQ}
                 onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter')  handleSearch();
+                  if (e.key === 'Escape') { clearSearch(); }
+                }}
               />
+              {searchQ && (
+                <button
+                  onClick={() => { clearSearch(); searchInputRef.current?.focus(); }}
+                  aria-label="Limpiar búsqueda"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-transparent border-0 rounded-full text-muted cursor-pointer hover:text-white hover:bg-border-mid transition-colors"
+                >
+                  <X size={15} />
+                </button>
+              )}
             </div>
             <button
               onClick={handleSearch}
@@ -458,12 +484,12 @@ export default function HomeView() {
           </div>
 
           {/* Dropdown de sugerencias */}
-          {searchQ.trim().length >= 2 && (searching || searchUsers.length > 0 || searchGroups.length > 0 || searchClubs.length > 0) && (
+          {searchQ.trim().length >= 2 && (searching || searchUsers.length > 0 || searchGroups.length > 0 || searchClubs.length > 0 || searchTours.length > 0) && (
             <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-alt border border-border-strong rounded-lg overflow-hidden shadow-xl max-h-72 overflow-y-auto">
               {searching && (
                 <div className="px-4 py-3 text-xs font-mono text-muted">Buscando...</div>
               )}
-              {!searching && searchUsers.length === 0 && searchGroups.length === 0 && searchClubs.length === 0 && (
+              {!searching && searchUsers.length === 0 && searchGroups.length === 0 && searchClubs.length === 0 && searchTours.length === 0 && (
                 <div className="px-4 py-3 text-xs font-mono text-muted">Sin resultados</div>
               )}
               {!searching && searchUsers.length > 0 && (
@@ -471,7 +497,7 @@ export default function HomeView() {
                   <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">PERFILES</div>
                   {searchUsers.map((u) => (
                     <div key={u.id}
-                      onClick={() => { navigate(`/u/${u.username}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); }}
+                      onClick={() => { navigate(`/u/${u.username}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
                       className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                     >
                       <span className="font-condensed font-bold text-base text-white">{u.name}</span>
@@ -485,7 +511,7 @@ export default function HomeView() {
                   <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CATEGORÍAS</div>
                   {searchGroups.map((g) => (
                     <div key={g.id}
-                      onClick={() => { navigate(`/cat/${g.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); }}
+                      onClick={() => { navigate(`/cat/${g.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
                       className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                     >
                       <span className="font-condensed font-bold text-base text-white">
@@ -496,12 +522,29 @@ export default function HomeView() {
                   ))}
                 </>
               )}
+              {!searching && searchTours.length > 0 && (
+                <>
+                  <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">TORNEOS</div>
+                  {searchTours.map((t) => (
+                    <div key={t.id}
+                      onClick={() => { navigate(`/view/${t.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
+                      className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
+                    >
+                      <span className="font-condensed font-bold text-base text-white truncate">{t.name}</span>
+                      <span className="text-[11px] font-mono text-dim truncate">
+                        {t.group_emojis?.length > 0 && <span className="mr-1">{t.group_emojis.join(' ')}</span>}
+                        {t.group_name}{t.day && <span> · {fmt(t.day)}</span>}
+                      </span>
+                    </div>
+                  ))}
+                </>
+              )}
               {!searching && searchClubs.length > 0 && (
                 <>
                   <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CLUBES</div>
                   {searchClubs.map((c) => (
                     <div key={c.id}
-                      onClick={() => { navigate(`/club/${c.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); }}
+                      onClick={() => { navigate(`/club/${c.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
                       className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                     >
                       {c.photo_url
@@ -667,7 +710,7 @@ export default function HomeView() {
               </button>
             </div>
             {committing && <div className="font-mono text-xs text-muted py-4">Buscando...</div>}
-            {!committing && committedUsers.length === 0 && committedGroups.length === 0 && committedClubs.length === 0 && (
+            {!committing && committedUsers.length === 0 && committedGroups.length === 0 && committedClubs.length === 0 && committedTours.length === 0 && (
               <div className="font-mono text-xs text-muted py-4">Sin resultados.</div>
             )}
             {!committing && committedUsers.length > 0 && (
@@ -692,6 +735,36 @@ export default function HomeView() {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
                   {committedGroups.map((g) => (
                     <GroupCard key={g.id} g={g} onClick={() => navigate(`/cat/${g.id}`)} />
+                  ))}
+                </div>
+              </>
+            )}
+            {!committing && committedTours.length > 0 && (
+              <>
+                <div className="font-mono text-[10px] text-dim tracking-widest mb-3">TORNEOS</div>
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
+                  {committedTours.map((t, i) => (
+                    <FadeInCard
+                      key={t.id}
+                      delay={i * 60}
+                      className="border border-border-mid rounded-lg cursor-pointer overflow-hidden p-4 card-link"
+                      style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
+                      onClick={() => navigate(`/view/${t.id}`)}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="font-condensed font-bold text-xl text-white leading-tight truncate">{t.name}</div>
+                        {t.status === 'finished' && (
+                          <span className="font-mono text-[10px] text-dim border border-border-mid rounded px-1.5 py-0.5 shrink-0">FINALIZADO</span>
+                        )}
+                      </div>
+                      <div className="font-mono text-xs text-secondary mt-1.5 truncate">
+                        {t.group_emojis?.length > 0 && <span className="mr-1">{t.group_emojis.join(' ')}</span>}
+                        {t.group_name}
+                      </div>
+                      <div className="font-mono text-[11px] text-dim mt-1 truncate">
+                        {fmt(t.day)}{t.club_name && <span> · {t.club_name}</span>}
+                      </div>
+                    </FadeInCard>
                   ))}
                 </div>
               </>

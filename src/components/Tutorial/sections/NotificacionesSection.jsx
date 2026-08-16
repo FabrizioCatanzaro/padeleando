@@ -28,8 +28,12 @@ const TIPOS = [
     text: 'Podés seguirlo de vuelta desde la notificación.',
   },
   {
-    label: 'Nuevo torneo en una categoría tuya',
+    label: 'Nuevo torneo en una categoría que jugás',
     text: 'Te avisa cuando se crea un torneo nuevo en una categoría en la que jugás.',
+  },
+  {
+    label: 'Nuevo torneo en una categoría favorita',
+    text: 'Si agregaste una categoría a tus favoritas, te avisa cuando se crea un torneo nuevo en ella.',
   },
   {
     label: 'Avisos de Padeleando',
@@ -41,9 +45,9 @@ export default function NotificacionesSection() {
   return (
     <TutorialSection
       title="Notificaciones"
-      description="Todo lo que necesita tu respuesta llega a la campana del menú. Reemplazó a la vieja sección de Invitaciones: si tenías ese link guardado, ahora te lleva acá."
+      description="Todo lo que necesita tu respuesta llega a la campana de notificaciones."
     >
-      <TutorialMedia caption="Campana de notificaciones y panel desplegable" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159242/tutorial/notificaciones.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Campana de notificaciones y panel desplegable" name="notificaciones" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-3">
         Qué te puede llegar
@@ -74,7 +78,7 @@ export default function NotificacionesSection() {
       </p>
 
       <Note>
-        Aceptar una transferencia de propiedad no tiene vuelta atrás. Antes de confirmar, fijate
+        Aceptar una transferencia de categoría no tiene vuelta atrás. Antes de confirmar, fijate
         bien de qué categoría se trata.
       </Note>
     </TutorialSection>

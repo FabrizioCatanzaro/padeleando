@@ -9,7 +9,7 @@ export default function EstadisticasAvanzadasSection() {
       title="Estadísticas avanzadas"
       description="Es un bloque extra al final del perfil, incluido en el plan Premium. Va más allá del resumen: mide cómo jugás partido a partido y cómo cambia tu rendimiento a lo largo del año."
     >
-      <TutorialMedia caption="Bloque de estadísticas avanzadas al final del perfil" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159250/tutorial/perfil-avanzadas.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Bloque de estadísticas avanzadas al final del perfil" name="perfil-stats-avanzadas" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Qué incluye
@@ -28,9 +28,9 @@ export default function EstadisticasAvanzadasSection() {
       />
 
       <Note>
-        Varios de estos números se calculan sobre lo que se cargó en cada partido. Si en tu grupo
+        Varios de estos números se calculan sobre lo que se cargó en cada partido. Si en tu categoría
         nadie anota los sets o la duración, esos bloques van a aparecer vacíos o medir menos
-        partidos de los que jugaste — no es un error del perfil, es que el dato no está.
+        partidos de los que jugaste.
       </Note>
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-6">

@@ -13,19 +13,20 @@ export default function EditarCategoriaSection() {
         },
         {
           label: 'Hacer clic en el ícono de edición',
-          text: 'Junto al nombre de la categoría verás un ícono de lápiz. Hacé clic en él para activar el modo edición.',
+          text: 'Junto al nombre de la categoría verás los "tres puntitos verticales" que contienen distintas opciones. Hacé clic en el botón de "Editar categoría" para activar el modo edición.',
         },
         {
           label: 'Modificar y guardar',
-          text: 'Editá el nombre y/o la descripción en los campos que aparecen. Confirmá los cambios con el botón de guardar (ícono de tilde) o cancelá con el ícono de X.',
+          text: 'Editá el nombre y/o la descripción en los campos que aparecen. Confirmá los cambios con el botón de guardar.',
         },
         {
           label: 'Editar torneo',
-          text: 'Desde la página donde organizas el torneo podes realizar el mismo procedimiento para editar el nombre de el torneo.',
+          text: 'Desde la página donde organizas el torneo podes realizar el mismo procedimiento para editar el nombre del torneo.',
         },
       ]}
     >
-      <TutorialMedia caption="Menú de la categoría, con la opción de editar" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159237/tutorial/menu-categoria.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Menú de la categoría, con la opción de editar" name="categoria-opciones" />
+      <TutorialMedia caption="Formulario de edición de la categoría" name="categoria-edicion" />
     </TutorialSection>
   )
 }

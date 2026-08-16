@@ -7,8 +7,8 @@ const NUMEROS = [
   { label: 'Torneos', text: 'Cuántos torneos jugaste, sumando todas las categorías en las que tu cuenta está vinculada a un jugador.' },
   { label: 'Partidos', text: 'Todos los que jugaste. En los americanos también cuentan los del cuadro final, que no son partidos comunes.' },
   { label: '% victorias', text: 'Partidos ganados sobre partidos jugados. En pádel no hay empates, así que todo partido cargado suma a uno de los dos lados.' },
-  { label: 'Racha actual', text: 'Victorias o derrotas seguidas, contando desde el último partido hacia atrás.' },
-  { label: 'Títulos', text: 'Ligas ganadas más americanos ganados. La liga sale de quedar primero en la tabla de un torneo terminado; el americano, de ganar la final del cuadro.' },
+  { label: 'Racha actual', text: 'Victorias seguidas, contando desde el último partido hacia atrás.' },
+  { label: 'Títulos', text: 'Ligas ganadas más americanos ganados. La liga sale de quedar primero en la tabla de un torneo terminado; el americano, de ganar la final del cuadro eliminatorio.' },
   { label: 'Compañeros frecuentes', text: 'Con quién jugaste más veces y cómo les fue juntos.' },
   { label: 'Clubes frecuentes', text: 'Dónde jugás más seguido, según el club cargado en cada torneo.' },
   { label: 'Últimos partidos', text: 'Los más recientes con su resultado, para ver de un vistazo cómo venís.' },
@@ -20,7 +20,7 @@ export default function EstadisticasPerfilSection() {
       title="Tu perfil y tus estadísticas"
       description="Tu perfil es una página pública en /u/tu-usuario que junta todo lo que jugaste, en todas las categorías. Podés compartirla con quien quieras."
     >
-      <TutorialMedia caption="Estadísticas personales en el perfil público" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159254/tutorial/perfil.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Estadísticas personales en el perfil público" name="perfil-stats" />
 
       <Note>
         Las estadísticas sólo acumulan los partidos de los jugadores vinculados a tu cuenta. Si

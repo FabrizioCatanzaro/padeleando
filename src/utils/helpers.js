@@ -21,6 +21,28 @@ export function setsWon(sets) {
   }, [0, 0]);
 }
 
+// El marcador guardado de un partido con sets: a 1 set son los juegos de ese set,
+// a 3 son los sets ganados. La card y las posiciones leen score1/score2 con esa regla.
+export function scoreFromSets(sets_format, sets = []) {
+  if (sets_format === 1) {
+    const s = sets[0] ?? { s1: 0, s2: 0 };
+    return [Number(s.s1) || 0, Number(s.s2) || 0];
+  }
+  const nv = visibleSetsCount(sets_format, sets);
+  return setsWon(sets.slice(0, nv));
+}
+
+// Un resultado por sets está completo cuando el set único tiene ganador o
+// alguien se llevó dos de los tres.
+export function setsResultReady(sets_format, sets = []) {
+  if (sets_format === 1) return setWinner(sets[0]) != null;
+  if (sets_format === 3) {
+    const [w1, w2] = setsWon(sets.slice(0, visibleSetsCount(3, sets)));
+    return w1 >= 2 || w2 >= 2;
+  }
+  return false;
+}
+
 // Cuántos sets mostrar en UI (reveal progresivo) o cuántos están jugados en un partido guardado.
 export function visibleSetsCount(sets_format, sets) {
   if (sets_format === 1) return 1;
@@ -385,12 +407,22 @@ export function clubCourts(club) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+// Canchas de un torneo. `number_of_courts` es una copia del club hecha al
+// asignarlo: si el club sumó canchas después, la copia quedó vieja, así que
+// manda lo que el club tiene hoy. Sin ese dato en el payload, la copia.
+export function tournamentCourts(tournament) {
+  if (!tournament) return 1;
+  const fromClub = Number(tournament.club_courts);
+  if (tournament.club_id && Number.isFinite(fromClub)) return fromClub > 0 ? fromClub : 0;
+  return Number(tournament.number_of_courts ?? 1);
+}
+
 // Etiqueta de cancha a mostrar para un partido.
-// - Si el torneo se juega en un club sin canchas cargadas (number_of_courts === 0) → '-'.
+// - Si el torneo se juega en un club sin canchas cargadas → '-'.
 // - Si el partido tiene cancha asignada → su número.
 // - Si no, null (no se muestra badge).
 export function courtLabel(tournament, court) {
-  if (tournament?.number_of_courts === 0) return '-';
+  if (tournamentCourts(tournament) === 0) return '-';
   return court != null ? String(court) : null;
 }
 

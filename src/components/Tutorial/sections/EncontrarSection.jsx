@@ -9,7 +9,7 @@ export default function EncontrarSection() {
       title="Encontrar categorías y jugadores"
       description="Desde la pantalla principal podés buscar gente, categorías y clubes, ver qué hay cerca tuyo y guardar las categorías que seguís aunque no juegues en ellas."
     >
-      <TutorialMedia caption="Buscador de la pantalla principal" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159226/tutorial/encontrar.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Buscador de la pantalla principal" name="buscador-home" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         El buscador
@@ -29,7 +29,7 @@ export default function EncontrarSection() {
         items={[
           'Cualquier categoría pública se puede agregar a favoritas.',
           'Quedan juntas en la pantalla principal, para entrar rápido a ver cómo va la fecha.',
-          'No hace falta jugar ahí: es para seguir la categoría de al lado, la de otra división o la del club.',
+          'No hace falta jugar ahí: es para seguir la categoría que organiza tu amigo, tu club favorito o lo que quieras.',
           'No podés marcar como favorita una categoría tuya, ni una privada.',
         ]}
       />
@@ -38,7 +38,7 @@ export default function EncontrarSection() {
         Cerca tuyo
       </h3>
       <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-        Si le das permiso de ubicación, la pantalla principal te muestra los clubes en un radio de
+        Si le das permiso de ubicación al navegador, la pantalla principal te muestra los clubes en un radio de
         20 km. Sirve para encontrar dónde se está jugando sin conocer a nadie todavía.
       </p>
 

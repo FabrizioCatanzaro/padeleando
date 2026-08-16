@@ -1,7 +1,8 @@
 import { useState, useEffect, useContext, useCallback, useMemo, useRef, useSyncExternalStore, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { calcStandings, compareStandingRows, courtLabel, getPairLabel, isAmericanoDraft, isDeletedAccount, fmt, fmtHora, tournamentDisplayStatus, TOURNAMENT_STATUS_META,
-  getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS } from "../../utils/helpers";
+  getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS,
+  setWinner, visibleSetsCount } from "../../utils/helpers";
 
 // Mínimo de partidos para que la pantalla de estadísticas entre en el Modo TV.
 const TV_STATS_MIN_MATCHES = 3;
@@ -1480,6 +1481,8 @@ function bracketRecentItems(tournament) {
         team2: m.pair2_name,
         s1: m.score1,
         s2: m.score2,
+        sets: m.sets ?? [],
+        setsFormat: m.sets_format ?? null,
         win1: m.winner_id === m.pair1_id,
       });
     }
@@ -1520,7 +1523,9 @@ function LiveTicker({ tournament, isAmericano }) {
         team2: teamLabel(m.team2, tournament),
         s1,
         s2,
-        win1: parseInt(s1) > parseInt(s2),
+        sets: m.sets ?? [],
+        setsFormat: m.sets_format ?? null,
+        win1: parseInt(m.score1) > parseInt(m.score2),
       };
     });
 
@@ -1575,6 +1580,36 @@ function LiveTicker({ tournament, isAmericano }) {
   );
 }
 
+// Los parciales van en línea (6-4 6-0) para no romper la altura de la cinta.
+function TickerScore({ item }) {
+  const nVisible = item.setsFormat === 3 ? visibleSetsCount(3, item.sets ?? []) : 0;
+
+  if (nVisible === 0) {
+    return (
+      <span className="font-condensed font-black text-[15px]">
+        <span className={item.win1 ? "text-brand" : "text-secondary"}>{item.s1}</span>
+        <span className="text-border-strong mx-0.5">–</span>
+        <span className={!item.win1 ? "text-cyan" : "text-secondary"}>{item.s2}</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex items-center gap-2.5 font-mono font-bold text-[13px] tabular-nums">
+      {item.sets.slice(0, nVisible).map((s, i) => {
+        const w = setWinner(s);
+        return (
+          <span key={i}>
+            <span className={w === 1 ? "text-brand" : "text-dim"}>{s.s1}</span>
+            <span className="text-muted mx-px">-</span>
+            <span className={w === 2 ? "text-cyan" : "text-dim"}>{s.s2}</span>
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 function TickerItem({ item }) {
   const isLive = item.type === "live";
   const phaseLabel = item.phase ? (PHASE_LABEL[item.phase] ?? item.phase.toUpperCase()) : null;
@@ -1618,11 +1653,7 @@ function TickerItem({ item }) {
       ) : (
         <div className="flex items-center gap-2">
           <span className={`font-condensed font-semibold text-[14px] ${item.win1 ? "text-brand" : "text-secondary"}`}>{item.team1}</span>
-          <span className="font-condensed font-black text-[15px]">
-            <span className={item.win1 ? "text-brand" : "text-secondary"}>{item.s1}</span>
-            <span className="text-border-strong mx-0.5">–</span>
-            <span className={!item.win1 ? "text-cyan" : "text-secondary"}>{item.s2}</span>
-          </span>
+          <TickerScore item={item} />
           <span className={`font-condensed font-semibold text-[14px] ${!item.win1 ? "text-cyan" : "text-secondary"}`}>{item.team2}</span>
         </div>
       )}

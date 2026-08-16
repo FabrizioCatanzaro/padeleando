@@ -5,11 +5,11 @@ export default function CrearPartidoSection() {
   return (
     <TutorialSection
       title="Crear un partido"
-      description='Una partido en Padeleando tiene la posibilidad de asignar las parejas involucradas, setear la fecha, cancha, iniciar un cronómetro y registrar los resultados.'
+      description='Un partido en Padeleando tiene la posibilidad de asignar las parejas involucradas, setear la cantidad de sets, número de cancha, iniciar un cronómetro y registrar los resultados.'
       steps={[
         {
           label: 'Ir a el torneo',
-          text: 'Desde la pantalla de tu torneo, en la sección de partidos,presioná el botón "NUEVO PARTIDO".',
+          text: 'Desde la pantalla de tu torneo, en la sección de partidos, presioná el botón "NUEVO PARTIDO".',
         },
         {
           label: 'Elegir las parejas',
@@ -21,12 +21,12 @@ export default function CrearPartidoSection() {
         },
         {
           label: 'Cargá el resultado',
-          text: 'Una vez finalizado el partido, podés registrar el resultado y se carga automáticamente a la tabla de posiciones.',
+          text: 'Una vez finalizado el partido, podés registrar el resultado y se carga automáticamente a la tabla de posiciones o el cuadro eliminatorio, depende del formato del torneo que estés organizando.',
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de creación de partido" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159200/tutorial/cargar-partido.png" aspect="aspect-auto" />
-      <TutorialMedia caption="Partido registrado" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159247/tutorial/partidos.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de creación de partido" name="torneo-nuevo-partido" />
+      <TutorialMedia caption="Partidos registrados" name="torneo-partidos" />
     </TutorialSection>
   )
 }

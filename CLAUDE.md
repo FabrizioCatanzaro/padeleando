@@ -102,6 +102,11 @@ Browser
 
 ## Key Conventions
 
+### Code style
+
+- **No multi-line comments.** Comment only when the context is impossible to grasp otherwise, and in a single short line.
+- The long reasoning — why a criterion was chosen, what measurement backs it, what bug motivated the change — goes in the commit message or in this file, never in the source.
+
 ### API Calls
 - **Never use `fetch()` directly in components.** All API calls go through `src/utils/api.js`.
 - The api wrapper handles 401 → token refresh → retry automatically.
@@ -214,6 +219,7 @@ Do not claim an improvement without measuring it — reading the code is not eno
 
 ## What NOT to Do
 
+- **Don't write multi-line comments** — one short line at most, and only if it's indispensable; the reasoning belongs in the commit message.
 - **Don't bypass `api.js`** — the token refresh logic lives there; skipping it breaks auth.
 - **Don't add subscription/payment UI** — the Subscription feature is intentionally disabled (components exist but routes are commented out in App.jsx).
 - **Don't store auth tokens in localStorage** — tokens use httpOnly cookies; only the `user` object (no secrets) is stored in localStorage.

@@ -1,5 +1,4 @@
 import TutorialSection from '../TutorialSection'
-import TutorialMedia from '../TutorialMedia'
 import Bullets from '../Bullets'
 import Note from '../Note'
 import { FREE_MAX_GROUPS, FREE_TOURNAMENTS_PER_MONTH } from '../../../utils/plan'
@@ -8,7 +7,7 @@ export default function PremiumSection() {
   return (
     <TutorialSection
       title="Plan Básico y Premium"
-      description="Padeleando se usa gratis. El plan Básico alcanza para organizar de forma estable; Premium levanta los límites y suma las funciones que necesitan los que organizan mucho."
+      description="Padeleando se usa gratis. El plan Básico alcanza para organizar de forma estable; Premium levanta los límites y suma las funciones que necesitan los que le darían mucho uso a la app."
     >
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1 border border-border-strong rounded-lg p-4">
@@ -18,7 +17,7 @@ export default function PremiumSection() {
             items={[
               `Hasta ${FREE_MAX_GROUPS} categorías.`,
               `Hasta ${FREE_TOURNAMENTS_PER_MONTH} torneos por mes en cada categoría.`,
-              'Partidos, posiciones, cuadro y estadísticas básicas, sin límite.',
+              'Partidos, posiciones, cuadro y estadísticas básicas.',
             ]}
           />
         </div>
@@ -29,6 +28,7 @@ export default function PremiumSection() {
             items={[
               'Categorías y torneos ilimitados.',
               'Estadísticas avanzadas en tu perfil.',
+              'Estadísticas avanzadas de todas tus categorías y torneos.',
               'Galería de fotos en los torneos.',
               'Ícono premium en tu perfil.',
               'Soporte prioritario.',
@@ -36,8 +36,6 @@ export default function PremiumSection() {
           />
         </div>
       </div>
-
-      <TutorialMedia caption="Comparación de planes" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Cómo se cuentan los límites
@@ -67,7 +65,7 @@ export default function PremiumSection() {
       />
 
       <Note>
-        Si pagaste y el plan no se activó, en tu perfil hay una opción para verificar el pago, que
+        Si pagaste y el plan no se activó, en el cuadro de "Editar perfil" dentro de tu perfil hay una opción para verificar el pago, que
         revisa el estado y lo destraba sin tener que escribirnos.
       </Note>
     </TutorialSection>

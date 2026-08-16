@@ -114,7 +114,8 @@ padeliando/
     │   └── Tutorial/
     │       ├── TutorialView.jsx    # Tutorial landing with section list
     │       ├── TutorialSection.jsx # Section wrapper component
-    │       ├── TutorialMedia.jsx   # Image/video display within tutorial
+    │       ├── TutorialMedia.jsx   # Screenshot display: picks vertical/horizontal per viewport
+    │       ├── tutorialImages.js   # Screenshot catalog: name → Cloudinary ids + sizes (generated)
     │       └── sections/           # One file per tutorial topic
     │           ├── RegistroSection.jsx
     │           ├── PerfilSection.jsx

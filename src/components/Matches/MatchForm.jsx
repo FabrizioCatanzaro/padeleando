@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { getPairLabel, setWinner, setsWon, visibleSetsCount } from "../../utils/helpers";
-import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2 } from "lucide-react";
+import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
+import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Modal from "../shared/Modal";
 
@@ -29,14 +29,73 @@ function useCancelGuard({ isDirty, isEditing, onCancel }) {
 
 // ── Selector de cancha ─────────────────────────────────────────────────────────
 export function CourtSelector({ courts, value, onChange }) {
+  const trackRef    = useRef(null);
+  const selectedRef = useRef(null);
+  const [edges, setEdges] = useState({ left: false, right: false });
+
+  function readEdges() {
+    const el = trackRef.current;
+    if (!el) return;
+    const max = el.scrollWidth - el.clientWidth;
+    setEdges({ left: el.scrollLeft > 2, right: el.scrollLeft < max - 2 });
+  }
+
+  // Con muchas canchas la elegida puede quedar fuera de la franja: se centra al abrir.
+  useEffect(() => {
+    const track = trackRef.current, el = selectedRef.current;
+    if (track && el && el.offsetLeft + el.offsetWidth > track.clientWidth) {
+      track.scrollLeft = el.offsetLeft - track.clientWidth / 2 + el.offsetWidth / 2;
+    }
+    readEdges();
+    if (!track) return;
+    const ro = new ResizeObserver(readEdges);
+    ro.observe(track);
+    return () => ro.disconnect();
+  }, [courts]);
+
+  function nudge(dir) {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(120, el.clientWidth * 0.7), behavior: 'smooth' });
+  }
+
+  const btnBase   = 'shrink-0 rounded-sm border font-mono font-bold cursor-pointer transition-colors';
+  const arrowBase = 'absolute top-0 bottom-0 w-8 flex items-center z-10 border-0 cursor-pointer text-muted hover:text-brand transition-colors';
+
   return (
     <div className="mt-3 mb-1">
       <div className="text-[11px] tracking-[2px] text-muted font-mono mb-2">CANCHA</div>
-      <div className="flex gap-2 flex-wrap">
+      <div className="relative">
+      {edges.left && (
         <button
           type="button"
+          onClick={() => nudge(-1)}
+          aria-label="Ver canchas anteriores"
+          className={`${arrowBase} left-0 justify-start bg-gradient-to-r from-surface via-surface to-transparent`}
+        >
+          <ChevronLeft size={18} />
+        </button>
+      )}
+      {edges.right && (
+        <button
+          type="button"
+          onClick={() => nudge(1)}
+          aria-label="Ver más canchas"
+          className={`${arrowBase} right-0 justify-end bg-gradient-to-l from-surface via-surface to-transparent`}
+        >
+          <ChevronRight size={18} />
+        </button>
+      )}
+      <div
+        ref={trackRef}
+        onScroll={readEdges}
+        className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden pb-0.5"
+      >
+        <button
+          type="button"
+          ref={value == null ? selectedRef : null}
           onClick={() => onChange(null)}
-          className={`px-3 py-1.5 rounded-sm border font-mono font-bold text-[11px] cursor-pointer transition-colors ${
+          className={`${btnBase} px-3 py-1.5 text-[11px] whitespace-nowrap ${
             value == null ? 'bg-brand text-base border-brand' : 'bg-surface border-border-mid text-muted hover:border-border-strong'
           }`}
         >
@@ -46,14 +105,16 @@ export function CourtSelector({ courts, value, onChange }) {
           <button
             key={n}
             type="button"
+            ref={value === n ? selectedRef : null}
             onClick={() => onChange(n)}
-            className={`w-10 h-8 rounded-sm border font-mono font-bold text-[13px] cursor-pointer transition-colors ${
+            className={`${btnBase} w-10 h-8 text-[13px] ${
               value === n ? 'bg-brand text-base border-brand' : 'bg-surface border-border-mid text-muted hover:border-border-strong'
             }`}
           >
             {n}
           </button>
         ))}
+      </div>
       </div>
     </div>
   );
@@ -205,52 +266,91 @@ export function ScoreCounter({ value, onChange, color = "text-brand" }) {
   );
 }
 
-// ── Scores + fecha ────────────────────────────────────────────────────────────
-function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar, team2Avatar }) {
+// Celda del tablero: el número con sus flechas. Reemplaza al par de botones
+// redondos, que a tres sets ocupaban 264px de alto para seis números.
+function ScoreCell({ value, onChange, color, disabled = false }) {
+  const num = Number(value) || 0;
+  const arrow = "w-full h-5 flex items-center justify-center text-muted transition-colors";
+  const dead = (cond) => cond || disabled;
+  return (
+    <div className={`flex flex-col items-center bg-base/40 border border-border rounded-sm py-0.5 ${disabled ? "opacity-35" : ""}`}>
+      <button
+        type="button"
+        onClick={() => onChange(Math.min(7, num + 1))}
+        disabled={dead(num >= 7)}
+        aria-label="Sumar"
+        className={`${arrow} ${dead(num >= 7) ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:text-white"}`}
+      >
+        <ChevronUp size={14} />
+      </button>
+      <span className={`font-mono font-bold text-[21px] leading-none tabular-nums ${color}`}>{num}</span>
+      <button
+        type="button"
+        onClick={() => onChange(Math.max(0, num - 1))}
+        disabled={dead(num <= 0)}
+        aria-label="Restar"
+        className={`${arrow} ${dead(num <= 0) ? "opacity-25 cursor-not-allowed" : "cursor-pointer hover:text-white"}`}
+      >
+        <ChevronDown size={14} />
+      </button>
+    </div>
+  );
+}
+
+// ── Selector de formato + carga del marcador ──────────────────────────────────
+// Tablero: una fila por equipo, una columna por set — el mismo formato en que se
+// lee después el resultado. Controlado: `onChange` recibe el patch
+// { sets_format, sets, score1, score2 }. Lo comparten la liga y el cuadro.
+export function SetsScoring({ setsFormat = null, sets = [], score1 = 0, score2 = 0, onChange, row1, row2 }) {
   function pickFormat(fmt) {
-    if (fmt === null) {
-      setForm((f) => ({ ...f, sets_format: null, sets: [], score1: 0, score2: 0 }));
-    } else {
-      const empty = { s1: 0, s2: 0 };
-      const newSets = fmt === 1 ? [empty] : [empty, empty, empty];
-      setForm((f) => ({ ...f, sets_format: fmt, sets: newSets, score1: 0, score2: 0 }));
-    }
+    const empty = { s1: 0, s2: 0 };
+    const newSets = fmt === 1 ? [empty] : [empty, empty, empty];
+    onChange({ sets_format: fmt, sets: newSets, score1: 0, score2: 0 });
   }
 
   function updateSet(idx, field, val) {
-    setForm((f) => {
-      const sets = f.sets.map((s, i) => i === idx ? { ...s, [field]: val } : s);
-      const nv = visibleSetsCount(f.sets_format, sets);
-      const [sw1, sw2] = setsWon(sets.slice(0, nv));
-      return { ...f, sets, score1: sw1, score2: sw2 };
-    });
+    const next = sets.map((s, i) => i === idx ? { ...s, [field]: val } : s);
+    const [s1, s2] = scoreFromSets(setsFormat, next);
+    onChange({ sets_format: setsFormat, sets: next, score1: s1, score2: s2 });
   }
 
-  const { sets_format, sets = [] } = form;
-  const nVisible = visibleSetsCount(sets_format, sets);
-  const [sw1, sw2] = sets_format ? setsWon(sets.slice(0, nVisible)) : [form.score1, form.score2];
-  const matchDone = sets_format === 3 && (sw1 >= 2 || sw2 >= 2);
-  const canSave = sets_format === 1
-    ? (sw1 !== sw2)
-    : sets_format === 3
-      ? (sw1 >= 2 || sw2 >= 2)
-      : (form.score1 !== form.score2);
+  // Los tres sets se muestran desde el principio; los que todavía no se pueden
+  // jugar quedan inertes. Ir revelándolos movía la card debajo del dedo.
+  const nPlayable  = visibleSetsCount(setsFormat, sets);
+  const [sw1, sw2] = setsWon(sets.slice(0, nPlayable));
+  const withSets   = setsFormat != null;
+  const cols       = setsFormat === 3 ? 3 : 1;
+
+  const cellsFor = (side) => Array.from({ length: cols }, (_, i) => {
+    if (!withSets) {
+      const v = side === 1 ? score1 : score2;
+      return { key: 'simple', value: v, onChange: (x) => onChange({ [`score${side}`]: x }), won: null, off: false };
+    }
+    const s = sets[i] ?? { s1: 0, s2: 0 };
+    return {
+      key: i,
+      value: side === 1 ? s.s1 : s.s2,
+      onChange: (x) => updateSet(i, side === 1 ? 's1' : 's2', x),
+      won: setWinner(s) === side,
+      off: i >= nPlayable,
+    };
+  });
+
+  const rowLabel = (content, accent) => (
+    <div className={`flex items-center gap-2 min-w-0 pr-1 font-condensed font-semibold text-[14px] ${accent}`}>
+      {content}
+    </div>
+  );
+
+  const grid = { gridTemplateColumns: `minmax(0,1fr) repeat(${cols}, var(--cell))` };
 
   return (
-    <div className="mt-4">
-      {/* Header VS */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">{team1Avatar}</div>
-        <span className="font-condensed font-bold text-[15px] text-border-strong tracking-[3px] mx-2">VS</span>
-        <div className="flex items-center gap-2">{team2Avatar}</div>
-      </div>
-
-      {/* Selector de formato */}
-      <div className="flex gap-2 justify-center mb-4">
+    <div className="min-w-0">
+      <div className="flex gap-2 mb-3">
         {[1, 3].map((fmt) => (
-          <button key={fmt} onClick={() => pickFormat(fmt)}
+          <button key={fmt} type="button" onClick={() => pickFormat(fmt)}
             className={`px-3 py-1.5 text-[11px] font-mono font-bold tracking-[1.5px] rounded-sm border cursor-pointer transition-colors ${
-              sets_format === fmt
+              setsFormat === fmt
                 ? "bg-brand text-base border-brand"
                 : "bg-transparent text-muted border-border-mid"
             }`}>
@@ -259,57 +359,58 @@ function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar,
         ))}
       </div>
 
-      {/* Área de puntuación */}
-      {sets_format == null ? (
-        <div className="flex gap-4 justify-center items-center">
-          <ScoreCounter value={form.score1} onChange={(v) => setForm((f) => ({ ...f, score1: v }))} color="text-brand" />
-          <span className="text-muted font-mono text-[20px]">|</span>
-          <ScoreCounter value={form.score2} onChange={(v) => setForm((f) => ({ ...f, score2: v }))} color="text-cyan" />
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {Array.from({ length: nVisible }, (_, i) => {
-            const s = sets[i] ?? { s1: 0, s2: 0 };
-            const w = setWinner(s);
-            return (
-              <div key={i}>
-                <div className="text-[11px] tracking-[2px] font-mono text-center mb-2">
-                  <span className="text-muted">SET {i + 1}</span>
-                  {w && <span className={`ml-2 font-bold ${w === 1 ? "text-brand" : "text-cyan"}`}>✓</span>}
-                </div>
-                <div className="flex gap-4 justify-center items-center">
-                  <ScoreCounter value={s.s1} onChange={(v) => updateSet(i, "s1", v)} color="text-brand" />
-                  <span className="text-muted font-mono text-[20px]">—</span>
-                  <ScoreCounter value={s.s2} onChange={(v) => updateSet(i, "s2", v)} color="text-cyan" />
-                </div>
+      <div className="grid gap-x-1 sm:gap-x-1.5 gap-y-1.5 items-center [--cell:2.25rem] sm:[--cell:2.75rem]" style={grid}>
+        {cols > 1 && (
+          <>
+            <div />
+            {Array.from({ length: cols }, (_, i) => (
+              <div key={i} className={`text-center text-[10px] font-mono tracking-widest ${i >= nPlayable ? 'text-dim/40' : 'text-dim'}`}>
+                S{i + 1}
               </div>
-            );
-          })}
-          {matchDone && sets_format === 3 && (
-            <p className="text-center font-mono text-[11px] text-muted tracking-widest">
-              RESULTADO: {sw1} — {sw2} EN SETS
-            </p>
-          )}
-        </div>
-      )}
+            ))}
+          </>
+        )}
 
-      {/* <div className="mt-3 flex justify-center">
-        <input type="date"
-          className="bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[13px] rounded-sm outline-none w-auto"
-          value={form.date}
-          onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-        />
-      </div> */}
+        {rowLabel(row1, 'text-brand')}
+        {cellsFor(1).map((c, i) => (
+          <ScoreCell key={`a${c.key}${i}`} value={c.value} onChange={c.onChange} disabled={c.off}
+            color={c.won === false ? 'text-secondary' : 'text-brand'} />
+        ))}
 
-      <div className="flex gap-2.5 mt-4">
-        <button onClick={onSave} disabled={!canSave}
-          className={`text-base border-0 flex-1 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm ${!canSave ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand cursor-pointer"}`}>
-          {isEditing ? "GUARDAR CAMBIOS" : "REGISTRAR PARTIDO"}
-        </button>
-        <button onClick={onCancel} className="bg-transparent text-muted border border-border-strong px-3 py-2 text-[12px] cursor-pointer rounded-sm font-sans">
-          Cancelar
-        </button>
+        {rowLabel(row2, 'text-cyan')}
+        {cellsFor(2).map((c, i) => (
+          <ScoreCell key={`b${c.key}${i}`} value={c.value} onChange={c.onChange} disabled={c.off}
+            color={c.won === false ? 'text-secondary' : 'text-cyan'} />
+        ))}
       </div>
+
+      {setsFormat === 3 && (sw1 >= 2 || sw2 >= 2) && (
+        <p className="font-mono text-[11px] text-muted tracking-widest mt-2.5">
+          RESULTADO: {sw1} — {sw2} EN SETS
+        </p>
+      )}
+    </div>
+  );
+}
+
+// ¿El marcador cargado alcanza para guardar? Sin sets, que no sea empate.
+function canSaveMatch(form) {
+  return form.sets_format
+    ? setsResultReady(form.sets_format, form.sets ?? [])
+    : form.score1 !== form.score2;
+}
+
+// ── Guardar / cancelar ────────────────────────────────────────────────────────
+function FormActions({ isEditing, canSave, onSave, onCancel }) {
+  return (
+    <div className="flex gap-2.5 mt-4">
+      <button onClick={onSave} disabled={!canSave}
+        className={`text-base border-0 flex-1 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm ${!canSave ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand cursor-pointer"}`}>
+        {isEditing ? "GUARDAR CAMBIOS" : "REGISTRAR PARTIDO"}
+      </button>
+      <button onClick={onCancel} className="bg-transparent text-muted border border-border-strong px-3 py-2 text-[12px] cursor-pointer rounded-sm font-sans">
+        Cancelar
+      </button>
     </div>
   );
 }
@@ -394,49 +495,57 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
       {cancelModal}
       <MatchCardHeader isEditing={isEditing} onCancel={requestCancel} timer={timerEl}
         onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
-      <div className="flex gap-3 flex-wrap">
-        <TeamBox label="PAREJA 1" accent="brand">
-          <select className="w-full bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-            value={form.team1Pair || ""} onChange={(e) => setForm({ ...form, team1Pair: e.target.value })}>
-            <option value="">Seleccionar pareja</option>
-            {selectablePairs.map((p) => (
-              <option
-                key={p.id}
-                value={p.id}
-                disabled={p.id === form.team2Pair || (isAtLimit(p.id) && p.id !== form.team1Pair)}
-              >
-                {pairOptionLabel(p.id)}
-              </option>
-            ))}
-          </select>
-        </TeamBox>
-        <TeamBox label="PAREJA 2" accent="cyan">
-          <select className="w-full bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-            value={form.team2Pair || ""} onChange={(e) => setForm({ ...form, team2Pair: e.target.value })}>
-            <option value="">Seleccionar pareja</option>
-            {selectablePairs.map((p) => (
-              <option
-                key={p.id}
-                value={p.id}
-                disabled={p.id === form.team1Pair || (isAtLimit(p.id) && p.id !== form.team2Pair)}
-              >
-                {pairOptionLabel(p.id)}
-              </option>
-            ))}
-          </select>
-        </TeamBox>
+      <div className={teamsComplete ? "grid gap-x-5 gap-y-4 sm:grid-cols-2 items-start" : ""}>
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className={`flex gap-3 flex-wrap ${teamsComplete ? "sm:flex-col" : ""}`}>
+            <TeamBox label="PAREJA 1" accent="brand">
+              <select className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
+                value={form.team1Pair || ""} onChange={(e) => setForm({ ...form, team1Pair: e.target.value })}>
+                <option value="">Seleccionar pareja</option>
+                {selectablePairs.map((p) => (
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    disabled={p.id === form.team2Pair || (isAtLimit(p.id) && p.id !== form.team1Pair)}
+                  >
+                    {pairOptionLabel(p.id)}
+                  </option>
+                ))}
+              </select>
+            </TeamBox>
+            <TeamBox label="PAREJA 2" accent="cyan">
+              <select className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
+                value={form.team2Pair || ""} onChange={(e) => setForm({ ...form, team2Pair: e.target.value })}>
+                <option value="">Seleccionar pareja</option>
+                {selectablePairs.map((p) => (
+                  <option
+                    key={p.id}
+                    value={p.id}
+                    disabled={p.id === form.team1Pair || (isAtLimit(p.id) && p.id !== form.team2Pair)}
+                  >
+                    {pairOptionLabel(p.id)}
+                  </option>
+                ))}
+              </select>
+            </TeamBox>
+          </div>
+          {teamsComplete && tournamentCourts(tournament) > 1 && (
+            <CourtSelector courts={tournamentCourts(tournament)} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
+          )}
+        </div>
+
+        {teamsComplete && (
+          <SetsScoring
+            setsFormat={form.sets_format} sets={form.sets ?? []}
+            score1={form.score1} score2={form.score2}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            row1={<>{pairAvatarFor(form.team1Pair, 24)}<span className="truncate">{getPairLabel(form.team1Pair, pairs, players)}</span></>}
+            row2={<>{pairAvatarFor(form.team2Pair, 24)}<span className="truncate">{getPairLabel(form.team2Pair, pairs, players)}</span></>}
+          />
+        )}
       </div>
       {teamsComplete && (
-        <>
-          {tournament.number_of_courts > 1 && (
-            <CourtSelector courts={tournament.number_of_courts} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
-          )}
-          <ScoreSection
-            form={form} setForm={setForm} isEditing={isEditing} onSave={onSave} onCancel={requestCancel}
-            team1Avatar={pairAvatarFor(form.team1Pair)}
-            team2Avatar={pairAvatarFor(form.team2Pair)}
-          />
-        </>
+        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} onSave={onSave} onCancel={requestCancel} />
       )}
     </div>
   );
@@ -463,6 +572,9 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
   const isDirty = !!(allSelected.length || timerState?.startedAt != null
     || form.sets_format != null || form.score1 || form.score2 || form.court != null);
   const { requestCancel, cancelModal } = useCancelGuard({ isDirty, isEditing, onCancel });
+
+  const teamNames = (ids) =>
+    ids.map((id) => players.find((p) => p.id === id)?.name ?? "?").join(" & ");
 
   function teamAvatars(ids, size = 42) {
     const p1 = players.find((p) => p.id === ids[0]);
@@ -497,45 +609,53 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
       {cancelModal}
       <MatchCardHeader isEditing={isEditing} onCancel={requestCancel} timer={timerEl}
         onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
-      <div className="flex gap-3 flex-wrap">
-        <TeamBox label="EQUIPO 1" accent="brand">
-          {[0, 1].map((i) => (
-            <select key={i} className="w-full bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-              value={form.team1[i]} onChange={(e) => updateTeam("team1", i, e.target.value)}>
-              <option value="">Jugador {i + 1}</option>
-              {selectablePlayers.map((p) => (
-                <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team1[i] !== p.id}>
-                  {p.name}
-                </option>
+      <div className={teamsComplete ? "grid gap-x-5 gap-y-4 sm:grid-cols-2 items-start" : ""}>
+        <div className="flex flex-col gap-3 min-w-0">
+          <div className={`flex gap-3 flex-wrap ${teamsComplete ? "sm:flex-col" : ""}`}>
+            <TeamBox label="EQUIPO 1" accent="brand">
+              {[0, 1].map((i) => (
+                <select key={i} className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
+                  value={form.team1[i]} onChange={(e) => updateTeam("team1", i, e.target.value)}>
+                  <option value="">Jugador {i + 1}</option>
+                  {selectablePlayers.map((p) => (
+                    <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team1[i] !== p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               ))}
-            </select>
-          ))}
-        </TeamBox>
-        <TeamBox label="EQUIPO 2" accent="cyan">
-          {[0, 1].map((i) => (
-            <select key={i} className="w-full bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-              value={form.team2[i]} onChange={(e) => updateTeam("team2", i, e.target.value)}>
-              <option value="">Jugador {i + 1}</option>
-              {selectablePlayers.map((p) => (
-                <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team2[i] !== p.id}>
-                  {p.name}
-                </option>
+            </TeamBox>
+            <TeamBox label="EQUIPO 2" accent="cyan">
+              {[0, 1].map((i) => (
+                <select key={i} className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
+                  value={form.team2[i]} onChange={(e) => updateTeam("team2", i, e.target.value)}>
+                  <option value="">Jugador {i + 1}</option>
+                  {selectablePlayers.map((p) => (
+                    <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team2[i] !== p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
               ))}
-            </select>
-          ))}
-        </TeamBox>
+            </TeamBox>
+          </div>
+          {teamsComplete && tournamentCourts(tournament) > 1 && (
+            <CourtSelector courts={tournamentCourts(tournament)} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
+          )}
+        </div>
+
+        {teamsComplete && (
+          <SetsScoring
+            setsFormat={form.sets_format} sets={form.sets ?? []}
+            score1={form.score1} score2={form.score2}
+            onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+            row1={<>{teamAvatars(form.team1, 24)}<span className="truncate">{teamNames(form.team1)}</span></>}
+            row2={<>{teamAvatars(form.team2, 24)}<span className="truncate">{teamNames(form.team2)}</span></>}
+          />
+        )}
       </div>
       {teamsComplete && (
-        <>
-          {tournament.number_of_courts > 1 && (
-            <CourtSelector courts={tournament.number_of_courts} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
-          )}
-          <ScoreSection
-            form={form} setForm={setForm} isEditing={isEditing} onSave={onSave} onCancel={requestCancel}
-            team1Avatar={teamAvatars(form.team1)}
-            team2Avatar={teamAvatars(form.team2)}
-          />
-        </>
+        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} onSave={onSave} onCancel={requestCancel} />
       )}
     </div>
   );

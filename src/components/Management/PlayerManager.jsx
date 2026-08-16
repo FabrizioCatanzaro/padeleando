@@ -4,7 +4,8 @@ import PlayerInput from "../Setup/PlayerInput";
 import Modal from "../shared/Modal";
 import PlayerAvatar from "../shared/PlayerAvatar";
 import ActionMenu from "../shared/ActionMenu";
-import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink } from "lucide-react";
+import CollapsibleSection from "../shared/CollapsibleSection";
+import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink, Link2, Copy } from "lucide-react";
 import { api } from "../../utils/api";
 import { useAuth } from "../../context/useAuth";
 
@@ -19,6 +20,8 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
 
   // Estado de invitaciones por jugador: { [playerId]: { open, identifier, sending, error } }
   const [inviteState, setInviteState] = useState({});
+  const [linkFor, setLinkFor] = useState(null); // { playerId, url }
+  const [copied,  setCopied]  = useState(false);
   const { isLoggedIn } = useAuth();
 
   function handleAdd() {
@@ -62,6 +65,28 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
     }
   }
 
+  // Para quien no tiene cuenta: en vez de una invitación que nadie recibe, un
+  // link que puede abrir, registrarse y quedar vinculado de una.
+  async function createLink(player) {
+    const state = inviteState[player.id];
+    if (state?.sending) return;
+    setInviteState(s => ({ ...s, [player.id]: { ...s[player.id], sending: true, error: null } }));
+    try {
+      const { url } = await api.invitations.createLink(player.id, tournament.group_id);
+      setLinkFor({ playerId: player.id, url });
+      closeInvite(player.id);
+      await onRefresh?.();
+    } catch (e) {
+      // El panel se abre para que el error se vea también cuando el link se pidió desde el menú.
+      setInviteState(s => ({ ...s, [player.id]: { ...s[player.id], open: true, sending: false, error: e.message } }));
+    }
+  }
+
+  async function copyLink(url) {
+    try { await navigator.clipboard.writeText(url); setCopied(true); setTimeout(() => setCopied(false), 2000); }
+    catch { /* sin portapapeles: el input queda para copiar a mano */ }
+  }
+
   // Desvincula la cuenta del slot sin borrar al jugador: el nombre y los partidos
   // se quedan en la categoría, sólo dejan de contar en el perfil de esa cuenta.
   async function confirmUnlink() {
@@ -92,6 +117,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
     const items = [];
     if (isLoggedIn && !p.user_id && !p.invitation_status) {
       items.push({ label: "Vincular usuario", icon: <UserPlus size={15} />, onClick: () => openInvite(p.id) });
+      items.push({ label: "Generar link de invitación", icon: <Link2 size={15} />, onClick: () => createLink(p) });
     }
     if (p.user_id) {
       items.push({ label: "Desvincular cuenta", icon: <Unlink size={15} />, onClick: () => setUnlinkTarget(p) });
@@ -105,19 +131,21 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
   }
 
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-4 mb-4">
-      <div className="flex justify-between items-center mb-3">
-        <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted">
-          JUGADORES
-          <span className="ml-2 text-brand">{tournament.players.filter((p) => !p.removed).length}</span>
-        </div>
-        {isOwner && (
-          <button onClick={() => setShowAdd(!showAdd)} className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap">
-            {showAdd ? "Cancelar" : "+ Agregar"}
-          </button>
-        )}
-      </div>
-
+    <>
+    <CollapsibleSection
+      storageKey="pd:mgmt:players"
+      title="JUGADORES"
+      count={tournament.players.filter((p) => !p.removed).length}
+      className="mb-4"
+      actions={isOwner ? (expand) => (
+        <button
+          onClick={() => { expand(); setShowAdd(!showAdd); }}
+          className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap"
+        >
+          {showAdd ? "Cancelar" : "+ Agregar"}
+        </button>
+      ) : null}
+    >
       {showAdd && (
         <div className="flex gap-2 mb-3">
           <PlayerInput
@@ -186,13 +214,22 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
                     <div className="hidden sm:flex items-center">
                       {/* Botón invitar: solo si no está vinculado y no hay invitación pendiente */}
                       {isLoggedIn && !p.user_id && !p.invitation_status && (
-                        <div
-                          onClick={() => openInvite(p.id)}
-                          title="Invitar usuario registrado"
-                          className="bg-transparent border-0 text-muted cursor-pointer px-1.5 py-0.5 hover:text-brand transition-colors"
-                        >
-                          <UserPlus size={14} />
-                        </div>
+                        <>
+                          <div
+                            onClick={() => openInvite(p.id)}
+                            title="Invitar usuario registrado"
+                            className="bg-transparent border-0 text-muted cursor-pointer px-1.5 py-0.5 hover:text-brand transition-colors"
+                          >
+                            <UserPlus size={14} />
+                          </div>
+                          <div
+                            onClick={() => createLink(p)}
+                            title="Generar link de invitación"
+                            className="bg-transparent border-0 text-muted cursor-pointer px-1.5 py-0.5 hover:text-brand transition-colors"
+                          >
+                            <Link2 size={14} />
+                          </div>
+                        </>
                       )}
                       {/* Desvincular la cuenta del slot (el jugador y su historial quedan) */}
                       {p.user_id && (
@@ -262,6 +299,47 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
                 {inviteState[p.id]?.error && (
                   <div className="text-[11px] text-danger font-mono">{inviteState[p.id].error}</div>
                 )}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[10px] text-dim font-mono">
+                    Al aceptar, sus partidos en toda la categoría cuentan en su perfil.
+                  </span>
+                  <button
+                    onClick={() => createLink(p)}
+                    disabled={inviteState[p.id]?.sending}
+                    className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 text-[11px] font-mono cursor-pointer rounded-sm hover:text-brand hover:border-brand transition disabled:opacity-50"
+                  >
+                    <Link2 size={12} /> ¿No tiene cuenta?
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Link de invitación generado */}
+            {linkFor?.playerId === p.id && (
+              <div className="flex flex-col gap-2 pt-1 border-t border-border-mid mt-1">
+                <div className="text-[11px] text-brand font-mono">
+                  Link de invitación de <span className="text-content">{p.name}</span> · se acepta una sola vez
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    readOnly
+                    value={linkFor.url}
+                    onFocus={(e) => e.target.select()}
+                    className="flex-1 min-w-0 bg-surface border border-border-mid text-content px-3 py-2 font-mono text-[12px] rounded-sm outline-none"
+                  />
+                  <button
+                    onClick={() => copyLink(linkFor.url)}
+                    className="flex items-center gap-1.5 bg-brand text-base border-0 px-4 py-2 font-condensed font-bold text-[12px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap"
+                  >
+                    {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? 'Copiado' : 'Copiar'}
+                  </button>
+                  <div
+                    onClick={() => setLinkFor(null)}
+                    className="flex items-center bg-transparent border border-border-strong text-muted px-2 py-2 text-[12px] cursor-pointer rounded-sm"
+                  >
+                    <X size={14} />
+                  </div>
+                </div>
               </div>
             )}
           </div>
@@ -290,6 +368,8 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
         </div>
       )}
 
+      </CollapsibleSection>
+
       {deleteTarget && (
         <Modal
           title={`¿Eliminar a ${deleteTarget.name}?`}
@@ -316,6 +396,6 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
           onCancel={() => setUnlinkTarget(null)}
         />
       )}
-    </div>
+    </>
   );
 }

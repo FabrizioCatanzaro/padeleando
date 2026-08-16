@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef } from "react";
-import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount } from "../../utils/helpers";
+import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
 import MatchCard from "./MatchCard";
 import MatchForm from "./MatchForm";
 import Modal from "../shared/Modal";
@@ -126,11 +126,10 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
     if (!liveMatch) return;
     const { form } = liveMatch;
 
-    // Si hay sets_format, usar los scores del set; si no, usar form.score1/score2
+    // A 1 set el marcador son los juegos de ese set; a 3, los sets ganados.
     let s1, s2;
-    if (form.sets_format && form.sets?.[0]) {
-      s1 = parseInt(form.sets[0].s1);
-      s2 = parseInt(form.sets[0].s2);
+    if (form.sets_format) {
+      [s1, s2] = scoreFromSets(form.sets_format, form.sets ?? []);
     } else {
       s1 = parseInt(form.score1);
       s2 = parseInt(form.score2);
@@ -187,11 +186,10 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
   async function handleSaveEdit() {
     if (!editId || !editForm) return;
 
-    // Si hay sets_format, usar los scores del set; si no, usar editForm.score1/score2
+    // A 1 set el marcador son los juegos de ese set; a 3, los sets ganados.
     let s1, s2;
-    if (editForm.sets_format && editForm.sets?.[0]) {
-      s1 = parseInt(editForm.sets[0].s1);
-      s2 = parseInt(editForm.sets[0].s2);
+    if (editForm.sets_format) {
+      [s1, s2] = scoreFromSets(editForm.sets_format, editForm.sets ?? []);
     } else {
       s1 = parseInt(editForm.score1);
       s2 = parseInt(editForm.score2);

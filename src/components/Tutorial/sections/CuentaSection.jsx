@@ -9,7 +9,7 @@ export default function CuentaSection() {
       title="Tu cuenta y tu seguridad"
       description="Todo lo que tiene que ver con el acceso a tu cuenta: cómo entrás, cómo recuperás el acceso si lo perdés y qué pasa si decidís irte."
     >
-      <TutorialMedia caption="Sección de cuenta en el perfil" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159222/tutorial/cuenta.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Eliminar la cuenta, desde tu perfil" name="perfil-eliminar-cuenta" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Cómo entrás
@@ -18,7 +18,7 @@ export default function CuentaSection() {
         items={[
           'Con email y contraseña, o con tu cuenta de Google.',
           'Tu nombre de usuario es lo que forma la dirección de tu perfil público. Al registrarte te sugerimos uno libre y te avisamos en el momento si el que elegís ya está tomado.',
-          'La sesión se mantiene sola mientras usás la app.',
+          'La sesión se mantiene abierta mientras usás la app. Si pasás mucho tiempo sin actividad, se cierra automáticamente y tenés que volver a entrar.',
         ]}
       />
 
@@ -47,8 +47,7 @@ export default function CuentaSection() {
         Eliminar tu cuenta
       </h3>
       <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-        Se hace desde tu perfil y es permanente. Para que el borrado no rompa el historial de otra
-        gente, funciona así:
+        Se hace desde tu perfil y es permanente. Para que el borrado no rompa el historial de otros jugadores, funciona así:
       </p>
       <Bullets
         items={[
@@ -61,7 +60,7 @@ export default function CuentaSection() {
 
       <Note>
         Si organizás una categoría que sigue activa, conviene transferirla antes de borrar la
-        cuenta. Así queda en manos de alguien del grupo en vez de bajo una cuenta anónima.
+        cuenta. Así queda en manos de alguien que conocés en vez de bajo una cuenta anónima (es irreversible).
       </Note>
     </TutorialSection>
   )

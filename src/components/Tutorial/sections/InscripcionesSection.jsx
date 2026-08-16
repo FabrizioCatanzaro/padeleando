@@ -11,7 +11,7 @@ export default function InscripcionesSection() {
       steps={[
         {
           label: 'Activá la inscripción',
-          text: 'Marcá "Mostrar precio y contacto para inscribirse". Sin eso, no se muestra nada en la vista pública.',
+          text: 'Marcá "Mostrar precio y contacto para inscribirse" cuando creas un torneo o editas uno existente. Sin eso, no se muestra nada en la vista pública.',
         },
         {
           label: 'Cargá el precio',
@@ -27,15 +27,15 @@ export default function InscripcionesSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Barra de inscripción en la vista pública del torneo" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159273/tutorial/vista-publica.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Barra de inscripción en la vista pública del torneo" name="banner-inscripcion" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Dónde se configura
       </h3>
       <Bullets
         items={[
-          'En la categoría, al editarla: sirve de valor por defecto para todos los torneos nuevos.',
-          'Al crear un torneo: lo que cargues ahí vale sólo para esa fecha.',
+          'En la categoría, al crearla o editarla: sirve de valor por defecto para todos los torneos nuevos.',
+          'Al crear un torneo: lo que cargues ahí vale sólo para ese torneo, no afecta a los demás torneos.',
           'En la gestión de un torneo ya creado: para corregir el precio o el contacto sobre la marcha.',
         ]}
       />
@@ -44,14 +44,14 @@ export default function InscripcionesSection() {
         Cómo funciona la herencia
       </h3>
       <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-        Cada torneo hereda de la categoría, campo por campo. Lo que dejás vacío en el torneo usa
-        el valor de la categoría, y lo que cargás lo pisa sólo para esa fecha. En el formulario, los
+        Cada torneo hereda la inscripción de la categoría, campo por campo. Lo que dejás vacío en el torneo usa
+        el valor de la categoría, y lo que cargás lo pisa sólo para ese torneo. En el formulario, los
         campos heredados te muestran el valor de la categoría en gris como referencia.
       </p>
       <Bullets
         items={[
           'Cambiás el precio en la categoría → cambia en todos los torneos que no tengan uno propio.',
-          'Ponés otro precio en un torneo puntual → esa fecha queda con el suyo y el resto no se toca.',
+          'Ponés otro precio en un torneo puntual → ese torneo queda con el suyo y el resto no se toca.',
           'Borrás el precio de un torneo → vuelve a heredar el de la categoría.',
         ]}
       />
@@ -62,7 +62,7 @@ export default function InscripcionesSection() {
       </Note>
 
       <p className="text-content text-[14px] font-sans leading-relaxed">
-        La barra es pública a propósito: se ve sin tener cuenta, así puede escribirte también
+        La barra de inscripción es pública a propósito: se ve sin tener cuenta, así puede escribirte también
         alguien que todavía no está registrado.
       </p>
     </TutorialSection>

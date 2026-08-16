@@ -25,11 +25,11 @@ export default function CrearCategoriaSection() {
         },
         {
           label: 'Crear torneos',
-          text: 'Dentro de una CATEGORÍA podés crear tantos TORNEOS como quieras. Cada torneo es una como una fecha de la categoría, por ejemplo: La categoría se puede llamar CABALLEROS 8VA y los torneos pueden ser: "Fecha 1", "18/12/2022", etc. Para entender más acerca de los torneos y cómo crearlos, revisá la sección "Crear un torneo" de este tutorial.',
+          text: 'Dentro de una CATEGORÍA podés crear tantos TORNEOS como quieras (según el plan). Cada torneo es una como una fecha de la categoría, por ejemplo: La categoría se puede llamar CABALLEROS 8VA y los torneos pueden ser: "Fecha 1", "18/12/2022", etc. Para entender más acerca de los torneos y cómo crearlos, revisá la sección "Crear un torneo" de este tutorial.',
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de creación de categoría" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159752/tutorial/crear-categoria-1.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de creación de categoría" name="nueva-categoria-informacion" />
     </TutorialSection>
   )
 }

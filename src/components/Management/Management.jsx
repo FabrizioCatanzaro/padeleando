@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Modal from "../shared/Modal";
+import FinishTournamentModal from "../shared/FinishTournamentModal";
 import PlayerManager from "./PlayerManager";
 import PairManager from "./PairManager";
 import ClubSelector from "../shared/ClubSelector";
@@ -116,6 +117,7 @@ export default function Management({
   const [resetInput, setResetInput]   = useState('');
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
+  const [finishModal, setFinishModal] = useState(false);
 
   const activePlayers = tournament.players.filter((p) => !p.removed).length;
   const showModeToggle = tournament.format === 'liga' && activePlayers >= 4;
@@ -195,13 +197,21 @@ export default function Management({
             </Btn>
             <Btn
               icon={tournament.status === 'active' ? TicketCheck : Play}
-              onClick={() => onToggleStatus()}
+              onClick={() => tournament.status === 'active' ? setFinishModal(true) : onToggleStatus()}
               className={tournament.status === 'active' ? 'text-brand border-brand/40' : 'text-green border-green/40'}
             >
               {tournament.status === 'active' ? 'Finalizar torneo' : 'Reanudar torneo'}
             </Btn>
           </div>
         </div>
+      )}
+
+      {finishModal && (
+        <FinishTournamentModal
+          tournament={tournament}
+          onConfirm={() => { onToggleStatus(); setFinishModal(false); }}
+          onCancel={() => setFinishModal(false)}
+        />
       )}
 
       {resetModal && (

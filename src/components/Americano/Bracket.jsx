@@ -1,12 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trophy, Pencil, Trash2, Info } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-import { courtLabel, AMERICANO_MIN_PAIRS } from "../../utils/helpers";
-import { Timer, ScoreCounter, CourtSelector, MatchCardHeader, MinimizedMatch } from "../Matches/MatchForm";
+import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
+import { Timer, CourtSelector, MatchCardHeader, MinimizedMatch, SetsScoring } from "../Matches/MatchForm";
 import Modal from "../shared/Modal";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
 import BracketStory from "../Snapshot/BracketStory";
+import MatchScoreboard from "../shared/MatchScoreboard";
 
 const PHASE_TITLE = { octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL" };
 const SLOT_LABEL  = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final" };
@@ -55,6 +56,40 @@ function SeedChip({ seed }) {
   return (
     <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-mono font-bold shrink-0 ${tone}`}>
       {seed}
+    </span>
+  );
+}
+
+// Marcador de una pareja dentro del nodo del cuadro: un número por set jugado,
+// o el resultado solo cuando el partido no se cargó por sets.
+function NodeScore({ match, side }) {
+  const sets     = match.sets ?? [];
+  const nVisible = match.sets_format === 3 ? visibleSetsCount(3, sets) : 0;
+  const wonMatch = match.winner_id === match[`pair${side}_id`];
+
+  if (nVisible === 0) {
+    return (
+      <span className={`font-mono font-bold text-[18px] ml-2 shrink-0 ${wonMatch ? "text-brand" : "text-muted"}`}>
+        {match[`score${side}`]}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex ml-2 shrink-0 font-mono font-bold text-[13px] tabular-nums">
+      {sets.slice(0, nVisible).map((s, i) => {
+        const w = setWinner(s);
+        return (
+          <span
+            key={i}
+            className={`w-[18px] text-center ${i > 0 ? "border-l border-border-mid" : ""} ${
+              w === side ? "text-brand" : "text-dim"
+            }`}
+          >
+            {side === 1 ? s.s1 : s.s2}
+          </span>
+        );
+      })}
     </span>
   );
 }
@@ -187,11 +222,7 @@ function BracketMatchCard({
             />
           )}
         </div>
-        {isPlayed && (
-          <span className={`font-mono font-bold text-[18px] ml-2 shrink-0 ${
-            match.winner_id === match.pair1_id ? "text-brand" : "text-muted"
-          }`}>{match.score1}</span>
-        )}
+        {isPlayed && <NodeScore match={match} side={1} />}
       </div>
 
       <div className="border-t border-border my-1" />
@@ -211,11 +242,7 @@ function BracketMatchCard({
             />
           )}
         </div>
-        {isPlayed && (
-          <span className={`font-mono font-bold text-[18px] ml-2 shrink-0 ${
-            match.winner_id === match.pair2_id ? "text-brand" : "text-muted"
-          }`}>{match.score2}</span>
-        )}
+        {isPlayed && <NodeScore match={match} side={2} />}
       </div>
 
       {/* Cancha */}
@@ -263,12 +290,15 @@ function BracketByeCard({ bye }) {
 }
 
 // ── Card de partido EN VIVO (debajo del cuadro) ────────────────────────────────
-function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, onScoreChange, onSave, onCancel, onTimerChange }) {
-  const { score1, score2, court } = liveMatch.score;
+function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, onScoreChange, onScorePatch, onSave, onCancel, onTimerChange }) {
+  const { score1, score2, court, sets_format = null, sets = [] } = liveMatch.score;
   const [minimized, setMinimized] = useState(false);
   const [confirming, setConfirming] = useState(false);
 
-  const isDirty = !!(liveMatch.timer?.startedAt != null || Number(score1) || Number(score2) || court != null);
+  const resultReady = sets_format
+    ? setsResultReady(sets_format, sets)
+    : Number(score1) !== Number(score2);
+  const isDirty = !!(liveMatch.timer?.startedAt != null || Number(score1) || Number(score2) || court != null || sets_format);
   const requestCancel = () => { if (isDirty) setConfirming(true); else onCancel(); };
 
   const timerEl = (
@@ -319,21 +349,27 @@ function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, o
         </div>
       </div>
 
-      {tournament.number_of_courts > 1 && (
-        <CourtSelector courts={tournament.number_of_courts} value={liveMatch.score.court} onChange={v => onScoreChange('court', v)} />
+      {tournamentCourts(tournament) > 1 && (
+        <CourtSelector courts={tournamentCourts(tournament)} value={liveMatch.score.court} onChange={v => onScoreChange('court', v)} />
       )}
 
-      <div className="flex gap-4 justify-center items-center mt-4">
-        <ScoreCounter value={score1} onChange={v => onScoreChange('score1', v)} color="text-brand" />
-        <span className="text-muted font-mono text-[20px]">—</span>
-        <ScoreCounter value={score2} onChange={v => onScoreChange('score2', v)} color="text-cyan" />
+      <div className="mt-4">
+        <SetsScoring
+          setsFormat={liveMatch.score.sets_format ?? null}
+          sets={liveMatch.score.sets ?? []}
+          score1={score1}
+          score2={score2}
+          onChange={onScorePatch}
+          row1={<><span className="truncate">{bracketMatch.pair1_name}</span></>}
+          row2={<><span className="truncate">{bracketMatch.pair2_name}</span></>}
+        />
       </div>
 
       <button
         onClick={onSave}
-        disabled={saving || Number(score1) === Number(score2)}
+        disabled={saving || !resultReady}
         className={`w-full border-0 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm mt-4 ${
-          saving || Number(score1) === Number(score2)
+          saving || !resultReady
             ? "bg-border-mid text-muted cursor-not-allowed"
             : "bg-brand text-base cursor-pointer"
         }`}
@@ -354,22 +390,20 @@ function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchN
         <span className="tracking-[2px] text-brand/80">{phase ? (PHASE_TITLE[phase] ?? phase) : ""}</span>
         <span className="tracking-[1px] text-muted">Cancha: {court != null && court !== '-' ? court : 'S/A'}</span>
       </div>
-      <div className="flex items-center gap-3 flex-wrap">
+      <div className="flex items-start gap-3">
         {matchNum != null && (
-          <span className="text-[10px] font-mono text-muted shrink-0 w-3 text-right">#{matchNum}</span>
+          <span className="text-[10px] font-mono text-muted shrink-0 w-3 text-right mt-1.5">#{matchNum}</span>
         )}
-        {/* Mismo criterio que MatchCard: 16px en mobile para que el nombre de la
-            pareja no envuelva en 3-4 líneas y estire la card. */}
-        <div className={`flex-1 font-condensed font-semibold text-base sm:text-xl leading-tight ${win1 ? "text-brand" : "text-secondary"}`}>
-          {match.pair1_name}
-        </div>
-        <div className="flex items-center gap-2 font-condensed font-black text-[28px] min-w-20 justify-center">
-          <span className={win1 ? "text-brand" : "text-secondary"}>{match.score1}</span>
-          <span className="text-border-strong text-[20px]">—</span>
-          <span className={!win1 ? "text-cyan" : "text-secondary"}>{match.score2}</span>
-        </div>
-        <div className={`flex-1 font-condensed font-semibold text-base sm:text-xl leading-tight text-right ${!win1 ? "text-cyan" : "text-secondary"}`}>
-          {match.pair2_name}
+        <div className="flex-1 min-w-0">
+          <MatchScoreboard
+            label1={match.pair1_name}
+            label2={match.pair2_name}
+            score1={match.score1}
+            score2={match.score2}
+            sets={match.sets ?? []}
+            setsFormat={match.sets_format ?? null}
+            win1={win1}
+          />
         </div>
       </div>
       {isOwner && (
@@ -393,8 +427,11 @@ function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchN
 }
 
 // ── Formulario de edición de resultado jugado ──────────────────────────────────
-function BracketEditCard({ match, tournament, saving, editScore, onScoreChange, onSave, onCancel }) {
+function BracketEditCard({ match, tournament, saving, editScore, onScoreChange, onScorePatch, onSave, onCancel }) {
   const s1 = Number(editScore.score1), s2 = Number(editScore.score2);
+  const resultReady = editScore.sets_format
+    ? setsResultReady(editScore.sets_format, editScore.sets ?? [])
+    : s1 !== s2;
   return (
     <div className="bg-surface border border-brand/40 rounded-lg p-5 mb-4">
       <div className="flex items-center justify-between mb-4">
@@ -414,19 +451,23 @@ function BracketEditCard({ match, tournament, saving, editScore, onScoreChange, 
           {pairAvatarFor(match.pair2_id, tournament, 26)}
         </div>
       </div>
-      <div className="flex gap-4 justify-center items-center">
-        <ScoreCounter value={s1} onChange={v => onScoreChange('score1', v)} color="text-brand" />
-        <span className="text-muted font-mono text-[20px]">—</span>
-        <ScoreCounter value={s2} onChange={v => onScoreChange('score2', v)} color="text-cyan" />
-      </div>
-      {tournament.number_of_courts > 1 && (
-        <CourtSelector courts={tournament.number_of_courts} value={editScore.court} onChange={v => onScoreChange('court', v)} />
+      <SetsScoring
+        setsFormat={editScore.sets_format ?? null}
+        sets={editScore.sets ?? []}
+        score1={s1}
+        score2={s2}
+        onChange={onScorePatch}
+        row1={<><span className="truncate">{match.pair1_name}</span></>}
+        row2={<><span className="truncate">{match.pair2_name}</span></>}
+      />
+      {tournamentCourts(tournament) > 1 && (
+        <CourtSelector courts={tournamentCourts(tournament)} value={editScore.court} onChange={v => onScoreChange('court', v)} />
       )}
       <button
         onClick={onSave}
-        disabled={saving || s1 === s2}
+        disabled={saving || !resultReady}
         className={`w-full border-0 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm mt-4 ${
-          saving || s1 === s2 ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand text-base cursor-pointer"
+          saving || !resultReady ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand text-base cursor-pointer"
         }`}
       >
         {saving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
@@ -515,7 +556,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       setLiveMatches(prev => [...prev, {
         matchId,
         timer: EMPTY_TIMER,
-        score: { score1: 0, score2: 0, duration_seconds: null, court: null },
+        score: { score1: 0, score2: 0, duration_seconds: null, court: null, sets_format: null, sets: [] },
       }]);
     }
   }
@@ -530,10 +571,20 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     ));
   }
 
+  function handleScorePatch(matchId, patch) {
+    setLiveMatches(prev => prev.map(m =>
+      m.matchId === matchId ? { ...m, score: { ...m.score, ...patch } } : m
+    ));
+  }
+
   async function handleSaveResult(matchId) {
     const lm = liveMatches.find(m => m.matchId === matchId);
     if (!lm) return;
-    const s1 = Number(lm.score.score1), s2 = Number(lm.score.score2);
+    const fmt = lm.score.sets_format ?? null;
+    const nv  = fmt ? visibleSetsCount(fmt, lm.score.sets ?? []) : 0;
+    const [s1, s2] = fmt
+      ? scoreFromSets(fmt, lm.score.sets ?? [])
+      : [Number(lm.score.score1), Number(lm.score.score2)];
     if (s1 === s2) return;
 
     // Si el cronómetro está corriendo, detenerlo y calcular la duración
@@ -550,7 +601,10 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     else localStorage.removeItem(key);
     setSaving(matchId);
     try {
-      await onUpdateMatch(matchId, s1, s2, duration ?? null, lm.score.court ?? null);
+      await onUpdateMatch(matchId, s1, s2, duration ?? null, lm.score.court ?? null, false, {
+        sets_format: fmt,
+        sets: nv > 0 ? (lm.score.sets ?? []).slice(0, nv) : [],
+      });
     } finally {
       setSaving(null);
     }
@@ -558,15 +612,26 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
   function handleOpenEdit(match) {
     setEditMatchId(match.id);
-    setEditScore({ score1: match.score1, score2: match.score2, duration_seconds: match.duration_seconds ?? null, court: match.court ?? null });
+    setEditScore({
+      score1: match.score1, score2: match.score2,
+      duration_seconds: match.duration_seconds ?? null, court: match.court ?? null,
+      sets_format: match.sets_format ?? null, sets: match.sets ?? [],
+    });
   }
 
   async function handleSaveEdit() {
-    const s1 = Number(editScore.score1), s2 = Number(editScore.score2);
+    const fmt = editScore.sets_format ?? null;
+    const nv  = fmt ? visibleSetsCount(fmt, editScore.sets ?? []) : 0;
+    const [s1, s2] = fmt
+      ? scoreFromSets(fmt, editScore.sets ?? [])
+      : [Number(editScore.score1), Number(editScore.score2)];
     if (s1 === s2) return;
     setSaving(editMatchId);
     try {
-      await onUpdateMatch(editMatchId, s1, s2, editScore.duration_seconds ?? null, editScore.court ?? null, true);
+      await onUpdateMatch(editMatchId, s1, s2, editScore.duration_seconds ?? null, editScore.court ?? null, true, {
+        sets_format: fmt,
+        sets: nv > 0 ? (editScore.sets ?? []).slice(0, nv) : [],
+      });
       setEditMatchId(null);
     } finally {
       setSaving(null);
@@ -901,7 +966,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
             );
 
             return (
-              <div key={phase.key} className={`flex flex-col flex-1 ${editMode ? "min-w-52 max-w-64 lg:max-w-none" : "min-w-52 max-w-60 lg:max-w-none"}`}>
+              <div key={phase.key} className={`flex flex-col flex-1 ${editMode ? "min-w-60 max-w-72 lg:max-w-none" : "min-w-60 max-w-68 lg:max-w-none"}`}>
                 <div className="sticky top-0 z-10 bg-base text-[10px] tracking-[2px] text-brand font-mono text-center pt-1 pb-3">
                   {phase.label}
                 </div>
@@ -950,6 +1015,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                 tournament={tournament}
                 saving={saving === lm.matchId}
                 onScoreChange={(field, value) => handleScoreChange(lm.matchId, field, value)}
+                onScorePatch={(patch) => handleScorePatch(lm.matchId, patch)}
                 onSave={() => handleSaveResult(lm.matchId)}
                 onCancel={() => handleToggleLive(lm.matchId)}
                 onTimerChange={newTimer => handleTimerChange(lm.matchId, newTimer)}
@@ -975,6 +1041,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                   saving={saving === m.id}
                   editScore={editScore}
                   onScoreChange={(field, value) => setEditScore(prev => ({ ...prev, [field]: value }))}
+                  onScorePatch={(patch) => setEditScore(prev => ({ ...prev, ...patch }))}
                   onSave={handleSaveEdit}
                   onCancel={() => setEditMatchId(null)}
                 />

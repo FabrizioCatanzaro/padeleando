@@ -1,6 +1,7 @@
 import { Clock, Pencil, Trash2 } from "lucide-react";
-import { fmt, getPairLabel, setWinner, visibleSetsCount, courtLabel } from "../../utils/helpers";
+import { fmt, getPairLabel, courtLabel } from "../../utils/helpers";
 import Badge from "../shared/Badge";
+import MatchScoreboard from "../shared/MatchScoreboard";
 export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete, matchNum }) {
   const { team1, team2, score1, score2, date, createdAt, sets = [], sets_format } = match;
   const { players, pairs, mode } = tournament;
@@ -8,8 +9,7 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
   // Para 1 set mostramos el score del set, no los sets ganados (que sería 1-0)
   const displayS1 = sets_format === 1 ? (sets[0]?.s1 ?? score1) : score1;
   const displayS2 = sets_format === 1 ? (sets[0]?.s2 ?? score2) : score2;
-  const win1 = parseInt(displayS1) > parseInt(displayS2);
-  const nVisible = sets_format === 3 ? visibleSetsCount(sets_format, sets) : 0;
+  const win1 = parseInt(score1) > parseInt(score2);
 
   function getLabel(team) {
     if (mode === "pairs") {
@@ -31,37 +31,15 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
           <Badge variant="label" color="brand">CANCHA {courtLabel(tournament, match.court)}</Badge>
         )}
       </div>
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Los nombres de pareja son largos: a 20px envuelven en 3-4 líneas en
-            mobile y estiran la card. 16px hasta sm, 20px de ahí para arriba. */}
-        <div className={`flex-1 flex items-center gap-2 font-condensed font-semibold text-base sm:text-xl leading-tight ${win1 ? "text-brand" : "text-secondary"}`}>
-          {getLabel(team1)}
-        </div>
-        <div className="flex flex-col items-center gap-1 min-w-20 justify-center">
-          <div className="flex items-center gap-2 font-condensed font-black text-[28px]">
-            <span className={win1 ? "text-brand" : "text-secondary"}>{displayS1}</span>
-            <span className="text-border-strong text-[20px]">—</span>
-            <span className={!win1 ? "text-cyan" : "text-secondary"}>{displayS2}</span>
-          </div>
-          {nVisible > 0 && (
-            <div className="flex gap-2 font-mono text-[11px] text-muted">
-              {sets.slice(0, nVisible).map((s, i) => {
-                const w = setWinner(s);
-                return (
-                  <span key={i}>
-                    <span className={w === 1 ? "text-brand" : ""}>{s.s1}</span>
-                    <span>-</span>
-                    <span className={w === 2 ? "text-cyan" : ""}>{s.s2}</span>
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        <div className={`flex-1 flex items-center gap-2 font-condensed font-semibold text-base sm:text-xl leading-tight justify-end text-right ${!win1 ? "text-cyan" : "text-secondary"}`}>
-          {getLabel(team2)}
-        </div>
-      </div>
+      <MatchScoreboard
+        label1={getLabel(team1)}
+        label2={getLabel(team2)}
+        score1={displayS1}
+        score2={displayS2}
+        sets={sets}
+        setsFormat={sets_format}
+        win1={win1}
+      />
         <div className="flex flex-row gap-3 items-center justify-center text-xs text-muted font-mono mt-1 text-center">
           <Clock size={12} /> 
           {match.duration_seconds != null ? (

@@ -27,7 +27,7 @@ export default function TransferirSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Transferir la categoría, desde su menú" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159237/tutorial/menu-categoria.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Transferir la propiedad de la categoría" name="categoria-transferencia" />
 
       <Note>
         Es irreversible. Una vez que la otra persona acepta, no podés recuperar la propiedad por tu
