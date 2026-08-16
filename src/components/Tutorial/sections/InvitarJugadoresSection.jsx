@@ -55,8 +55,7 @@ export default function InvitarJugadoresSection() {
       />
 
       <Note>
-        Por privacidad, la invitación no te dice si esa cuenta existe o no: se guarda igual. Si la
-        persona no recibe nada, revisá que el usuario o el email estén bien escritos.
+        Si te equivocaste al vincular un jugador, podés desvincularlo desde la gestión de jugadores. Esto no borra los resultados ni afecta la tabla, sólo deja de acumularse en el perfil de esa cuenta.
       </Note>
     </TutorialSection>
   )

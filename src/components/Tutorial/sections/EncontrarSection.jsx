@@ -29,7 +29,7 @@ export default function EncontrarSection() {
         items={[
           'Cualquier categoría pública se puede agregar a favoritas.',
           'Quedan juntas en la pantalla principal, para entrar rápido a ver cómo va la fecha.',
-          'No hace falta jugar ahí: es para seguir la categoría de al lado, la de otra división o la del club.',
+          'No hace falta jugar ahí: es para seguir la categoría que organiza tu amigo, tu club favorito o lo que quieras.',
           'No podés marcar como favorita una categoría tuya, ni una privada.',
         ]}
       />
@@ -38,7 +38,7 @@ export default function EncontrarSection() {
         Cerca tuyo
       </h3>
       <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-        Si le das permiso de ubicación, la pantalla principal te muestra los clubes en un radio de
+        Si le das permiso de ubicación al navegador, la pantalla principal te muestra los clubes en un radio de
         20 km. Sirve para encontrar dónde se está jugando sin conocer a nadie todavía.
       </p>
 

@@ -16,14 +16,14 @@ export default function CargarPartidoSection() {
       </h3>
       <Bullets
         items={[
-          'Sin elegir formato: cargás directamente los games de cada lado. Es lo más rápido y sirve para los partidos cortos de una liga.',
+          'Sin elegir formato: cargás directamente los games de cada lado (como si fuera a 1 set). Es lo más rápido y sirve para los partidos cortos de una liga.',
           '1 set: cargás el set y el resultado sale de ahí.',
           '3 sets: al mejor de tres. Los sets van apareciendo a medida que los completás, y el partido se cierra solo cuando alguien gana dos.',
         ]}
       />
 
       <Note>
-        En pádel no hay empates, así que el formulario no te deja guardar un resultado igualado. Si
+        En pádel no existe el empate, así que el formulario no te deja guardar un resultado igualado. Si
         te pasa, revisá el marcador: falta cargar algo.
       </Note>
 
@@ -32,7 +32,7 @@ export default function CargarPartidoSection() {
       </h3>
       <Bullets
         items={[
-          'Cancha: en qué cancha se jugó. Aparece en la lista de partidos y en la imagen del fixture, útil cuando hay varias en paralelo.',
+          'Cancha: en qué cancha se jugó. Aparece en la lista de partidos y en la imagen del fixture, útil cuando hay varias en paralelo. Solo se puede elegir si el torneo se juega en un club que tiene cargadas sus canchas. Si no, el campo queda oculto.',
           'Cronómetro: el botón "Iniciar" arranca a contar y queda visible para todos. Al frenarlo, la duración queda guardada con el partido.',
           'Un partido con el cronómetro corriendo se muestra como en vivo, también para los que están mirando desde el link público.',
         ]}

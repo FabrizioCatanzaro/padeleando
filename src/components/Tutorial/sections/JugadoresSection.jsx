@@ -8,7 +8,7 @@ export default function JugadoresSection() {
       description="Desde la pestaña de gestión de un torneo podés administrar los participantes: agregar nuevos jugadores o parejas, editar sus nombres, y eliminarlos si es necesario."
       steps={[
         {
-          label: 'Acceder a la gestión de el torneo',
+          label: 'Acceder a la gestión del torneo',
           text: 'Dentro de un torneo, buscá la pestaña o sección de gestión de jugadores/parejas.',
         },
         {

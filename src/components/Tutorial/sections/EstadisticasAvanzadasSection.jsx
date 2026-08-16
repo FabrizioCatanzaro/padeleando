@@ -28,9 +28,9 @@ export default function EstadisticasAvanzadasSection() {
       />
 
       <Note>
-        Varios de estos números se calculan sobre lo que se cargó en cada partido. Si en tu grupo
+        Varios de estos números se calculan sobre lo que se cargó en cada partido. Si en tu categoría
         nadie anota los sets o la duración, esos bloques van a aparecer vacíos o medir menos
-        partidos de los que jugaste — no es un error del perfil, es que el dato no está.
+        partidos de los que jugaste.
       </Note>
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-6">

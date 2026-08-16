@@ -7,7 +7,7 @@ export default function CompartirSection() {
   return (
     <TutorialSection
       title="Compartir un torneo"
-      description="Todo torneo tiene una vista pública pensada para los que miran: se abre sin cuenta, se actualiza sola y muestra posiciones, partidos y cuadro. Es lo que mandás al grupo para que sigan los resultados sin preguntarte."
+      description="Todo torneo tiene una vista pública pensada para los espectadores: se abre sin cuenta, se actualiza sola y muestra posiciones, partidos y cuadro eliminatorio. Es lo que mandás al grupo para que sigan los resultados sin preguntarte."
       steps={[
         {
           label: 'Tocá compartir',
@@ -28,7 +28,7 @@ export default function CompartirSection() {
         items={[
           'El torneo: la vista pública con posiciones, partidos y cuadro.',
           'La categoría: para que se sumen o sigan todos los torneos, no una fecha suelta.',
-          'Los partidos: la imagen del fixture, para mandar quién juega contra quién.',
+          'Los partidos: el fixture en formato texto, para mandar quién juega contra quién.',
           'Tu perfil y tus estadísticas, con su propia imagen para redes.',
         ]}
       />
@@ -50,7 +50,7 @@ export default function CompartirSection() {
           'Se refresca sola cada 30 segundos, así que los que miran ven los resultados apenas los cargás.',
           'Muestra el estado del torneo: próximamente, en curso o finalizado, con el campeón cuando termina.',
           'Si tenés la inscripción abierta, también muestra el precio y tus contactos.',
-          'Al que tiene cuenta y juega ahí, le ofrece reclamar su lugar desde la misma pantalla.',
+          'Si hay jugadores que no están vinculados al torneo, se pueden sumar desde la vista pública con un botón de "Solicitar unirse".',
         ]}
       />
 

@@ -13,7 +13,7 @@ export default function FormatosSection() {
             Modo Liga
           </div>
           <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-            Los jugadores se agrupan en parejas para cada torneo (que pueden cambiar de torneo en torneo). Se juegan partidos entre parejas y los puntos se acumulan en una tabla de posiciones general del torneo. Es ideal para grupos de amigos que juegan regularmente.
+            Los jugadores se agrupan en parejas para cada torneo (que pueden cambiar de torneo en torneo dentro de una categoría). Se juegan partidos entre parejas y los puntos se acumulan en una tabla de posiciones general del torneo. Es ideal para grupos de amigos que juegan regularmente, o para organizadores de Canchas Abiertas que quieran crear torneos estructurados.
           </p>
           <ul className="flex flex-col gap-2 mb-4">
             {[
@@ -45,7 +45,7 @@ export default function FormatosSection() {
               'Se requieren mínimo 8 parejas para iniciar. Con menos, el torneo queda en BORRADOR: lo podés crear igual y sumar las parejas que faltan más tarde, pero no se pueden cargar partidos ni generar el cuadro hasta llegar al mínimo.',
               'Fase previa: 2 partidos al azar que suman a una tabla general para clasificar al cuadro final.',
               'Cuadro final: octavos, cuartos, semifinales y final por eliminación directa.',
-              'El torneo se resuelve en una sola fecha.',
+              'Mejores parejas: En caso de no llegar a 16 parejas, se calcula automáticamente la cantidad de mejores parejas que pasan directo a cuartos de final. Por ejemplo, si hay 12 parejas, las 4 mejores pasan directo a cuartos y las otras 8 juegan octavos.',
             ].map((item, i) => (
               <li key={i} className="flex gap-3 items-start text-[14px] text-secondary font-sans">
                 <span className="text-brand mt-0.5 shrink-0">›</span>

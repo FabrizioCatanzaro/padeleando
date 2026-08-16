@@ -26,7 +26,7 @@ export default function SeguirSection() {
       </h3>
       <Bullets
         items={[
-          'Tenés sus perfiles juntos, sin buscarlos cada vez.',
+          'Seguís a la gente con la que jugás y podés ver sus perfiles a mano.',
           'Tu perfil muestra a quiénes seguís y quiénes te siguen, y las dos listas son públicas.',
           'Aparece un ranking que te compara con la gente que seguís por victorias y porcentaje. Ese bloque lo ves sólo vos, en tu propio perfil.',
         ]}

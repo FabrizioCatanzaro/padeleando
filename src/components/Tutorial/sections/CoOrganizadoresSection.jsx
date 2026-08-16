@@ -7,7 +7,7 @@ export default function CoOrganizadoresSection() {
   return (
     <TutorialSection
       title="Co-organizadores"
-      description="Si no querés cargar todos los resultados vos, podés sumar co-organizadores a una categoría. Son gente de confianza que administra los torneos con las mismas herramientas que vos, pero sin poder tocar la categoría en sí."
+      description="Si no querés cargar todos los resultados vos, podés sumar co-organizadores a una categoría. Son gente de confianza que administra los torneos con las mismas herramientas que vos, pero sin poder modificar la categoría en sí."
       steps={[
         {
           label: 'Abrí la categoría',
@@ -15,11 +15,11 @@ export default function CoOrganizadoresSection() {
         },
         {
           label: 'Elegí cómo invitar',
-          text: 'Por @usuario o email, que le manda una notificación; o generando un link de invitación que podés pegar donde quieras.',
+          text: 'Por @usuario o email, que le manda una notificación; o generando un link de invitación que podés pasarlo por donde quieras.',
         },
         {
           label: 'Esperá a que acepte',
-          text: 'Con @usuario o email tiene que aceptar desde la campana. Con el link, entra, ve de qué categoría se trata y confirma ahí.',
+          text: 'Con @usuario o email tiene que aceptar desde la campana de notificaciones dentro de la app. Con el link, entra, ve de qué categoría se trata y confirma ahí.',
         },
       ]}
     >
@@ -32,8 +32,8 @@ export default function CoOrganizadoresSection() {
         items={[
           'Crear, editar y borrar torneos de esa categoría.',
           'Agregar, editar y eliminar jugadores y parejas.',
-          'Cargar, corregir y borrar resultados, y armar el cuadro del americano.',
-          'Configurar la inscripción de cada torneo y subir fotos.',
+          'Cargar, corregir y borrar resultados, y armar el cuadro eliminatorio del americano.',
+          'Configurar la inscripción de cada torneo y subir fotos. (Las fotos se podrán subir solo si el dueño es Premium)',
         ]}
       />
 
@@ -52,8 +52,8 @@ export default function CoOrganizadoresSection() {
 
       <Note>
         Los límites del plan se miden siempre contra el dueño de la categoría, nunca contra quien
-        está haciendo la acción. Si el dueño tiene plan Básico, un co-organizador Premium tampoco
-        va a poder crear un tercer torneo en el mes.
+        está intentando hacer una acción Premium. Por ejemplo: Si el dueño tiene plan Básico, un co-organizador Premium tampoco
+        va a poder crear un tercer torneo en el mes o cargar fotos.
       </Note>
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-6">
@@ -72,7 +72,7 @@ export default function CoOrganizadoresSection() {
       </h3>
       <Bullets
         items={[
-          'Si invitás por @usuario o email, esa cuenta tiene que existir: a diferencia de las invitaciones a jugadores, acá te avisa si no la encuentra.',
+          'Si invitás por @usuario o email, esa cuenta tiene que existir.',
           'No podés tener dos invitaciones pendientes para la misma persona en la misma categoría.',
           'Ser co-organizador es por categoría, no por torneo: no se puede dar acceso a una sola fecha.',
         ]}
