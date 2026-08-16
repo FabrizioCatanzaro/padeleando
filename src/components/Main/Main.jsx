@@ -19,6 +19,7 @@ import Btn from "../shared/Btn";
 import LazyNotFound from "../NotFound/LazyNotFound";
 import ShareModal from "../shared/ShareModal";
 import QrModal from "../shared/QrModal";
+import FinishTournamentModal from "../shared/FinishTournamentModal";
 import SignupPricePill from "../shared/SignupPricePill";
 import { resolveSignup } from "../../utils/signup";
 
@@ -69,6 +70,7 @@ export default function Main() {
   const [tab, setTab]         = useState(null);
   const [shareOpen, setShareOpen] = useState(false);
   const [qrOpen, setQrOpen]       = useState(false);
+  const [finishModal, setFinishModal] = useState(false);
   const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput]     = useState("");
 
@@ -261,7 +263,7 @@ export default function Main() {
       {isOwner && isAmericano && tournament.status === 'active' && tournament.bracket?.final?.winner_id && (
         <div className="px-6 py-3 border-b border-border bg-surface-alt flex items-center justify-between gap-3">
           <span className="text-muted font-mono text-[12px]">La final fue jugada. ¿Querés cerrar el torneo?</span>
-          <Btn variant="primary" size="sm" onClick={handleToggleStatus}>FINALIZAR TORNEO</Btn>
+          <Btn variant="primary" size="sm" onClick={() => setFinishModal(true)}>FINALIZAR TORNEO</Btn>
         </div>
       )}
 
@@ -371,6 +373,14 @@ export default function Main() {
           clubName={tournament.club_name}
           url={shareLink}
           onClose={() => setShareOpen(false)}
+        />
+      )}
+
+      {finishModal && (
+        <FinishTournamentModal
+          tournament={tournament}
+          onConfirm={() => { handleToggleStatus(); setFinishModal(false); }}
+          onCancel={() => setFinishModal(false)}
         />
       )}
 
