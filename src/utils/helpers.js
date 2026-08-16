@@ -21,6 +21,28 @@ export function setsWon(sets) {
   }, [0, 0]);
 }
 
+// El marcador guardado de un partido con sets: a 1 set son los juegos de ese set,
+// a 3 son los sets ganados. La card y las posiciones leen score1/score2 con esa regla.
+export function scoreFromSets(sets_format, sets = []) {
+  if (sets_format === 1) {
+    const s = sets[0] ?? { s1: 0, s2: 0 };
+    return [Number(s.s1) || 0, Number(s.s2) || 0];
+  }
+  const nv = visibleSetsCount(sets_format, sets);
+  return setsWon(sets.slice(0, nv));
+}
+
+// Un resultado por sets está completo cuando el set único tiene ganador o
+// alguien se llevó dos de los tres.
+export function setsResultReady(sets_format, sets = []) {
+  if (sets_format === 1) return setWinner(sets[0]) != null;
+  if (sets_format === 3) {
+    const [w1, w2] = setsWon(sets.slice(0, visibleSetsCount(3, sets)));
+    return w1 >= 2 || w2 >= 2;
+  }
+  return false;
+}
+
 // Cuántos sets mostrar en UI (reveal progresivo) o cuántos están jugados en un partido guardado.
 export function visibleSetsCount(sets_format, sets) {
   if (sets_format === 1) return 1;
