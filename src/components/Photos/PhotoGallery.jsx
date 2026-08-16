@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { Camera, Image as ImageIcon, Trash2, X, Plus, Gem, Pencil, Check, Star } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Camera, Image as ImageIcon, Trash2, X, Gem, Pencil, Check, Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api } from '../../utils/api';
 import { fmt } from '../../utils/helpers';
 import Modal from '../shared/Modal';
@@ -8,14 +8,18 @@ import PremiumModal from '../shared/PremiumModal';
 const MAX_PHOTO_BYTES    = 10 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const MAX_PHOTOS         = 12;
-const MAX_CAPTION_LEN    = 200;
-const INITIAL_VISIBLE    = 1;
-const LOAD_STEP          = 3;
+const MAX_CAPTION_LEN    = 100;
+
+function cld(src, width) {
+  if (!src || !src.includes('/upload/')) return src;
+  return src.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`);
+}
 
 export default function PhotoGallery({ tournamentId, isOwner = false, isPremium = false }) {
   const fileInputRef = useRef(null);
+  const trackRef     = useRef(null);
   const [photos,     setPhotos]     = useState([]);
-  const [visible,    setVisible]    = useState(INITIAL_VISIBLE);
+  const [index,      setIndex]      = useState(0);
   const [loading,    setLoading]    = useState(true);
   const [listError,  setListError]  = useState(null);
 
@@ -42,11 +46,26 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
     setLoading(true);
     setListError(null);
     api.photos.list(tournamentId)
-      .then((list) => { if (alive) { setPhotos(Array.isArray(list) ? list : []); setVisible(INITIAL_VISIBLE); } })
+      .then((list) => { if (alive) { setPhotos(Array.isArray(list) ? list : []); setIndex(0); } })
       .catch((e)   => { if (alive) { setListError(e.message); console.error('[PhotoGallery] list failed:', e); } })
       .finally(()  => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [tournamentId]);
+
+  const goTo = useCallback((i, behavior = 'smooth') => {
+    const el = trackRef.current;
+    if (!el) return;
+    const clamped = Math.max(0, Math.min(i, photos.length - 1));
+    el.scrollTo({ left: clamped * el.clientWidth, behavior });
+    setIndex(clamped);
+  }, [photos.length]);
+
+  function handleScroll() {
+    const el = trackRef.current;
+    if (!el || el.clientWidth === 0) return;
+    const i = Math.round(el.scrollLeft / el.clientWidth);
+    setIndex((prev) => (prev === i ? prev : i));
+  }
 
   function openFilePicker() {
     if (!isPremium) { setShowPremiumModal(true); return; }
@@ -115,6 +134,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
     // Mantener orden: más nuevas primero.
     setPhotos((prev) => [...uploaded.reverse(), ...prev]);
     setBatch(null);
+    goTo(0, 'auto');
 
     const msg = [];
     if (issues.length)   msg.push(...issues);
@@ -132,6 +152,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
       setPhotos((prev) => [created, ...prev]);
       setPendingFile(null);
       setCaptionDraft('');
+      goTo(0, 'auto');
     } catch (err) {
       setUploadError(err.message);
     } finally {
@@ -157,6 +178,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
           return new Date(b.created_at) - new Date(a.created_at);
         });
       });
+      goTo(0, 'auto');
     } catch (err) {
       setUploadError(err.message);
     }
@@ -168,6 +190,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
       setConfirmDel(null);
       setLightbox((lb) => (lb?.id === photoId ? null : lb));
+      setIndex((i) => Math.max(0, Math.min(i, photos.length - 2)));
     } catch (err) {
       setUploadError(err.message);
       setConfirmDel(null);
@@ -201,10 +224,10 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
   }
 
   const total        = photos.length;
-  const shown        = photos.slice(0, visible);
-  const remaining    = Math.max(0, total - visible);
   const reachedLimit = total >= MAX_PHOTOS;
   const busy         = uploading || !!batch;
+  const current      = photos[Math.min(index, total - 1)] ?? null;
+  const isEditing    = current ? editingId === current.id : false;
 
   if (loading) {
     return (
@@ -266,124 +289,166 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
         </div>
       )}
 
-      {shown.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {shown.map((p) => {
-            const isEditing = editingId === p.id;
-            return (
-              <div key={p.id} className="relative group rounded-lg overflow-hidden border border-border-mid bg-surface">
-                <button
-                  type="button"
-                  onClick={() => setLightbox(p)}
-                  className="block w-full p-0 bg-transparent border-0 cursor-pointer"
+      {total > 0 && (
+        <div className="rounded-lg overflow-hidden border border-border-mid bg-surface">
+          <div className="relative">
+            <div
+              ref={trackRef}
+              onScroll={handleScroll}
+              className="flex overflow-x-auto snap-x snap-mandatory scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
+              {photos.map((p, i) => (
+                <div
+                  key={p.id}
+                  className="relative w-full shrink-0 snap-center aspect-4/5 max-h-[70vh] bg-black overflow-hidden"
                 >
                   <img
-                    src={p.url}
-                    alt={p.caption || 'Foto del torneo'}
-                    loading="lazy"
-                    className="w-full h-48 object-cover"
+                    src={cld(p.url, 48)}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute inset-0 w-full h-full object-cover blur-2xl scale-110 opacity-40"
                   />
-                </button>
-
-                {isEditing ? (
-                  <div className="px-3 py-2 flex items-center gap-2">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={editDraft}
-                      onChange={(e) => setEditDraft(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter')  saveEdit(p.id);
-                        if (e.key === 'Escape') cancelEdit();
-                      }}
-                      maxLength={MAX_CAPTION_LEN}
-                      placeholder="Descripción"
-                      className="flex-1 bg-base border border-border-mid text-white px-2.5 py-1.5 rounded text-[12px] outline-none font-sans"
+                  <button
+                    type="button"
+                    onClick={() => setLightbox(p)}
+                    className="relative block w-full h-full p-0 bg-transparent border-0 cursor-zoom-in"
+                    aria-label="Ampliar foto"
+                  >
+                    <img
+                      src={cld(p.url, 1000)}
+                      alt={p.caption || 'Foto del torneo'}
+                      loading={i === 0 ? 'eager' : 'lazy'}
+                      className="w-full h-full object-contain"
                     />
-                    <button
-                      type="button"
-                      onClick={() => saveEdit(p.id)}
-                      disabled={editSaving}
-                      title="Guardar"
-                      className="bg-brand text-base border-0 w-7 h-7 flex items-center justify-center cursor-pointer rounded disabled:opacity-50"
-                    >
-                      <Check size={13} />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={cancelEdit}
-                      disabled={editSaving}
-                      title="Cancelar"
-                      className="bg-transparent text-muted border border-border-strong w-7 h-7 flex items-center justify-center cursor-pointer rounded disabled:opacity-50"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                ) : (
-                  <div className="px-3 py-2 text-[12px] font-mono flex items-center justify-between gap-2">
-                    <span className={`truncate ${p.caption ? 'text-muted' : 'text-dim italic'}`}>
-                      {p.caption || (isOwner ? 'Sin descripción' : '')}
-                    </span>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {isOwner && (
-                        <button
-                          type="button"
-                          onClick={() => startEdit(p)}
-                          title="Editar descripción"
-                          className="bg-transparent text-dim border-0 cursor-pointer hover:text-white transition p-0"
-                        >
-                          <Pencil size={12} />
-                        </button>
-                      )}
-                      <span className="text-dim whitespace-nowrap">{fmt(p.created_at)}</span>
+                  </button>
+
+                  {p.is_cover && (
+                    <div className="absolute top-2 left-2 flex items-center gap-1 bg-brand text-base px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-widest pointer-events-none">
+                      <Star size={9} fill="currentColor" /> PORTADA
                     </div>
-                  </div>
-                )}
+                  )}
+                  {total > 1 && (
+                    <div className="absolute top-2 right-2 bg-black/60 text-white px-2 py-0.5 rounded-full text-[10px] font-mono pointer-events-none">
+                      {i + 1}/{total}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
 
-                {/* Badge portada */}
-                {p.is_cover && (
-                  <div className="absolute top-2 left-2 flex items-center gap-1 bg-brand text-base px-2 py-0.5 rounded text-[10px] font-mono font-bold tracking-widest">
-                    <Star size={9} fill="currentColor" /> PORTADA
-                  </div>
-                )}
+            {total > 1 && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => goTo(index - 1)}
+                  disabled={index === 0}
+                  aria-label="Foto anterior"
+                  className="hidden sm:flex absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 text-white border-0 rounded-full w-9 h-9 items-center justify-center cursor-pointer hover:bg-black/80 transition disabled:opacity-0 disabled:pointer-events-none"
+                >
+                  <ChevronLeft size={18} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goTo(index + 1)}
+                  disabled={index >= total - 1}
+                  aria-label="Foto siguiente"
+                  className="hidden sm:flex absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 text-white border-0 rounded-full w-9 h-9 items-center justify-center cursor-pointer hover:bg-black/80 transition disabled:opacity-0 disabled:pointer-events-none"
+                >
+                  <ChevronRight size={18} />
+                </button>
+              </>
+            )}
+          </div>
 
-                {/* Botón: establecer como portada (owners, no-cover, no editando) */}
-                {isOwner && !isEditing && !p.is_cover && (
-                  <button
-                    type="button"
-                    onClick={() => handleSetCover(p.id)}
-                    title="Establecer como portada"
-                    className="absolute top-2 left-2 bg-base/80 text-muted border border-border-strong rounded-full w-7 h-7 flex items-center justify-center cursor-pointer hover:text-brand hover:border-brand transition opacity-0 group-hover:opacity-100"
-                  >
-                    <Star size={12} />
-                  </button>
-                )}
+          {total > 1 && (
+            <div className="flex items-center justify-center gap-1.5 py-2.5">
+              {photos.map((p, i) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => goTo(i)}
+                  aria-label={`Ir a la foto ${i + 1}`}
+                  className={`border-0 p-0 rounded-full cursor-pointer transition ${
+                    i === index ? 'w-2 h-2 bg-brand' : 'w-1.5 h-1.5 bg-border-strong'
+                  }`}
+                />
+              ))}
+            </div>
+          )}
 
-                {isOwner && !isEditing && (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDel(p)}
-                    title="Eliminar foto"
-                    className="absolute top-2 right-2 bg-base/80 text-muted border border-border-strong rounded-full w-7 h-7 flex items-center justify-center cursor-pointer hover:text-danger hover:border-danger transition opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 size={12} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+          {current && (isEditing ? (
+            <div className="px-3 py-2.5 flex items-center gap-2 border-t border-border">
+              <input
+                autoFocus
+                type="text"
+                value={editDraft}
+                onChange={(e) => setEditDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter')  saveEdit(current.id);
+                  if (e.key === 'Escape') cancelEdit();
+                }}
+                maxLength={MAX_CAPTION_LEN}
+                placeholder="Descripción"
+                className="flex-1 min-w-0 bg-base border border-border-mid text-white px-2.5 py-1.5 rounded text-[12px] outline-none font-sans"
+              />
+              <span className={`text-[11px] font-mono shrink-0 tabular-nums ${editDraft.length >= MAX_CAPTION_LEN ? 'text-danger' : 'text-dim'}`}>
+                {MAX_CAPTION_LEN - editDraft.length}
+              </span>
+              <button
+                type="button"
+                onClick={() => saveEdit(current.id)}
+                disabled={editSaving}
+                title="Guardar"
+                className="bg-brand text-base border-0 w-8 h-8 flex items-center justify-center cursor-pointer rounded disabled:opacity-50"
+              >
+                <Check size={14} />
+              </button>
+              <button
+                type="button"
+                onClick={cancelEdit}
+                disabled={editSaving}
+                title="Cancelar"
+                className="bg-transparent text-muted border border-border-strong w-8 h-8 flex items-center justify-center cursor-pointer rounded disabled:opacity-50"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <div className="px-3 py-2.5 border-t border-border flex items-center justify-between gap-3 text-[12px] font-mono">
+              <span className={`truncate ${current.caption ? 'text-muted' : 'text-dim italic'}`}>
+                {current.caption || (isOwner ? 'Sin descripción' : '')}
+              </span>
+              <span className="text-dim whitespace-nowrap shrink-0">{fmt(current.created_at)}</span>
+            </div>
+          ))}
 
-      {remaining > 0 && (
-        <div className="flex justify-center mt-4">
-          <button
-            type="button"
-            onClick={() => setVisible((v) => Math.min(total, v + LOAD_STEP))}
-            className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-4 py-2 text-xs font-mono cursor-pointer rounded hover:text-white hover:border-white transition"
-          >
-            <Plus size={12} /> Ver {Math.min(LOAD_STEP, remaining)} foto{remaining === 1 ? '' : 's'} más
-          </button>
+          {current && isOwner && !isEditing && (
+            <div className="px-3 py-2 border-t border-border flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleSetCover(current.id)}
+                disabled={current.is_cover}
+                className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 rounded text-[11px] font-mono cursor-pointer hover:text-brand hover:border-brand transition disabled:opacity-50 disabled:cursor-default disabled:hover:text-muted disabled:hover:border-border-strong"
+              >
+                <Star size={12} fill={current.is_cover ? 'currentColor' : 'none'} />
+                {current.is_cover ? 'Es portada' : 'Portada'}
+              </button>
+              <button
+                type="button"
+                onClick={() => startEdit(current)}
+                className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 rounded text-[11px] font-mono cursor-pointer hover:text-white hover:border-white transition"
+              >
+                <Pencil size={12} /> Editar
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmDel(current)}
+                className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 rounded text-[11px] font-mono cursor-pointer hover:text-danger hover:border-danger transition ml-auto"
+              >
+                <Trash2 size={12} /> Eliminar
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -402,7 +467,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
             <X size={18} />
           </button>
           <div className="max-w-4xl w-full" onClick={(e) => e.stopPropagation()}>
-            <img src={lightbox.url} alt={lightbox.caption || ''} className="w-full max-h-[80vh] object-contain rounded" />
+            <img src={cld(lightbox.url, 1600)} alt={lightbox.caption || ''} className="w-full max-h-[80vh] object-contain rounded" />
             {lightbox.caption && (
               <div className="mt-3 text-center text-sm font-mono text-muted">{lightbox.caption}</div>
             )}
@@ -418,7 +483,12 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
             <div className="text-sm text-secondary font-sans mb-4">
               {pendingFile.name} · {(pendingFile.size / 1024 / 1024).toFixed(1)} MB
             </div>
-            <label className="block text-[11px] tracking-[2px] text-dim font-mono mb-1.5">DESCRIPCIÓN (OPCIONAL)</label>
+            <div className="flex items-baseline justify-between gap-2 mb-1.5">
+              <label className="block text-[11px] tracking-[2px] text-dim font-mono">DESCRIPCIÓN (OPCIONAL)</label>
+              <span className={`text-[11px] font-mono tabular-nums ${captionDraft.length >= MAX_CAPTION_LEN ? 'text-danger' : 'text-dim'}`}>
+                {captionDraft.length}/{MAX_CAPTION_LEN}
+              </span>
+            </div>
             <input
               type="text"
               value={captionDraft}
