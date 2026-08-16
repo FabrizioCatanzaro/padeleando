@@ -25,7 +25,8 @@ export default function EditarCategoriaSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Menú de la categoría, con la opción de editar" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159237/tutorial/menu-categoria.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Menú de la categoría, con la opción de editar" name="categoria-opciones" />
+      <TutorialMedia caption="Formulario de edición de la categoría" name="categoria-edicion" />
     </TutorialSection>
   )
 }

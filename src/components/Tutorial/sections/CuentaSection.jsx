@@ -9,7 +9,7 @@ export default function CuentaSection() {
       title="Tu cuenta y tu seguridad"
       description="Todo lo que tiene que ver con el acceso a tu cuenta: cómo entrás, cómo recuperás el acceso si lo perdés y qué pasa si decidís irte."
     >
-      <TutorialMedia caption="Sección de cuenta en el perfil" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159222/tutorial/cuenta.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Eliminar la cuenta, desde tu perfil" name="perfil-eliminar-cuenta" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Cómo entrás

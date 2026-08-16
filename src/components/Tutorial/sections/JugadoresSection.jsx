@@ -25,7 +25,8 @@ export default function JugadoresSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Panel de gestión del torneo" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159232/tutorial/gestion-jugadores.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Panel de gestión del torneo" name="americano-gestion" />
+      <TutorialMedia caption="Paso de jugadores al crear el torneo" name="nuevo-torneo-jugadores" />
     </TutorialSection>
   )
 }

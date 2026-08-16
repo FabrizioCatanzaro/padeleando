@@ -43,7 +43,7 @@ export default function NotificacionesSection() {
       title="Notificaciones"
       description="Todo lo que necesita tu respuesta llega a la campana del menú. Reemplazó a la vieja sección de Invitaciones: si tenías ese link guardado, ahora te lleva acá."
     >
-      <TutorialMedia caption="Campana de notificaciones y panel desplegable" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159242/tutorial/notificaciones.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Campana de notificaciones y panel desplegable" name="notificaciones" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-3">
         Qué te puede llegar

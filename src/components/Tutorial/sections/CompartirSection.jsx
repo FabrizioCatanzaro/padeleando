@@ -19,7 +19,7 @@ export default function CompartirSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Opciones para compartir una categoría" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159751/tutorial/compartir.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Opciones para compartir una categoría" name="categoria-compartir" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Qué se puede compartir

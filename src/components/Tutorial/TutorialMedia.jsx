@@ -1,24 +1,23 @@
-import { Camera } from 'lucide-react'
+import { tutorialImg } from './tutorialImages'
 
-export default function TutorialMedia({ src, caption, aspect = 'aspect-video' }) {
+export default function TutorialMedia({ name, caption }) {
+  const img = tutorialImg(name)
+
   return (
     <div className="mb-6">
-      {src ? (
+      {/* El alto se reserva con la relación de aspecto de cada versión: la vertical y la horizontal no miden igual. */}
+      <picture className="block" style={{ '--ar-m': img.ratio, '--ar-d': img.ratioDesktop }}>
+        <source media="(min-width: 768px)" srcSet={img.srcDesktop} />
         <img
-          src={src}
+          src={img.src}
           alt={caption}
-          className={`w-full rounded-lg border border-border-strong object-cover ${aspect}`}
+          width={img.width}
+          height={img.height}
+          loading="lazy"
+          decoding="async"
+          className="w-full h-auto aspect-[var(--ar-m)] md:aspect-[var(--ar-d)] rounded-lg border border-border-strong"
         />
-      ) : (
-        <div
-          className={`w-full rounded-lg border border-border-strong bg-surface flex flex-col items-center justify-center gap-3 text-muted ${aspect}`}
-        >
-          <Camera size={28} className="opacity-40" />
-          <span className="text-[12px] font-mono tracking-widest opacity-50">
-            IMAGEN PRÓXIMAMENTE
-          </span>
-        </div>
-      )}
+      </picture>
       {caption && (
         <div className="text-[11px] font-mono text-muted mt-2 text-center tracking-wide">
           {caption}

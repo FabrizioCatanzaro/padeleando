@@ -29,7 +29,7 @@ export default function PerfilSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de edición de perfil" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159224/tutorial/editar-perfil.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de edición de perfil" name="perfil-editar" />
     </TutorialSection>
   )
 }

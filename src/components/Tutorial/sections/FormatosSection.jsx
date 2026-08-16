@@ -28,8 +28,8 @@ export default function FormatosSection() {
               </li>
             ))}
           </ul>
-          <TutorialMedia caption="Elección del formato al crear el torneo" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159220/tutorial/crear-torneo.png" aspect="aspect-auto" />
-          <TutorialMedia caption="Tabla de posiciones en Modo Liga" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159269/tutorial/tabla-liga.png" aspect="aspect-auto" />
+          <TutorialMedia caption="Elección del formato al crear el torneo" name="nuevo-torneo-formato" />
+          <TutorialMedia caption="Tabla de posiciones en Modo Liga" name="torneo-liga-tabla" />
         </div>
 
         <div className="border-t border-border pt-8">
@@ -53,8 +53,8 @@ export default function FormatosSection() {
               </li>
             ))}
           </ul>
-          <TutorialMedia caption="Vista de agregado de parejas en Modo Americano" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159196/tutorial/americano-parejas.png" aspect="aspect-auto" />
-          <TutorialMedia caption="Vista de cuadro final en Modo Americano" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159192/tutorial/americano-cuadro.png" aspect="aspect-auto" />
+          <TutorialMedia caption="Vista de agregado de parejas en Modo Americano" name="americano-gestion-parejas" />
+          <TutorialMedia caption="Vista de cuadro final en Modo Americano" name="americano-cuadro" />
         </div>
       </div>
     </TutorialSection>

@@ -9,7 +9,7 @@ export default function CargarPartidoSection() {
       title="Cargar un partido en detalle"
       description="El resultado se puede cargar de la forma más simple, con un solo número por lado, o con todo el detalle: sets, cancha y cronómetro. Cuanto más cargues, más completas quedan las estadísticas de todos."
     >
-      <TutorialMedia caption="Formulario de carga de un partido" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159200/tutorial/cargar-partido.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de carga de un partido" name="torneo-nuevo-partido" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Formato del partido

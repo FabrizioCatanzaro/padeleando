@@ -20,7 +20,7 @@ export default function EstadisticasPerfilSection() {
       title="Tu perfil y tus estadísticas"
       description="Tu perfil es una página pública en /u/tu-usuario que junta todo lo que jugaste, en todas las categorías. Podés compartirla con quien quieras."
     >
-      <TutorialMedia caption="Estadísticas personales en el perfil público" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159254/tutorial/perfil.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Estadísticas personales en el perfil público" name="perfil-stats" />
 
       <Note>
         Las estadísticas sólo acumulan los partidos de los jugadores vinculados a tu cuenta. Si

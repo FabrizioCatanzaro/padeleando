@@ -9,7 +9,7 @@ export default function ClubesSection() {
       title="Clubes"
       description="Un club es el lugar donde se juega. Asociarlo a tu categoría ubica los torneos en el mapa, los muestra en el perfil del club y te arma la estadística de dónde jugás más seguido."
     >
-      <TutorialMedia caption="Perfil de un club" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159211/tutorial/club.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Perfil de un club" name="club-perfil" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Asociar un club

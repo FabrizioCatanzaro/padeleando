@@ -27,7 +27,7 @@ export default function InscripcionesSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Barra de inscripción en la vista pública del torneo" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159273/tutorial/vista-publica.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Barra de inscripción en la vista pública del torneo" name="banner-inscripcion" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Dónde se configura

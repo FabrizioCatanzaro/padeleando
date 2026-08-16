@@ -9,7 +9,7 @@ export default function EncontrarSection() {
       title="Encontrar categorías y jugadores"
       description="Desde la pantalla principal podés buscar gente, categorías y clubes, ver qué hay cerca tuyo y guardar las categorías que seguís aunque no juegues en ellas."
     >
-      <TutorialMedia caption="Buscador de la pantalla principal" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159226/tutorial/encontrar.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Buscador de la pantalla principal" name="buscador-home" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         El buscador

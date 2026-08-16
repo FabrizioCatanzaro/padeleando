@@ -25,8 +25,8 @@ export default function CrearPartidoSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de creación de partido" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159200/tutorial/cargar-partido.png" aspect="aspect-auto" />
-      <TutorialMedia caption="Partido registrado" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159247/tutorial/partidos.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de creación de partido" name="torneo-nuevo-partido" />
+      <TutorialMedia caption="Partido registrado" name="torneo-partidos" />
     </TutorialSection>
   )
 }

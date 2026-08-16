@@ -29,7 +29,7 @@ export default function CrearCategoriaSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de creación de categoría" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159752/tutorial/crear-categoria-1.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de creación de categoría" name="nueva-categoria-informacion" />
     </TutorialSection>
   )
 }

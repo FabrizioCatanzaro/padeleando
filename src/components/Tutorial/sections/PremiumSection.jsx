@@ -1,5 +1,4 @@
 import TutorialSection from '../TutorialSection'
-import TutorialMedia from '../TutorialMedia'
 import Bullets from '../Bullets'
 import Note from '../Note'
 import { FREE_MAX_GROUPS, FREE_TOURNAMENTS_PER_MONTH } from '../../../utils/plan'
@@ -36,8 +35,6 @@ export default function PremiumSection() {
           />
         </div>
       </div>
-
-      <TutorialMedia caption="Comparación de planes" />
 
       <h3 className="font-condensed font-bold text-[18px] text-white mb-2 mt-2">
         Cómo se cuentan los límites

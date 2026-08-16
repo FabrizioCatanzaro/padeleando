@@ -29,7 +29,9 @@ export default function CrearTorneoSection() {
         },
       ]}
     >
-      <TutorialMedia caption="Formulario de creación de torneo" src="https://res.cloudinary.com/dm80qflwa/image/upload/f_auto,q_auto,w_900,c_limit/v1786159220/tutorial/crear-torneo.png" aspect="aspect-auto" />
+      <TutorialMedia caption="Formulario de creación de torneo" name="nuevo-torneo-informacion" />
+      <TutorialMedia caption="Paso de jugadores del asistente" name="nuevo-torneo-jugadores" />
+      <TutorialMedia caption="Los torneos de la categoría, con sus filtros" name="categoria-buscador-torneos" />
     </TutorialSection>
   )
 }
