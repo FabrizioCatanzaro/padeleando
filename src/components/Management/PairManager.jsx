@@ -2,6 +2,7 @@ import { useState } from "react";
 import { getPairLabel, managementWarnings, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS } from "../../utils/helpers";
 import Modal from "../shared/Modal";
 import ActionMenu from "../shared/ActionMenu";
+import CollapsibleSection from "../shared/CollapsibleSection";
 import { Check, Pencil, Trash2, X, AlertTriangle } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete }) {
@@ -53,26 +54,28 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   }
 
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-4 mb-4 mt-4">
-      <div className="flex justify-between items-center mb-3">
-        <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted">
-          PAREJAS
-          <span className="ml-2 text-brand">{pairs.length}</span>
-        </div>
-        {isOwner && !pairsFull && (
-          <button
-            onClick={() => { if (showAdd || !noPairsLeft) setShowAdd(!showAdd); }}
-            disabled={!showAdd && noPairsLeft}
-            title={!showAdd && noPairsLeft ? "No quedan jugadores libres para armar otra pareja" : undefined}
-            className={`bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm whitespace-nowrap ${
-              !showAdd && noPairsLeft ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
-            }`}
-          >
-            {showAdd ? "Cancelar" : "+ Nueva pareja"}
-          </button>
-        )}
-      </div>
-
+    <>
+    <CollapsibleSection
+      storageKey="pd:mgmt:pairs"
+      title="PAREJAS"
+      count={pairs.length}
+      className="mb-4 mt-4"
+      badge={warnings.length > 0 ? (
+        <AlertTriangle size={13} className="text-brand" aria-label="Hay avisos en esta sección" />
+      ) : null}
+      actions={isOwner && !pairsFull ? (expand) => (
+        <button
+          onClick={() => { if (showAdd || !noPairsLeft) { expand(); setShowAdd(!showAdd); } }}
+          disabled={!showAdd && noPairsLeft}
+          title={!showAdd && noPairsLeft ? "No quedan jugadores libres para armar otra pareja" : undefined}
+          className={`bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm whitespace-nowrap ${
+            !showAdd && noPairsLeft ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
+          }`}
+        >
+          {showAdd ? "Cancelar" : "+ Nueva pareja"}
+        </button>
+      ) : null}
+    >
       {isOwner && !pairsFull && !showAdd && noPairsLeft && (
         <p className="text-[10px] text-dim font-mono mb-3">
           {activePlayers.length === 0
@@ -235,6 +238,8 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
         ))}
       </div>
 
+      </CollapsibleSection>
+
       {deleteTarget && (
         <Modal
           title="¿Eliminar esta pareja?"
@@ -245,6 +250,6 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </>
   );
 }
