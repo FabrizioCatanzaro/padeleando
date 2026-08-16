@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trophy, Pencil, Trash2, Info } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets, setsResultReady } from "../../utils/helpers";
+import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
 import { Timer, CourtSelector, MatchCardHeader, MinimizedMatch, SetsScoring } from "../Matches/MatchForm";
 import Modal from "../shared/Modal";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
@@ -349,8 +349,8 @@ function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, o
         </div>
       </div>
 
-      {tournament.number_of_courts > 1 && (
-        <CourtSelector courts={tournament.number_of_courts} value={liveMatch.score.court} onChange={v => onScoreChange('court', v)} />
+      {tournamentCourts(tournament) > 1 && (
+        <CourtSelector courts={tournamentCourts(tournament)} value={liveMatch.score.court} onChange={v => onScoreChange('court', v)} />
       )}
 
       <div className="mt-4">
@@ -360,6 +360,8 @@ function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, o
           score1={score1}
           score2={score2}
           onChange={onScorePatch}
+          row1={<><span className="truncate">{bracketMatch.pair1_name}</span></>}
+          row2={<><span className="truncate">{bracketMatch.pair2_name}</span></>}
         />
       </div>
 
@@ -455,9 +457,11 @@ function BracketEditCard({ match, tournament, saving, editScore, onScoreChange, 
         score1={s1}
         score2={s2}
         onChange={onScorePatch}
+        row1={<><span className="truncate">{match.pair1_name}</span></>}
+        row2={<><span className="truncate">{match.pair2_name}</span></>}
       />
-      {tournament.number_of_courts > 1 && (
-        <CourtSelector courts={tournament.number_of_courts} value={editScore.court} onChange={v => onScoreChange('court', v)} />
+      {tournamentCourts(tournament) > 1 && (
+        <CourtSelector courts={tournamentCourts(tournament)} value={editScore.court} onChange={v => onScoreChange('court', v)} />
       )}
       <button
         onClick={onSave}
