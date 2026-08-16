@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getPairLabel, setWinner, setsWon, visibleSetsCount } from "../../utils/helpers";
+import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady } from "../../utils/helpers";
 import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2 } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Modal from "../shared/Modal";
@@ -205,52 +205,32 @@ export function ScoreCounter({ value, onChange, color = "text-brand" }) {
   );
 }
 
-// ── Scores + fecha ────────────────────────────────────────────────────────────
-function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar, team2Avatar }) {
+// ── Selector de formato + carga del marcador ──────────────────────────────────
+// Controlado: `onChange` recibe el patch { sets_format, sets, score1, score2 }.
+// Lo comparten el formulario de liga y las cards del cuadro americano.
+export function SetsScoring({ setsFormat = null, sets = [], score1 = 0, score2 = 0, onChange }) {
   function pickFormat(fmt) {
-    if (fmt === null) {
-      setForm((f) => ({ ...f, sets_format: null, sets: [], score1: 0, score2: 0 }));
-    } else {
-      const empty = { s1: 0, s2: 0 };
-      const newSets = fmt === 1 ? [empty] : [empty, empty, empty];
-      setForm((f) => ({ ...f, sets_format: fmt, sets: newSets, score1: 0, score2: 0 }));
-    }
+    const empty = { s1: 0, s2: 0 };
+    const newSets = fmt === 1 ? [empty] : [empty, empty, empty];
+    onChange({ sets_format: fmt, sets: newSets, score1: 0, score2: 0 });
   }
 
   function updateSet(idx, field, val) {
-    setForm((f) => {
-      const sets = f.sets.map((s, i) => i === idx ? { ...s, [field]: val } : s);
-      const nv = visibleSetsCount(f.sets_format, sets);
-      const [sw1, sw2] = setsWon(sets.slice(0, nv));
-      return { ...f, sets, score1: sw1, score2: sw2 };
-    });
+    const next = sets.map((s, i) => i === idx ? { ...s, [field]: val } : s);
+    const [s1, s2] = scoreFromSets(setsFormat, next);
+    onChange({ sets_format: setsFormat, sets: next, score1: s1, score2: s2 });
   }
 
-  const { sets_format, sets = [] } = form;
-  const nVisible = visibleSetsCount(sets_format, sets);
-  const [sw1, sw2] = sets_format ? setsWon(sets.slice(0, nVisible)) : [form.score1, form.score2];
-  const matchDone = sets_format === 3 && (sw1 >= 2 || sw2 >= 2);
-  const canSave = sets_format === 1
-    ? (sw1 !== sw2)
-    : sets_format === 3
-      ? (sw1 >= 2 || sw2 >= 2)
-      : (form.score1 !== form.score2);
+  const nVisible = visibleSetsCount(setsFormat, sets);
+  const [sw1, sw2] = setsWon(sets.slice(0, nVisible));
 
   return (
-    <div className="mt-4">
-      {/* Header VS */}
-      <div className="flex justify-between items-center mb-3">
-        <div className="flex items-center gap-2">{team1Avatar}</div>
-        <span className="font-condensed font-bold text-[15px] text-border-strong tracking-[3px] mx-2">VS</span>
-        <div className="flex items-center gap-2">{team2Avatar}</div>
-      </div>
-
-      {/* Selector de formato */}
+    <>
       <div className="flex gap-2 justify-center mb-4">
         {[1, 3].map((fmt) => (
           <button key={fmt} onClick={() => pickFormat(fmt)}
             className={`px-3 py-1.5 text-[11px] font-mono font-bold tracking-[1.5px] rounded-sm border cursor-pointer transition-colors ${
-              sets_format === fmt
+              setsFormat === fmt
                 ? "bg-brand text-base border-brand"
                 : "bg-transparent text-muted border-border-mid"
             }`}>
@@ -259,12 +239,11 @@ function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar,
         ))}
       </div>
 
-      {/* Área de puntuación */}
-      {sets_format == null ? (
+      {setsFormat == null ? (
         <div className="flex gap-4 justify-center items-center">
-          <ScoreCounter value={form.score1} onChange={(v) => setForm((f) => ({ ...f, score1: v }))} color="text-brand" />
+          <ScoreCounter value={score1} onChange={(v) => onChange({ score1: v })} color="text-brand" />
           <span className="text-muted font-mono text-[20px]">|</span>
-          <ScoreCounter value={form.score2} onChange={(v) => setForm((f) => ({ ...f, score2: v }))} color="text-cyan" />
+          <ScoreCounter value={score2} onChange={(v) => onChange({ score2: v })} color="text-cyan" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -285,13 +264,40 @@ function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar,
               </div>
             );
           })}
-          {matchDone && sets_format === 3 && (
+          {setsFormat === 3 && (sw1 >= 2 || sw2 >= 2) && (
             <p className="text-center font-mono text-[11px] text-muted tracking-widest">
               RESULTADO: {sw1} — {sw2} EN SETS
             </p>
           )}
         </div>
       )}
+    </>
+  );
+}
+
+// ── Scores + fecha ────────────────────────────────────────────────────────────
+function ScoreSection({ form, setForm, isEditing, onSave, onCancel, team1Avatar, team2Avatar }) {
+  const { sets_format, sets = [] } = form;
+  const canSave = sets_format
+    ? setsResultReady(sets_format, sets)
+    : (form.score1 !== form.score2);
+
+  return (
+    <div className="mt-4">
+      {/* Header VS */}
+      <div className="flex justify-between items-center mb-3">
+        <div className="flex items-center gap-2">{team1Avatar}</div>
+        <span className="font-condensed font-bold text-[15px] text-border-strong tracking-[3px] mx-2">VS</span>
+        <div className="flex items-center gap-2">{team2Avatar}</div>
+      </div>
+
+      <SetsScoring
+        setsFormat={sets_format}
+        sets={sets}
+        score1={form.score1}
+        score2={form.score2}
+        onChange={(patch) => setForm((f) => ({ ...f, ...patch }))}
+      />
 
       {/* <div className="mt-3 flex justify-center">
         <input type="date"

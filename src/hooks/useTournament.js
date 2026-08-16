@@ -302,8 +302,12 @@ export function useTournament(groupId, tournamentId) {
     );
   }
 
-  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false) {
-    const res = await api.tournaments.updateBracket(tournament.id, matchId, { score1, score2, duration_seconds, court });
+  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false, setsData = {}) {
+    const res = await api.tournaments.updateBracket(tournament.id, matchId, {
+      score1, score2, duration_seconds, court,
+      sets_format: setsData.sets_format ?? null,
+      sets:        setsData.sets ?? [],
+    });
     applyBracket(res.bracket);
     flash();
     showToast(isEdit ? 'Partido actualizado' : 'Partido registrado');
