@@ -143,6 +143,7 @@ export const api = {
   },
   tournaments: {
     get:         (id)   => req('GET',    `/tournaments/${id}`),
+    search:      (q)    => req('GET',    `/tournaments/search?q=${encodeURIComponent(q)}`),
     create:      (body) => req('POST',   '/tournaments', body),
     update:      (id,b) => req('PATCH',  `/tournaments/${id}`, b),
     delete:      (id)   => req('DELETE', `/tournaments/${id}`),
