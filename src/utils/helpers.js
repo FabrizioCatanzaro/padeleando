@@ -407,12 +407,22 @@ export function clubCourts(club) {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+// Canchas de un torneo. `number_of_courts` es una copia del club hecha al
+// asignarlo: si el club sumó canchas después, la copia quedó vieja, así que
+// manda lo que el club tiene hoy. Sin ese dato en el payload, la copia.
+export function tournamentCourts(tournament) {
+  if (!tournament) return 1;
+  const fromClub = Number(tournament.club_courts);
+  if (tournament.club_id && Number.isFinite(fromClub)) return fromClub > 0 ? fromClub : 0;
+  return Number(tournament.number_of_courts ?? 1);
+}
+
 // Etiqueta de cancha a mostrar para un partido.
-// - Si el torneo se juega en un club sin canchas cargadas (number_of_courts === 0) → '-'.
+// - Si el torneo se juega en un club sin canchas cargadas → '-'.
 // - Si el partido tiene cancha asignada → su número.
 // - Si no, null (no se muestra badge).
 export function courtLabel(tournament, court) {
-  if (tournament?.number_of_courts === 0) return '-';
+  if (tournamentCourts(tournament) === 0) return '-';
   return court != null ? String(court) : null;
 }
 
