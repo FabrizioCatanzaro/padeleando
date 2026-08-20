@@ -4,6 +4,7 @@ import Btn from '../shared/Btn';
 import TournamentFilters from './TournamentFilters';
 import SortMenu from './SortMenu';
 import TournamentCard from './TournamentCard';
+import { isLive } from '../../utils/helpers';
 
 // Listado de torneos de la categoría: la pestaña por defecto. Salió de GroupView
 // cuando la pantalla pasó a tener pestañas, para que ese archivo no siguiera
@@ -18,7 +19,7 @@ export default function GroupTournaments({
   // La jornada en vivo sube a su propia banda y sale de la lista, pero sólo con
   // la lista limpia: si el usuario está filtrando, esconderle un resultado que
   // coincide es peor que repetirlo.
-  const live = activeFilters === 0 ? filtered.find((t) => !!t.live_match) : null;
+  const live = activeFilters === 0 ? filtered.find(isLive) : null;
   const rest = live ? filtered.filter((t) => t.id !== live.id) : filtered;
 
   if (total === 0) {

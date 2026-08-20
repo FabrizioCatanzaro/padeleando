@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import Modal from '../shared/Modal';
 import { api } from '../../utils/api';
-import { adaptTournament, isDeletedAccount, entityClub } from '../../utils/helpers';
+import { adaptTournament, isDeletedAccount, entityClub, isLive } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -489,7 +489,7 @@ export default function GroupView() {
   // player_count lo agrega la consulta del grupo (jugadores distintos, no la
   // suma por jornada, que cuenta dos veces a quien juega en varias).
   const tours      = group.tournaments ?? [];
-  const liveCount  = tours.filter((t) => !!t.live_match).length;
+  const liveCount  = tours.filter(isLive).length;
   const matchCount = tours.reduce((n, t) => n + (t.match_count ?? 0), 0);
   const firstDay   = tours.reduce((min, t) => {
     const d = String(t.event_date ?? t.created_at ?? '').slice(0, 10);

@@ -537,6 +537,21 @@ export function isAmericanoDraft({ format, pairCount }) {
   return format === 'americano' && (pairCount ?? 0) < AMERICANO_MIN_PAIRS;
 }
 
+// Una jornada está en vivo sólo si NO terminó y live_match trae partidos.
+//
+// Las dos guardas hacen falta:
+//  - Terminar una jornada es un PATCH de status: nadie limpia live_match, así
+//    que la finalizada conserva el último payload y `!!t.live_match` la daba
+//    por jugándose.
+//  - PUT /tournaments/:id/live-match guarda `[]` tal cual cuando no hay
+//    partidos en curso, y en JS un array vacío es truthy.
+//
+// Es la misma condición que aplica la consulta `live` de GET /api/home
+// (status <> 'finished' + jsonb_array_length > 0).
+export function isLive(t) {
+  return t?.status !== 'finished' && Array.isArray(t?.live_match) && t.live_match.length > 0;
+}
+
 // Estado a mostrar de un torneo. Solo hay 4 estados: finished / draft / active / upcoming.
 // - finished: el torneo está finalizado.
 // - draft ('borrador'): americano con menos parejas que el mínimo — todavía no se puede jugar.
