@@ -6,7 +6,7 @@ export default function GroupCard({ g, delay = 0, badge = null, onClick, classNa
     <FadeInCard
       delay={delay}
       className={`border border-border-mid rounded-lg cursor-pointer overflow-hidden card-link flex flex-col ${className}`}
-      style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
+      style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)' }}
       onClick={onClick}
     >
       <div className="px-4 pt-4 pb-3 flex items-start justify-between gap-2 flex-1">
@@ -62,7 +62,7 @@ export default function GroupCard({ g, delay = 0, badge = null, onClick, classNa
                 </span>
               )}
               {badge && (
-                <span className="font-mono text-[10px] text-green border border-green/30 px-1.5 py-0.5 rounded-full">{badge}</span>
+                <span className="font-mono text-[10px] tracking-widest uppercase text-green border border-green/30 px-1.5 py-0.5 rounded-full">{badge}</span>
               )}
             </span>
           )}

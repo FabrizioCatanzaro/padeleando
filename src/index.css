@@ -28,6 +28,13 @@
   --color-secondary: #9e9e9e;  /* 6,88:1 */
   --color-soft: #aaaaaa;       /* 7,93:1 */
   --color-content: #cccccc;    /* 11,47:1 */
+  /* `text-white` estaba en 481 lugares apuntando al blanco fijo de Tailwind, y
+     en modo claro eso es texto invisible sobre fondo blanco: los nombres de las
+     categorías, los números y los títulos desaparecían. Declararlo acá lo
+     convierte en un nivel más de la escala —el de máximo énfasis— y el tema
+     claro lo invierte abajo. Para volver al blanco literal, borrar esta línea y
+     la de html.light. */
+  --color-white: #ffffff;
 }
 
 html.light {
@@ -48,6 +55,7 @@ html.light {
   --color-secondary: #4b5563;  /* 6,63:1 */
   --color-soft: #374151;
   --color-content: #1e293b;
+  --color-white: #0f172a;
 }
 
 * { box-sizing: border-box; }

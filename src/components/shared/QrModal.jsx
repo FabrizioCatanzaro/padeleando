@@ -73,7 +73,7 @@ export default function QrModal({ url, tournamentName, categoryName, onClose }) 
         <div className="px-5 py-6 flex flex-col items-center">
           {/* QR sobre fondo blanco para escaneo confiable en tema oscuro.
               Este nodo es el que se exporta como PNG. */}
-          <div ref={qrRef} className="bg-white rounded-2xl p-4">
+          <div ref={qrRef} className="bg-[#ffffff] rounded-2xl p-4">
             <QRCodeSVG value={url} size={220} level="M" marginSize={2} bgColor="#ffffff" fgColor="#000000" />
           </div>
 
