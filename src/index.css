@@ -35,6 +35,34 @@
      claro lo invierte abajo. Para volver al blanco literal, borrar esta línea y
      la de html.light. */
   --color-white: #ffffff;
+
+  /* Dorado de premium. Ya se usaba a mano en PlayerAvatar; acá pasa a token
+     para que el tema claro pueda oscurecerlo. Medido contra la marca: ΔE 19,7
+     en visión normal y 14,5 en deuteranopía, así que se distinguen bien.
+     El otro dorado que había (#f0d04a, "liga ganada") quedaba a ΔE 8,1 de la
+     marca —indistinguible— y se reemplazó por éste: un solo dorado, un solo
+     significado (logro). */
+  --color-premium: #f59e0b;
+  --color-premium-hi: #fde68a;
+  /* Tinta sobre el degradado dorado: el marrón oscuro es el unico que
+     contrasta con los dos extremos del gradiente. */
+  --color-premium-ink: #3a2400;
+
+  /* Paleta de gráficos. NO son los acentos de UI: la marca es demasiado clara
+     para rellenos grandes (encandila como área). Estos tres salieron de un
+     barrido validado con el script de la skill dataviz —peor par ΔE 24,2 en
+     visión normal, con piso 15— y pasan las cinco pruebas en ambos temas.
+     La marca sigue mandando en números y marcas finas. */
+  --color-chart-1: #8e8f19;
+  --color-chart-2: #6286d8;
+  --color-chart-3: #c17429;
+
+  /* Rampa del mapa de calor: un solo matiz, luminosidad monótona. */
+  --color-heat-0: #141414;
+  --color-heat-1: #6c6d2b;
+  --color-heat-2: #8b8c2c;
+  --color-heat-3: #abac2a;
+  --color-heat-4: #cccd22;
 }
 
 html.light {
@@ -56,6 +84,17 @@ html.light {
   --color-soft: #374151;
   --color-content: #1e293b;
   --color-white: #0f172a;
+  --color-premium: #b45309;
+  --color-premium-hi: #f59e0b;
+  --color-premium-ink: #fffbeb;
+  --color-chart-1: #868604;
+  --color-chart-2: #5a7dce;
+  --color-chart-3: #b76b1c;
+  --color-heat-0: #eef0f5;
+  --color-heat-1: #b5b761;
+  --color-heat-2: #9fa03c;
+  --color-heat-3: #898900;
+  --color-heat-4: #6d6d00;
 }
 
 * { box-sizing: border-box; }

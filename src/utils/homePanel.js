@@ -3,11 +3,24 @@
 // unificado necesita un único rol por fila. Gana el más fuerte, en este orden.
 export const ROLES = ['own', 'co', 'play', 'fav'];
 
+// Cada rol se dice de dos maneras. En la portada el dueño de la lista es quien
+// mira, así que va en primera persona; en el perfil de otra persona, no. `tag3`
+// y `chip3` son esa segunda voz.
+//
+// Para 'own' el tercero es ORGANIZA y no DUEÑO a propósito: el sustantivo lleva
+// género y en el perfil de una jugadora saldría en masculino. El verbo no, y
+// además queda en paralelo con JUEGA.
 export const ROLE_META = {
-  own:  { tag: 'MÍA',    chip: 'Mías',        cls: 'bg-brand text-base' },
-  co:   { tag: 'CO-ORG', chip: 'Co-organizo', cls: 'text-cyan border border-cyan/40' },
-  play: { tag: 'JUEGO',  chip: 'Juego',       cls: 'text-green border border-green/40' },
-  fav:  { tag: 'FAV',    chip: 'Favoritas',   cls: 'text-muted border border-border-strong' },
+  own:  { tag: 'MÍA',    tag3: 'ORGANIZA', chip: 'Mías',        chip3: 'Organiza',     cls: 'bg-brand text-base' },
+  co:   { tag: 'CO-ORG', tag3: 'CO-ORG',   chip: 'Co-organizo', chip3: 'Co-organiza',  cls: 'text-cyan border border-cyan/40' },
+  play: { tag: 'JUEGO',  tag3: 'JUEGA',    chip: 'Juego',       chip3: 'Juega',        cls: 'text-green border border-green/40' },
+  fav:  { tag: 'FAV',    tag3: 'FAV',      chip: 'Favoritas',   chip3: 'Favoritas',    cls: 'text-muted border border-border-strong' },
+};
+
+/** Etiqueta y chip de un rol. `third` cambia a la voz de tercera persona. */
+export const roleWords = (role, third = false) => {
+  const meta = ROLE_META[role] ?? ROLE_META.fav;
+  return { tag: third ? meta.tag3 : meta.tag, chip: third ? meta.chip3 : meta.chip, cls: meta.cls };
 };
 
 export function mergeGroups({ groups = [], coorgGroups = [], partGroups = [], favGroups = [], liveGroupIds }) {

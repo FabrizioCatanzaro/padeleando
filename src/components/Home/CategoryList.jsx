@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Plus, Star } from 'lucide-react';
 import Btn from '../shared/Btn';
-import CategoryRow from './CategoryRow';
+import CategoryRow from '../shared/CategoryRow';
 import { ROLES, ROLE_META } from '../../utils/homePanel';
 
 // Las cuatro secciones de antes son ahora una sola lista con chips: con diez

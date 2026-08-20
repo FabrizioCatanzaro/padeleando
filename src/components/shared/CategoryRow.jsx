@@ -1,12 +1,12 @@
 import { ChevronRight, Building2, Lock, Radio } from 'lucide-react';
-import ClubTile from '../shared/ClubTile';
-import { ROLE_META, dateLabel } from '../../utils/homePanel';
+import ClubTile from './ClubTile';
+import { roleWords, dateLabel } from '../../utils/homePanel';
 import { fmtHora } from '../../utils/helpers';
 
 const Dot = () => <span className="opacity-40">·</span>;
 
-export default function CategoryRow({ g, next = null, live = false, eager = false, onClick }) {
-  const meta = ROLE_META[g.role];
+export default function CategoryRow({ g, next = null, live = false, eager = false, third = false, onClick }) {
+  const meta = roleWords(g.role, third);
   const day  = next ? dateLabel(next.event_date) : null;
   const hora = next ? fmtHora(next.event_time) : '';
 

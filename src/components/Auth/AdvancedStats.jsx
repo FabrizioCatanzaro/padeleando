@@ -3,8 +3,8 @@
 // siendo premium y con partidos jugados. Importado de forma estática arrastraba
 // esa librería a toda visita de perfil, incluida la de un anónimo que nunca la
 // ve. ProfileView lo carga con React.lazy.
-import { Gem } from 'lucide-react';
 import { bestMonthOf } from '../../utils/helpers';
+import StatTile, { StatTiles } from '../shared/StatTile';
 import {
   ResponsiveContainer, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, Tooltip, CartesianGrid, Legend,
@@ -13,7 +13,7 @@ import {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-[#1a1a1a] border border-border-strong rounded px-3 py-2 text-xs font-mono">
+    <div className="bg-surface border border-border-strong rounded px-3 py-2 text-xs font-mono">
       <div className="text-muted mb-1">{label}</div>
       {payload.map((p) => (
         <div key={p.dataKey} style={{ color: p.color }}>{p.name}: {p.value}{p.unit ?? ''}</div>
@@ -23,12 +23,15 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 // ── Heatmap de actividad ──────────────────────────────────────────────────────
+// Rampa secuencial: un solo matiz, luminosidad monótona. Antes eran cuatro
+// alfas del amarillo de marca sobre negro, que en tema claro se veían como
+// nada. Ahora son escalones opacos con su propio valor en cada tema.
 const HEATMAP_COLORS = [
-  '#111',                    // 0 — sin actividad
-  'rgba(232,240,74,0.22)',   // 1
-  'rgba(232,240,74,0.45)',   // 2
-  'rgba(232,240,74,0.70)',   // 3
-  '#e8f04a',                 // 4+
+  'var(--color-heat-0)',   // 0 — sin actividad
+  'var(--color-heat-1)',   // 1
+  'var(--color-heat-2)',   // 2
+  'var(--color-heat-3)',   // 3
+  'var(--color-heat-4)',   // 4+
 ];
 
 function heatColor(n) {
@@ -41,6 +44,9 @@ function heatColor(n) {
 
 function ActivityHeatmap({ dailyActivity }) {
   const activityMap = Object.fromEntries((dailyActivity ?? []).map(d => [d.day, d.partidos]));
+  // Sin actividad era una grilla de 119 casilleros apagados: ocupaba el mismo
+  // espacio que el gráfico lleno y no decía nada.
+  if (!dailyActivity?.length) return null;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -92,7 +98,7 @@ function ActivityHeatmap({ dailyActivity }) {
             {weeks.map((_, wi) => {
               const lbl = monthLabels.find(m => m.wi === wi);
               return (
-                <div key={wi} style={{ width: STEP, flexShrink: 0, fontSize: 9, color: '#555', fontFamily: 'monospace' }}>
+                <div key={wi} style={{ width: STEP, flexShrink: 0, fontSize: 9, color: 'var(--color-muted)', fontFamily: 'monospace' }}>
                   {lbl?.label ?? ''}
                 </div>
               );
@@ -101,7 +107,7 @@ function ActivityHeatmap({ dailyActivity }) {
           {/* Filas (días) */}
           {Array.from({ length: 7 }, (_, di) => (
             <div key={di} style={{ display: 'flex', alignItems: 'center', gap: 0, marginBottom: GAP }}>
-              <div style={{ width: 26, fontSize: 8, color: '#444', fontFamily: 'monospace', textAlign: 'right', paddingRight: 4, flexShrink: 0 }}>
+              <div style={{ width: 26, fontSize: 8, color: 'var(--color-dim)', fontFamily: 'monospace', textAlign: 'right', paddingRight: 4, flexShrink: 0 }}>
                 {DAY_LABELS[di]}
               </div>
               {weeks.map((week, wi) => {
@@ -125,11 +131,11 @@ function ActivityHeatmap({ dailyActivity }) {
           ))}
           {/* Leyenda */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 3, marginTop: 6, marginLeft: 28 }}>
-            <span style={{ fontSize: 9, color: '#444', fontFamily: 'monospace', marginRight: 2 }}>Menos</span>
+            <span style={{ fontSize: 9, color: 'var(--color-dim)', fontFamily: 'monospace', marginRight: 2 }}>Menos</span>
             {HEATMAP_COLORS.map((bg, i) => (
               <div key={i} style={{ width: CELL, height: CELL, borderRadius: 2, background: bg, flexShrink: 0 }} />
             ))}
-            <span style={{ fontSize: 9, color: '#444', fontFamily: 'monospace', marginLeft: 2 }}>Más</span>
+            <span style={{ fontSize: 9, color: 'var(--color-dim)', fontFamily: 'monospace', marginLeft: 2 }}>Más</span>
           </div>
         </div>
       </div>
@@ -168,8 +174,8 @@ function WeekdayStats({ weekdayStats }) {
       {favorito.partidos > 0 && (
         <div className="bg-base rounded-lg px-4 py-3 border border-border-strong mb-3">
           <div className="font-condensed font-black text-[22px] text-white leading-none">{favorito.full}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>TU DÍA</div>
-          <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>
+          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: 'var(--color-dim)' }}>TU DÍA</div>
+          <div className="text-[10px] font-mono mt-0.5" style={{ color: 'var(--color-muted)' }}>
             {favorito.partidos} {favorito.partidos === 1 ? 'partido' : 'partidos'} · {favorito.winRate}% de victorias
           </div>
           <div className="h-0.5 rounded-full mt-2 bg-cyan opacity-40" />
@@ -178,13 +184,13 @@ function WeekdayStats({ weekdayStats }) {
       {activeDays >= 3 && (
         <ResponsiveContainer width="100%" height={130}>
           <BarChart data={rows} margin={{ top: 0, right: 0, left: -28, bottom: 0 }} barSize={14}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#444', fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: '#ffffff06' }} />
-            <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'monospace', color: '#555', paddingTop: 4 }} />
-            <Bar dataKey="partidos" name="Partidos" fill="#4ab8f0" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="victorias" name="Victorias" fill="#4af07a" radius={[3, 3, 0, 0]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: 'var(--color-dim)', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-dim)', fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'color-mix(in srgb, var(--color-content) 6%, transparent)' }} />
+            <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-muted)', paddingTop: 4 }} />
+            <Bar dataKey="partidos" name="Partidos" fill="var(--color-chart-2)" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="victorias" name="Victorias" fill="var(--color-chart-1)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       )}
@@ -205,6 +211,26 @@ function fmtDuracion(segundos) {
 
 // ── Estadísticas avanzadas (premium) ─────────────────────────────────────────
 export default function AdvancedStats({ stats, monthlyStats, dailyActivity, weekdayStats }) {
+  // Los tres cortes (por día, por mes, actividad diaria) necesitan historial.
+  // Con pocos partidos llegan vacíos y antes se reservaba el espacio igual:
+  // tres gráficos en blanco. Un aviso corto explica mejor que un hueco.
+  const sinHistorial =
+    !weekdayStats?.length && !monthlyStats?.length && !dailyActivity?.length;
+
+  if (sinHistorial) {
+    return (
+      <div className="border border-dashed border-border-strong rounded-lg p-8 text-center mb-6">
+        <div className="font-condensed font-bold text-[15px] text-white">
+          Todavía no hay suficientes partidos
+        </div>
+        <p className="text-[13px] text-muted font-sans leading-relaxed mt-2 mb-0 max-w-sm mx-auto">
+          Cuando juegues unos cuantos más vas a ver en qué días te va mejor,
+          tu mejor racha y cómo venís mes a mes.
+        </p>
+      </div>
+    );
+  }
+
   const gf   = stats.games_favor  ?? 0;
   const gc   = stats.games_contra ?? 0;
   const diff = gf - gc;
@@ -234,7 +260,6 @@ export default function AdvancedStats({ stats, monthlyStats, dailyActivity, week
   const setsTotal = (stats.sets?.sets_favor ?? 0) + (stats.sets?.sets_contra ?? 0);
   const setsPct   = setsTotal > 0 ? Math.round((stats.sets.sets_favor / setsTotal) * 100) : 0;
   const tightRate  = stats.ajustados > 0 ? Math.round((stats.ajustados_ganados / stats.ajustados) * 100) : 0;
-  const tightColor = tightRate >= 60 ? '#4af07a' : tightRate >= 40 ? '#e8f04a' : '#f07a4a';
 
   const activeMonths = filledMonths.filter(m => m.partidos > 0).length;
   const avgPerMonth  = activeMonths > 0 ? (stats.partidos / activeMonths).toFixed(1) : '—';
@@ -242,143 +267,70 @@ export default function AdvancedStats({ stats, monthlyStats, dailyActivity, week
   const bestMonth = bestMonthOf(monthlyStats);
 
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
-      {/* Header */}
-      <div className="flex items-center gap-2 mb-5">
-        <Gem size={13} className="text-brand" />
-        <span className="font-condensed font-bold text-sm tracking-[3px] text-brand">ESTADÍSTICAS AVANZADAS</span>
-      </div>
-
-      {/* Mejor racha + Mejor mes */}
-      <div className="grid grid-cols-2 gap-3 mb-4">
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.racha_max ?? 0}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>MEJOR RACHA</div>
-          <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>
-            {(stats.racha_max ?? 0) === 1 ? 'victoria consecutiva' : 'victorias consecutivas'}
-          </div>
-          <div className="h-0.5 rounded-full mt-2 bg-brand opacity-35" />
-        </div>
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          {bestMonth ? (
-            <>
-              {/* En media columna en mobile no entra el año de cuatro cifras:
-                  ahí va abreviado ("Junio '26") y a partir de sm, completo. */}
-              <div className="font-condensed font-black text-[18px] sm:text-[22px] text-white leading-none truncate">
+    <div className="mb-6">
+      {/* El título y el sello PREMIUM los pone la pestaña: acá adentro serían
+          un segundo encabezado pegado al primero. */}
+      <StatTiles>
+        <StatTile
+          value={stats.racha_max ?? 0}
+          label="Mejor racha"
+          sub={(stats.racha_max ?? 0) === 1 ? 'victoria al hilo' : 'victorias al hilo'}
+          tone={(stats.racha_max ?? 0) > 0 ? 'brand' : 'off'}
+        />
+        {bestMonth ? (
+          <StatTile
+            // En media columna no entra el año de cuatro cifras: ahí va
+            // abreviado ("Julio '26") y a partir de sm, completo.
+            value={(
+              <span className="text-[20px]">
                 {bestMonth.mes}{' '}
                 <span className="sm:hidden">&apos;{bestMonth.anio.slice(-2)}</span>
                 <span className="hidden sm:inline">{bestMonth.anio}</span>
-              </div>
-              <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>MEJOR MES</div>
-              <div className="text-[10px] font-mono mt-0.5 truncate" style={{ color: '#555' }}>
-                {bestMonth.partidos}PJ · {bestMonth.victorias}V
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="font-condensed font-black text-[32px] text-[#333] leading-none">—</div>
-              <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>MEJOR MES</div>
-            </>
-          )}
-          <div className="h-0.5 rounded-full mt-2 opacity-35" style={{ background: '#a84af0' }} />
-        </div>
-      </div>
-
-      {/* Games GF / GC / DIF */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className="font-condensed font-black text-[28px] text-white leading-none">{gf}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>GAMES A FAVOR</div>
-          <div className="h-0.5 rounded-full mt-2 bg-green opacity-40" />
-        </div>
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className="font-condensed font-black text-[28px] text-white leading-none">{gc}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>GAMES EN CONTRA</div>
-          <div className="h-0.5 rounded-full mt-2 bg-danger opacity-40" />
-        </div>
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className={`font-condensed font-black text-[28px] leading-none ${diff > 0 ? 'text-green' : diff < 0 ? 'text-danger' : 'text-white'}`}>
-            {diff > 0 ? '+' : ''}{diff}
-          </div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>DIFERENCIA</div>
-          <div className="h-0.5 rounded-full mt-2 opacity-40" style={{ background: diff >= 0 ? '#4af07a' : '#f07a4a' }} />
-        </div>
-      </div>
-
-      {(timedMatches > 0 || (stats.ajustados ?? 0) > 0) && (
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {timedMatches > 0 && (
-            <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-              <div className="font-condensed font-black text-[22px] text-white leading-none">{fmtDuracion(stats.segundos_jugados ?? 0)}</div>
-              <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>EN CANCHA</div>
-              <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>
-                {timedMatches} de {stats.partidos} con tiempo · {fmtDuracion(stats.segundos_jugados / timedMatches)} promedio
-              </div>
-              <div className="h-0.5 rounded-full mt-2 bg-cyan opacity-40" />
-            </div>
-          )}
-          {(stats.ajustados ?? 0) > 0 && (
-            <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-              <div className="font-condensed font-black text-[22px] leading-none" style={{ color: tightColor }}>
-                {tightRate}%
-              </div>
-              <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>EN PARTIDOS PAREJOS</div>
-              <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>
-                {stats.ajustados_ganados} de {stats.ajustados} definidos por 1 game
-              </div>
-              <div className="h-0.5 rounded-full mt-2 opacity-40" style={{ background: tightColor }} />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Meses activos + Promedio */}
-      <div className="grid grid-cols-2 gap-3 mb-6">
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className="font-condensed font-black text-[28px] text-white leading-none">{activeMonths}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>MESES ACTIVOS</div>
-          <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>últimos 12 meses</div>
-        </div>
-        <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-          <div className="font-condensed font-black text-[28px] text-white leading-none">{avgPerMonth}</div>
-          <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>PROM. PARTIDOS/MES</div>
-          <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>en meses activos</div>
-        </div>
-      </div>
+              </span>
+            )}
+            label="Mejor mes"
+            sub={`${bestMonth.partidos} PJ · ${bestMonth.victorias} V`}
+          />
+        ) : (
+          <StatTile value="—" label="Mejor mes" sub="falta un mes completo" tone="off" />
+        )}
+        <StatTile value={activeMonths} label="Meses activos" sub="últimos 12 meses" />
+        <StatTile value={avgPerMonth} label="Prom. partidos/mes" sub="en meses activos" />
+      </StatTiles>
 
       {/* Gráfico de barras — partidos + victorias por mes */}
-      <div className="mb-6">
+      <div className="mt-3 bg-surface border border-border-mid rounded-xl p-4">
         <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">PARTIDOS POR MES</div>
         <ResponsiveContainer width="100%" height={140}>
           <BarChart data={filledMonths} margin={{ top: 0, right: 0, left: -28, bottom: 0 }} barSize={10} barCategoryGap="30%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fill: '#444', fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
-            <Tooltip content={<ChartTooltip />} cursor={{ fill: '#ffffff06' }} />
-            <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'monospace', color: '#555', paddingTop: 4 }} />
-            <Bar dataKey="partidos" name="Partidos" fill="#4ab8f0" radius={[3, 3, 0, 0]} />
-            <Bar dataKey="victorias" name="Victorias" fill="#4af07a" radius={[3, 3, 0, 0]} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: 'var(--color-dim)', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fill: 'var(--color-dim)', fontSize: 9 }} axisLine={false} tickLine={false} allowDecimals={false} />
+            <Tooltip content={<ChartTooltip />} cursor={{ fill: 'color-mix(in srgb, var(--color-content) 6%, transparent)' }} />
+            <Legend wrapperStyle={{ fontSize: 9, fontFamily: 'monospace', color: 'var(--color-muted)', paddingTop: 4 }} />
+            <Bar dataKey="partidos" name="Partidos" fill="var(--color-chart-2)" radius={[3, 3, 0, 0]} />
+            <Bar dataKey="victorias" name="Victorias" fill="var(--color-chart-1)" radius={[3, 3, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
 
       {/* Gráfico de líneas — win rate por mes */}
-      <div className="mb-6">
+      <div className="mt-3 bg-surface border border-border-mid rounded-xl p-4">
         <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">WIN RATE % POR MES</div>
         <ResponsiveContainer width="100%" height={120}>
           <LineChart data={filledMonths} margin={{ top: 4, right: 4, left: -28, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" vertical={false} />
-            <XAxis dataKey="month" tick={{ fill: '#444', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
-            <YAxis domain={[0, 100]} tick={{ fill: '#444', fontSize: 9 }} axisLine={false} tickLine={false} unit="%" />
-            <Tooltip content={<ChartTooltip />} cursor={{ stroke: '#ffffff15' }} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+            <XAxis dataKey="month" tick={{ fill: 'var(--color-dim)', fontSize: 9, fontFamily: 'monospace' }} axisLine={false} tickLine={false} />
+            <YAxis domain={[0, 100]} tick={{ fill: 'var(--color-dim)', fontSize: 9 }} axisLine={false} tickLine={false} unit="%" />
+            <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'color-mix(in srgb, var(--color-content) 15%, transparent)' }} />
             <Line
               type="monotone"
               dataKey="winRate"
               name="Win Rate"
               unit="%"
-              stroke="#e8f04a"
+              stroke="var(--color-chart-1)"
               strokeWidth={2}
-              dot={{ fill: '#e8f04a', r: 3, strokeWidth: 0 }}
+              dot={{ fill: 'var(--color-brand)', r: 3, strokeWidth: 0 }}
               activeDot={{ r: 5, strokeWidth: 0 }}
               connectNulls={false}
             />
@@ -386,53 +338,63 @@ export default function AdvancedStats({ stats, monthlyStats, dailyActivity, week
         </ResponsiveContainer>
       </div>
 
-      {/* Sets: sólo con partidos al mejor de tres */}
-      {stats.sets?.disponible && (
-        <div className="grid grid-cols-3 gap-3 mb-6">
-          <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-            <div className="font-condensed font-black text-[28px] text-white leading-none">{setsPct}%</div>
-            <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>SETS GANADOS</div>
-            <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>
-              {stats.sets.sets_favor}-{stats.sets.sets_contra} en {stats.sets.partidos} partidos
-            </div>
-            <div className="h-0.5 rounded-full mt-2 bg-green opacity-40" />
-          </div>
-          <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-            <div className="font-condensed font-black text-[28px] text-white leading-none">{stats.sets.remontadas}</div>
-            <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>REMONTADAS</div>
-            <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>perdiendo el 1er set</div>
-            <div className="h-0.5 rounded-full mt-2 bg-brand opacity-40" />
-          </div>
-          <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-            <div className="font-condensed font-black text-[28px] text-white leading-none">{stats.sets.partidos}</div>
-            <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>A 3 SETS</div>
-            <div className="h-0.5 rounded-full mt-2 bg-cyan opacity-40" />
-          </div>
-        </div>
-      )}
-
-      {/* Palizas: 6-0, o todos los sets 6-0 */}
-      {(stats.palizas_ganadas > 0 || stats.palizas_sufridas > 0) && (
-        <div className="grid grid-cols-2 gap-3 mb-6">
-          <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-            <div className="font-condensed font-black text-[28px] text-green leading-none">{stats.palizas_ganadas}</div>
-            <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>PALIZAS DADAS</div>
-            <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>6-0 sin ceder un game</div>
-            <div className="h-0.5 rounded-full mt-2 bg-green opacity-40" />
-          </div>
-          <div className="bg-base rounded-lg px-4 py-3 border border-border-strong">
-            <div className="font-condensed font-black text-[28px] text-danger leading-none">{stats.palizas_sufridas}</div>
-            <div className="text-[10px] font-mono mt-1.5 tracking-widest" style={{ color: '#444' }}>PALIZAS SUFRIDAS</div>
-            <div className="h-0.5 rounded-full mt-2 bg-danger opacity-40" />
-          </div>
-        </div>
-      )}
-
       {/* Rendimiento por día de la semana */}
-      <WeekdayStats weekdayStats={weekdayStats} />
+      <div className="mt-3">
+        <WeekdayStats weekdayStats={weekdayStats} />
+      </div>
 
       {/* Heatmap de actividad */}
       <ActivityHeatmap dailyActivity={dailyActivity} />
+
+      {/* El detalle fino va al final: son cifras para mirar de a una, no el
+          titular de la pestaña. */}
+      <StatTiles className="mt-3">
+        <StatTile value={gf} label="Games a favor" tone={gf > 0 ? 'green' : 'off'} />
+        <StatTile value={gc} label="Games en contra" tone={gc > 0 ? 'danger' : 'off'} />
+        <StatTile
+          value={`${diff > 0 ? '+' : ''}${diff}`}
+          label="Diferencia"
+          tone={diff > 0 ? 'green' : diff < 0 ? 'danger' : 'default'}
+        />
+        {stats.sets?.disponible && (
+          <StatTile
+            value={`${stats.sets.sets_favor}-${stats.sets.sets_contra}`}
+            label="Sets"
+            sub={`${setsPct}% ganados · ${stats.sets.partidos} partidos a tres`}
+          />
+        )}
+        {stats.sets?.disponible && (
+          <StatTile
+            value={stats.sets.remontadas}
+            label="Remontadas"
+            sub="iba perdiendo y ganó"
+            tone={stats.sets.remontadas > 0 ? 'brand' : 'off'}
+          />
+        )}
+        {(stats.ajustados ?? 0) > 0 && (
+          <StatTile
+            value={`${stats.ajustados_ganados}/${stats.ajustados}`}
+            label="Partidos parejos"
+            sub={`${tightRate}% de los definidos por 1 game`}
+            tone={tightRate >= 60 ? 'green' : tightRate >= 40 ? 'brand' : 'danger'}
+          />
+        )}
+        {(stats.palizas_ganadas > 0 || stats.palizas_sufridas > 0) && (
+          <StatTile
+            value={`${stats.palizas_ganadas}-${stats.palizas_sufridas}`}
+            label="Palizas"
+            sub="dadas / sufridas · 6-0"
+            tone={stats.palizas_ganadas >= stats.palizas_sufridas ? 'green' : 'danger'}
+          />
+        )}
+        {timedMatches > 0 && (
+          <StatTile
+            value={<span className="text-[20px]">{fmtDuracion(stats.segundos_jugados ?? 0)}</span>}
+            label="En cancha"
+            sub={`${timedMatches} de ${stats.partidos} con tiempo · ${fmtDuracion(stats.segundos_jugados / timedMatches)} promedio`}
+          />
+        )}
+      </StatTiles>
     </div>
   );
 }
