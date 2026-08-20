@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import Modal from '../shared/Modal';
 import { api } from '../../utils/api';
-import { adaptTournament, isDeletedAccount, entityClub } from '../../utils/helpers';
+import { adaptTournament, isDeletedAccount, entityClub, isLive } from '../../utils/helpers';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -17,7 +17,8 @@ const HistoricalStats = lazy(() => import('../Stats/Stats').then(m => ({ default
 import GroupTournaments from './GroupTournaments';
 import GroupPlayers from './GroupPlayers';
 import GroupClubs from './GroupClubs';
-import { EMPTY_FILTERS, filterTournaments, countActiveFilters } from '../../utils/tournamentFilters';
+import { EMPTY_FILTERS, filterTournaments, countActiveFilters, sortTournaments, DEFAULT_SORT } from '../../utils/tournamentFilters';
+import GroupHero from './GroupHero';
 import ClubSelector from '../shared/ClubSelector';
 import PremiumModal from '../shared/PremiumModal';
 import { FREE_TOURNAMENTS_PER_MONTH } from '../../utils/plan';
@@ -56,6 +57,7 @@ export default function GroupView() {
   const [visibleCount,     setVisibleCount]     = useState(5);
   const [filters,          setFilters]          = useState(EMPTY_FILTERS);
   const [filtersOpen,      setFiltersOpen]      = useState(false);
+  const [sort,             setSort]             = useState(DEFAULT_SORT);
 
   // edit fields
   const [editName,     setEditName]     = useState('');
@@ -372,7 +374,10 @@ export default function GroupView() {
   useDocumentTitle(notFound ? 'Categoría no encontrada' : group?.name);
 
   const allT = group?.tournaments;
-  const filtered = useMemo(() => filterTournaments(allT ?? [], filters), [allT, filters]);
+  const filtered = useMemo(
+    () => sortTournaments(filterTournaments(allT ?? [], filters), sort),
+    [allT, filters, sort],
+  );
   const activeFilters = countActiveFilters(filters);
 
   function changeFilters(next) {
@@ -480,54 +485,91 @@ export default function GroupView() {
     },
   ];
 
+  // Riel del hero. Todo sale de las jornadas que la vista ya tiene cargadas;
+  // player_count lo agrega la consulta del grupo (jugadores distintos, no la
+  // suma por jornada, que cuenta dos veces a quien juega en varias).
+  const tours      = group.tournaments ?? [];
+  const liveCount  = tours.filter(isLive).length;
+  const matchCount = tours.reduce((n, t) => n + (t.match_count ?? 0), 0);
+  const firstDay   = tours.reduce((min, t) => {
+    const d = String(t.event_date ?? t.created_at ?? '').slice(0, 10);
+    return d && (!min || d < min) ? d : min;
+  }, '');
+  // Año completo: "jul 26" se leía como el 26 de julio y no como julio de 2026.
+  const sinceLabel = firstDay
+    ? new Date(`${firstDay}T00:00`).toLocaleDateString('es-AR', { month: 'short', year: 'numeric' }).replace('.', '')
+    : null;
+
+  const heroStats = [
+    ...(liveCount > 0 ? [{ value: liveCount, label: 'En vivo', brand: true }] : []),
+    { value: tours.length,            label: tours.length === 1 ? 'Torneo' : 'Torneos' },
+    { value: group.player_count ?? 0, label: 'Jugadores' },
+    { value: matchCount,              label: 'Partidos' },
+    ...(sinceLabel ? [{ value: sinceLabel, label: 'Desde' }] : []),
+  ];
+
+  // El cupo mensual del plan free se evalúa contra el DUEÑO de la categoría, no
+  // contra quien crea: un co-organizador premium no evade el límite del dueño.
+  function handleNewTournament() {
+    if (!group.owner_is_premium) {
+      const now = new Date();
+      const thisMonthCount = tours.filter((t) => {
+        const d = new Date(t.created_at);
+        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+      }).length;
+      if (thisMonthCount >= FREE_TOURNAMENTS_PER_MONTH) {
+        setPremiumReason(`Esta categoría ya usó sus ${FREE_TOURNAMENTS_PER_MONTH} torneos del mes. El cupo se renueva el 1°; los torneos ya creados quedan intactos.`);
+        setShowPremiumModal(true);
+        return;
+      }
+    }
+    navigate(`/cat/${groupId}/torneo/new`);
+  }
+
+  const backBtn = <Btn size="sm" icon={ChevronLeft} onClick={() => navigate('/')}>Volver</Btn>;
+
+  const headerActions = isOwner ? (
+    <div className="flex items-center gap-1.5 flex-wrap justify-end">
+      {favoriteControl}
+      {group.is_public && <Btn size="sm" icon={Share2} onClick={() => setShowShareModal(true)} title="Compartir" />}
+      <ActionMenu label="Acciones de la categoría" items={ownerActions} />
+    </div>
+  ) : (
+    <div className="flex items-center gap-2">
+      {favoriteControl}
+      <Btn size="sm" icon={Share2} onClick={() => setShowShareModal(true)} />
+      {isDeletedAccount(group.owner_username) ? (
+        <span className="flex gap-2 items-center border border-border-strong rounded-full pl-1 pr-3 py-1">
+          <User2 className="text-content" size={13} /><span className="text-sm text-content font-mono">Cuenta eliminada</span>
+        </span>
+      ) : (
+        <span
+          className="flex gap-2 items-center bg-surface border border-border-strong rounded-full pl-1 pr-3 py-1 hover:bg-border-mid hover:text-white cursor-pointer transition-colors"
+          onClick={() => navigate(`/u/${group.owner_username}`)}
+        >
+          <PlayerAvatar
+            name={group.owner_name ?? group.owner_username ?? '?'}
+            src={group.owner_avatar_url}
+            size={24}
+            premium={!!group.owner_is_premium}
+          />
+          <span className="text-sm text-content font-mono">@{group.owner_username ?? '—'}</span>
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <div className="bg-base text-content font-sans pb-24 sm:pb-15">
-      <div className="px-6 pt-6 pb-5 flex flex-col gap-3 border-b border-border">
-        <div className="flex justify-between items-center">
-          <Btn size="sm" icon={ChevronLeft} onClick={() => navigate('/')}>Volver</Btn>
+      {editingGroup ? (
+        <div className="px-4 sm:px-6 pt-6 pb-5 flex flex-col gap-3 border-b border-border">
+          <div className="flex justify-between items-center">{backBtn}</div>
+          <div className="min-w-0">
 
-          {isOwner && !editingGroup && (
-            <div className="flex items-center gap-1.5 flex-wrap justify-end">
-              {favoriteControl}
-              {group.is_public && (
-                <Btn size="sm" icon={Share2} onClick={() => setShowShareModal(true)} title="Compartir" />
-              )}
-              <ActionMenu label="Acciones de la categoría" items={ownerActions} />
-            </div>
-          )}
-
-          {!isOwner && (
-            <div className="flex items-center gap-2">
-              {favoriteControl}
-              <Btn size="sm" icon={Share2} onClick={() => setShowShareModal(true)} />
-              {isDeletedAccount(group.owner_username) ? (
-                <span className="flex gap-2 items-center border border-border-strong rounded-full pl-1 pr-3 py-1">
-                  <User2 className="text-content" size={13}/><span className='text-sm text-content font-mono'>Cuenta eliminada</span>
-                </span>
-              ) : (
-                <span
-                  className="flex gap-2 items-center bg-surface border border-border-strong rounded-full pl-1 pr-3 py-1 hover:bg-border-mid hover:text-white cursor-pointer transition-colors"
-                  onClick={() => navigate(`/u/${group.owner_username}`)}
-                >
-                  <PlayerAvatar
-                    name={group.owner_name ?? group.owner_username ?? '?'}
-                    src={group.owner_avatar_url}
-                    size={24}
-                    premium={!!group.owner_is_premium}
-                  />
-                  <span className='text-sm text-content font-mono'>@{group.owner_username ?? '—'}</span>
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-
-        <div className="min-w-0">
-          {editingGroup ? (
             <div className="flex flex-col gap-4">
               {/* Nombre */}
               <div>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">NOMBRE</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">NOMBRE</label>
                 <input
                   autoFocus
                   value={editName}
@@ -539,7 +581,7 @@ export default function GroupView() {
 
               {/* Descripción */}
               <div>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">DESCRIPCIÓN (opcional)</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">DESCRIPCIÓN (opcional)</label>
                 <input
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
@@ -551,14 +593,14 @@ export default function GroupView() {
 
               {/* Privacidad */}
               <div>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">PRIVACIDAD</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">PRIVACIDAD</label>
                 <div className="flex gap-2">
                   {[{ val: true, label: 'Público', icon: Globe }, { val: false, label: 'Privado', icon: Lock }].map(v => (
                     <div key={String(v.val)} onClick={() => setEditIsPublic(v.val)}
                       className={`flex items-center gap-2 px-3 py-2 text-xs rounded cursor-pointer border transition-colors bg-transparent ${
                         editIsPublic === v.val
                           ? v.val ? 'border-cyan text-cyan' : 'border-yellow-400 text-yellow-400'
-                          : 'border-border-strong text-[#555]'
+                          : 'border-border-strong text-muted'
                       }`}>
                       <v.icon size={13} />{v.label}
                     </div>
@@ -568,13 +610,13 @@ export default function GroupView() {
 
               {/* Club */}
               <div>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">CLUB (opcional)</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">CLUB (opcional)</label>
                 <ClubSelector value={editClub} onChange={setEditClub} />
                 <p className="text-[10px] text-dim font-mono mt-1.5">Se usa como club por defecto en los torneos nuevos.</p>
               </div>
 
               <div className="border-t border-border-mid pt-4">
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-2.5">INSCRIPCIÓN</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-2.5">INSCRIPCIÓN</label>
                 <SignupEditor
                   value={editSignup}
                   onChange={setEditSignup}
@@ -585,10 +627,10 @@ export default function GroupView() {
 
               {/* Íconos */}
               <div>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">ÍCONOS (opcional · máx. 2)</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">ÍCONOS (opcional · máx. 2)</label>
                 <div className="flex items-center gap-3">
                   <button type="button" onClick={() => setShowEmojiModal(true)}
-                    className="flex items-center gap-2 bg-transparent border border-border-mid text-[#888] hover:border-border-strong hover:text-white transition-colors px-3 py-2 rounded text-xs font-mono cursor-pointer">
+                    className="flex items-center gap-2 bg-transparent border border-border-mid text-secondary hover:border-border-strong hover:text-white transition-colors px-3 py-2 rounded text-xs font-mono cursor-pointer">
                     <Smile size={13} />
                     ÍCONOS
                     {editEmojis.length > 0 && <span className="text-brand font-bold">({editEmojis.length}/2)</span>}
@@ -597,7 +639,7 @@ export default function GroupView() {
                     <div className="flex gap-1.5 items-center">
                       {editEmojis.map(e => <span key={e} className="text-xl leading-none">{e}</span>)}
                       <button type="button" onClick={() => setEditEmojis([])}
-                        className="ml-1 text-[#555] hover:text-white transition-colors bg-transparent border-none cursor-pointer">
+                        className="ml-1 text-dim hover:text-white transition-colors bg-transparent border-none cursor-pointer">
                         <X size={12} />
                       </button>
                     </div>
@@ -611,53 +653,21 @@ export default function GroupView() {
                 <Btn size="sm" icon={X} onClick={() => setEditingGroup(false)}>CANCELAR</Btn>
               </div>
             </div>
-          ) : (
-            <>
-              <div className="flex items-start gap-3">
-                {group.emojis?.length > 0 && (
-                  <div className="flex flex-col items-center justify-center gap-1 shrink-0 bg-surface border border-border-mid rounded-lg px-3 py-2 self-stretch">
-                    {group.emojis.map((e) => <span key={e} className="text-2xl leading-none">{e}</span>)}
-                  </div>
-                )}
-                <div className="min-w-0">
-                  <div className="font-condensed font-bold text-[28px] text-white tracking-wide">{group.name}</div>
-                  {group.description && (
-                    <div className="font-condensed text-[14px] text-gray-500 tracking-wide mt-0.5 wrap-break-word whitespace-normal">{group.description}</div>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Privacidad (solo dueño), club y precio — justo encima de la línea divisoria */}
-        {!editingGroup && (isOwner || group.club_id || group.signup_open) && (
-          <div className="flex flex-wrap items-center gap-2">
-            {isOwner && (
-              <span className={`inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border ${group.is_public ? 'text-cyan border-cyan/40' : 'text-yellow-400 border-yellow-400/40'}`}>
-                {group.is_public ? <Globe size={12}/> : <Lock size={12}/>}
-                {group.is_public ? 'Categoría pública' : 'Categoría privada'}
-              </span>
-            )}
-            <SignupPricePill signup={{
-              open:  group.signup_open ?? false,
-              price: group.signup_price,
-              unit:  group.signup_price_unit ?? 'player',
-            }} />
-            {group.club_id ? (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border text-brand border-brand/40 max-w-full">
-                <Building2 size={12} className="shrink-0" />
-                <span className="truncate">{group.club_name}</span>
-              </span>
-            ) : isOwner && group.pending_club_request_id && (
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border text-yellow-400 border-yellow-400/40 max-w-full">
-                <Building2 size={12} className="shrink-0" />
-                <span className="truncate">{group.pending_club_name} · pendiente</span>
-              </span>
-            )}
           </div>
-        )}
+        </div>
+      ) : (
+        <GroupHero
+          group={group}
+          stats={heroStats}
+          isOwner={isOwner}
+          back={backBtn}
+          actions={headerActions}
+        />
+      )}
 
+      {/* Carteles contextuales. Van fuera del hero: son transitorios y antes
+          empujaban los torneos debajo del pliegue cuando caían varios juntos. */}
+      <div className="px-4 sm:px-6 pt-4 flex flex-col gap-2.5 empty:hidden">
         {/* Cartel de co-organizador */}
         {isCollaborator && (
           <div className="flex items-center justify-between gap-2 bg-brand/5 border border-brand/25 rounded-md px-3 py-2">
@@ -780,46 +790,17 @@ export default function GroupView() {
         })}
       </div>
 
-      <div className="p-6">
+      <div className="px-4 sm:px-6 py-6">
         {tab === 'torneos' && (
-          <>
-            <div className="flex items-center justify-between mb-4">
-              <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">TORNEOS</div>
-              {canManage && (
-                <Btn
-                  variant="primary"
-                  size="sm"
-                  icon={Plus}
-                  onClick={() => {
-                    // El cupo mensual del plan free se evalúa contra el DUEÑO de la categoría,
-                    // no contra quien crea (un co-organizador premium no evade el límite del dueño).
-                    if (!group.owner_is_premium) {
-                      const now = new Date();
-                      const thisMonthCount = (group.tournaments ?? []).filter(t => {
-                        const d = new Date(t.created_at);
-                        return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
-                      }).length;
-                      if (thisMonthCount >= FREE_TOURNAMENTS_PER_MONTH) {
-                        setPremiumReason(`Esta categoría ya usó sus ${FREE_TOURNAMENTS_PER_MONTH} torneos del mes. El cupo se renueva el 1°; los torneos ya creados quedan intactos.`);
-                        setShowPremiumModal(true);
-                        return;
-                      }
-                    }
-                    navigate(`/cat/${groupId}/torneo/new`);
-                  }}
-                >
-                  NUEVO TORNEO
-                </Btn>
-              )}
-            </div>
-            <GroupTournaments
-              group={group} groupId={groupId} canManage={canManage}
-              filters={filters} changeFilters={changeFilters}
-              filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
-              activeFilters={activeFilters} filtered={filtered}
-              visibleCount={visibleCount} setVisibleCount={setVisibleCount}
-            />
-          </>
+          <GroupTournaments
+            group={group} groupId={groupId} canManage={canManage}
+            filters={filters} changeFilters={changeFilters}
+            filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
+            activeFilters={activeFilters} filtered={filtered}
+            visibleCount={visibleCount} setVisibleCount={setVisibleCount}
+            sort={sort} setSort={setSort}
+            onNewTournament={handleNewTournament}
+          />
         )}
 
         {/* Recharts pesa 111 KB: sigue entrando por lazy, ahora además sólo
@@ -849,9 +830,9 @@ export default function GroupView() {
           onClick={(e) => { if (e.target === e.currentTarget) setShowEmojiModal(false); }}>
           <div className="bg-surface border border-border-mid rounded-t-2xl sm:rounded-xl w-full sm:max-w-sm p-5">
             <div className="flex items-center justify-between mb-4">
-              <div className="font-mono text-sm text-[#555] tracking-widest">ÍCONOS · máx. 2</div>
+              <div className="font-mono text-sm text-dim tracking-widest">ÍCONOS · máx. 2</div>
               <button type="button" onClick={() => setShowEmojiModal(false)}
-                className="bg-transparent border-none text-[#555] hover:text-white cursor-pointer transition-colors">
+                className="bg-transparent border-none text-dim hover:text-white cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -888,7 +869,7 @@ export default function GroupView() {
             <div className="flex items-center justify-between mb-2">
               <div className="font-condensed font-bold text-lg text-white tracking-wide">Co-organizadores</div>
               <button type="button" onClick={() => setShowCollabModal(false)}
-                className="bg-transparent border-none text-[#555] hover:text-white cursor-pointer transition-colors">
+                className="bg-transparent border-none text-dim hover:text-white cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -913,7 +894,7 @@ export default function GroupView() {
               )}
             </div>
 
-            <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">INVITAR POR @USUARIO O EMAIL</label>
+            <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">INVITAR POR @USUARIO O EMAIL</label>
             <div className="flex gap-2 mb-3">
               <input
                 value={collabIdentifier}
@@ -946,7 +927,7 @@ export default function GroupView() {
             <div className="flex items-center justify-between mb-2">
               <div className="font-condensed font-bold text-lg text-white tracking-wide">Transferir propiedad</div>
               <button type="button" onClick={() => setShowTransferModal(false)}
-                className="bg-transparent border-none text-[#555] hover:text-white cursor-pointer transition-colors">
+                className="bg-transparent border-none text-dim hover:text-white cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
@@ -970,7 +951,7 @@ export default function GroupView() {
               </div>
             ) : (
               <>
-                <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">TRANSFERIR A @USUARIO O EMAIL</label>
+                <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">TRANSFERIR A @USUARIO O EMAIL</label>
                 <input
                   value={transferIdentifier}
                   onChange={(e) => setTransferIdentifier(e.target.value)}

@@ -1,29 +1,34 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
 import { api } from '../../utils/api';
 import { fmt, calcNivel } from '../../utils/helpers';
+import { mergeGroups } from '../../utils/homePanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { Eye, EyeOff, Copy, Check, Camera, Trash2, ChevronDown, ChevronUp, X, Link, Flame, Trophy, UserPlus, UserCheck, Lock, Globe, Gem, Badge, BadgeCheck, Share2, BarChart3, Swords, Handshake, MapPin, Users, LayoutGrid } from 'lucide-react';
+import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 // Recharts sólo lo necesita este bloque, que además casi nunca se muestra.
 const AdvancedStats = lazy(() => import('./AdvancedStats'));
 import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons';
 import FadeInCard from '../shared/FadeInCard';
-import GroupCard from '../shared/GroupCard';
 import PremiumModal from '../shared/PremiumModal';
 import ClaimPremiumRequest from '../shared/ClaimPremiumRequest';
 import Modal from '../shared/Modal';
 import statsPreview from '../../assets/advanced-stats-preview.svg';
 import Loader from '../Loader/Loader';
 import LazyNotFound from '../NotFound/LazyNotFound';
+import MatchRow from './MatchRow';
+import ProfileMatches from './ProfileMatches';
+import ProfileHero, { PlanBand } from './ProfileHero';
+import SectionRule from '../shared/SectionRule';
+import ProfileStats from './ProfileStats';
+import ProfileCategories from './ProfileCategories';
+import PremiumChip from '../shared/PremiumChip';
 import PlayerAvatar from '../shared/PlayerAvatar';
-import ClubLogo from '../shared/ClubLogo';
 import AvatarCropper from '../shared/AvatarCropper';
 import ShareProfileModal from '../shared/ShareProfileModal';
 import SnapshotModal from '../Snapshot/SnapshotModal';
 import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
-import coverMark from '../../assets/cover-mark.webp';
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -48,6 +53,12 @@ const NETWORKS = [
 ];
 
 const EMPTY_LINK = { network: '', url: '' };
+
+const PROFILE_TABS = [
+  { id: 'resumen',  label: 'RESUMEN' },
+  { id: 'partidos', label: 'PARTIDOS' },
+  { id: 'stats',    label: 'ESTADÍSTICAS' },
+];
 
 // El avatar se guarda a 512 px: pedirlo transformado sólo cambia el formato y la compresión.
 function avatarZoomUrl(src) {
@@ -293,7 +304,7 @@ export default function ProfileView() {
   const [editUsername, setEditUsername] = useState('');
   const [editBio,      setEditBio]      = useState('');
   const [socialLinks,  setSocialLinks]  = useState([{ ...EMPTY_LINK }]);
-  const [showAllMatches, setShowAllMatches] = useState(false);
+  const [tab,            setTab]            = useState('resumen');
   const [currentPass,  setCurrentPass]  = useState('');
   const [newPass,      setNewPass]      = useState('');
   const [newPass2,     setNewPass2]     = useState('');
@@ -316,7 +327,6 @@ export default function ProfileView() {
   const [advancedBusy,   setAdvancedBusy]   = useState(false);
   const [advancedError,  setAdvancedError]  = useState(null);
 
-  const [bioOpen,         setBioOpen]         = useState(false);
 
   // El avatar necesita dos tamaños reales (no sólo CSS) porque PlayerAvatar
   // deriva de `size` el cuerpo de las iniciales y el borde premium. El valor
@@ -392,20 +402,79 @@ export default function ProfileView() {
   if (error === 'notfound') return <LazyNotFound subject="profile" />;
   if (error)   return <div className="text-danger p-10">{error}</div>;
 
-  const { owner, groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
+  const { owner, groups, played_groups, coorg_groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
   const isOwnProfile  = user?.username === owner.username;
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
 
   const avatarSize  = isDesktop ? 128 : 104;
   const headerPct   = stats?.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : null;
   const headerNivel = calcNivel(stats?.partidos ?? 0, headerPct ?? 0);
-  // 140 caracteres es lo que entra en tres líneas al ancho de la bio en mobile.
-  // Medir el desborde real obligaría a leer el layout después de pintar.
-  const bioLong     = (owner.bio?.length ?? 0) > 140;
 
   // El plan manda: sin premium no hay avanzadas ni para el dueño. Publicarlas
   // las abre a cualquier visitante, incluida la captura del perfil.
   const canSeeAdvanced = !!owner.is_premium && (isOwnProfile || advancedPublic);
+
+  // Una sola fila de acciones para los dos tamaños: antes había un bloque
+  // duplicado para desktop y otro para mobile que había que mantener a la par.
+  const heroActions = (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={() => setShowShare(true)}
+        title="Compartir perfil"
+        aria-label="Compartir perfil"
+        className="w-9 h-9 flex items-center justify-center rounded-lg border border-border-strong text-muted hover:border-brand hover:text-brand bg-transparent transition-colors cursor-pointer shrink-0"
+      >
+        <Share2 size={14} />
+      </button>
+      {isOwnProfile ? (
+        <button
+          onClick={() => setEditOpen(v => !v)}
+          className="flex items-center gap-2 px-4 py-2 rounded-lg font-sans text-[13px] border border-border-strong text-content bg-transparent hover:bg-border-mid hover:text-white transition-colors cursor-pointer"
+        >
+          <Pencil size={14} />Editar perfil
+        </button>
+      ) : (
+        <button
+          onClick={user ? handleFollowToggle : () => setShowInviteModal(true)}
+          onMouseEnter={() => setFollowHover(true)}
+          onMouseLeave={() => setFollowHover(false)}
+          disabled={followBusy}
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-condensed font-bold text-[12px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
+            isFollowing
+              ? followHover
+                ? 'border-danger text-danger bg-transparent'
+                : 'border-border-strong text-muted bg-transparent'
+              : 'bg-brand text-base border-brand hover:brightness-110'
+          }`}
+        >
+          {isFollowing
+            ? followHover
+              ? <><UserPlus size={14} /> DEJAR DE SEGUIR</>
+              : <><UserCheck size={14} /> SIGUIENDO</>
+            : <><UserPlus size={14} /> SEGUIR</>}
+        </button>
+      )}
+    </div>
+  );
+
+  // Una categoría puede ser propia, jugada y co-organizada a la vez: la lista
+  // unificada se arma una sola vez para que el riel y la sección cuenten igual.
+  const mergedGroups = mergeGroups({
+    groups,
+    coorgGroups: coorg_groups ?? [],
+    partGroups:  played_groups ?? [],
+    favGroups:   [],
+  });
+
+  // Riel del perfil: sólo lo deportivo, y todo derivado de lo que ya llegó.
+  const railStats = stats ? [
+    { value: stats.partidos ?? 0, label: 'Partidos' },
+    { value: stats.torneos ?? 0,  label: 'Torneos' },
+    { value: stats.titulos ?? 0,  label: 'Títulos', tone: (stats.titulos ?? 0) > 0 ? 'gold' : 'off' },
+    { value: stats.racha ?? 0,    label: 'Racha',   tone: (stats.racha ?? 0) > 0 ? 'brand' : 'off' },
+    { value: mergedGroups.length, label: 'Categorías' },
+    { value: club_stats?.length ?? 0, label: 'Clubes' },
+  ] : [];
 
   const savedLinks    = Array.isArray(owner.social_links) ? owner.social_links.filter(l => l.url?.trim()) : [];
   const filledLinks   = socialLinks.filter(l => {
@@ -654,231 +723,43 @@ export default function ProfileView() {
 
       <div className="p-4 sm:p-6">
 
-        {/* Cabecera */}
-        <div className="mb-5 sm:mb-6">
-          {/* Banda superior: da un fondo sobre el que apoyar el avatar y corta
-              el bloque de identidad del de estadísticas. Sangra hasta los
-              bordes del contenedor. La marca en diagonal va a muy poco
-              contraste: es textura, no un elemento que compita con el nombre.
-              El giro lo hace la capa interna y no el fondo, porque CSS no puede
-              rotar un background: por eso la baldosa se repite derecha y se
-              inclina el div que la contiene, sobredimensionado para que las
-              esquinas queden cubiertas después de girar. */}
-          <div className="relative overflow-hidden -mx-4 sm:-mx-6 -mt-4 sm:-mt-6 h-20 sm:h-32 bg-surface border-b border-border">
-            <div
-              className="profile-cover-mark absolute inset-[-50%]"
-              style={{ backgroundImage: `url(${coverMark})`, backgroundRepeat: 'repeat', backgroundSize: '200px auto' }}
+        <ProfileHero
+          owner={owner}
+          isOwnProfile={isOwnProfile}
+          avatarSrc={avatarThumbUrl(displayAvatar, avatarSize)}
+          avatarSize={avatarSize}
+          nivel={headerNivel}
+          isPremium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
+          joinedAt={fmt(owner.created_at)}
+          onAvatarOpen={() => displayAvatar && setAvatarZoom(true)}
+          onPickAvatar={pickAvatar}
+          onDeleteAvatar={() => setConfirmAvatarDelete(true)}
+          avatarBusy={avatarBusy}
+          avatarError={avatarError}
+          fileInputRef={fileInputRef}
+          onFileChange={handleAvatarChange}
+          socials={<SocialLinksDisplay links={savedLinks} />}
+          followersCount={followersCount}
+          followingCount={followingCount}
+          onOpenFollowers={() => openFollowModal('followers')}
+          onOpenFollowing={() => openFollowModal('following')}
+          winPct={headerPct}
+          wins={stats?.victorias ?? 0}
+          played={stats?.partidos ?? 0}
+          railStats={railStats}
+          actions={heroActions}
+          planChip={isOwnProfile ? (
+            <PlanBand
+              premium={user?.subscription?.plan === 'premium'}
+              subscription={user?.subscription}
+              onManage={() => navigate('/subscription/manage')}
+              onSeePlans={() => setShowPremiumModal(true)}
             />
-          </div>
+          ) : null}
+        />
 
-          {/* En mobile la columna de la derecha quedaba en ~190 px: el nombre se
-              partía en dos, la bio caía en siete líneas y las redes se apilaban
-              una por fila. Debajo de sm la cabecera pasa a una sola columna
-              centrada y todo dispone del ancho completo. */}
-          <div className="flex flex-col items-center text-center sm:flex-row sm:items-start sm:text-left sm:gap-5">
-            {/* Avatar. El aro del color de la página es lo que hace que el
-                recorte sobre la portada se lea como intencional y no como una
-                foto apoyada encima. */}
-            <div className="relative shrink-0 -mt-13 sm:-mt-20 rounded-full bg-base p-1">
-              <button
-                type="button"
-                onClick={() => displayAvatar && setAvatarZoom(true)}
-                aria-label={displayAvatar ? `Ver la foto de ${owner.name}` : undefined}
-                disabled={!displayAvatar}
-                className="bg-transparent border-0 p-0 rounded-full block enabled:cursor-pointer enabled:hover:brightness-110 transition"
-              >
-                <PlayerAvatar
-                  name={owner.name}
-                  src={avatarThumbUrl(displayAvatar, avatarSize)}
-                  size={avatarSize}
-                  premium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
-                />
-              </button>
-              {isOwnProfile && (
-                <>
-                  <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp"
-                    className="hidden" onChange={handleAvatarChange} />
-                  <button type="button" onClick={pickAvatar} disabled={avatarBusy}
-                    title={displayAvatar ? 'Cambiar foto' : 'Subir foto'}
-                    className="absolute -bottom-1 -right-1 bg-brand text-base rounded-full w-7 h-7 flex items-center justify-center border-2 border-base cursor-pointer hover:brightness-110 transition disabled:opacity-50 disabled:cursor-wait">
-                    <Camera size={13} />
-                  </button>
-                  {displayAvatar && (
-                    <button type="button" onClick={() => setConfirmAvatarDelete(true)} disabled={avatarBusy} title="Quitar foto"
-                      className="absolute -top-1 -right-1 bg-surface text-muted rounded-full w-6 h-6 flex items-center justify-center border border-border-strong cursor-pointer hover:text-danger hover:border-danger transition disabled:opacity-50 disabled:cursor-wait">
-                      <Trash2 size={11} />
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-
-            {/* Info */}
-            <div className="w-full min-w-0 mt-3 sm:mt-0 sm:flex-1 sm:pt-4">
-              <h1 className="font-condensed font-bold text-[22px] sm:text-[28px] text-white leading-tight m-0 break-words">{owner.name}</h1>
-              <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 mt-1.5">
-                <span className="text-[12px] text-muted font-mono">@{owner.username}</span>
-                {headerNivel && (
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full border text-[10px] font-mono tracking-widest"
-                    style={{ color: headerNivel.color, borderColor: `${headerNivel.color}44`, background: `${headerNivel.color}10` }}>
-                    {headerNivel.label.toUpperCase()}
-                  </span>
-                )}
-              </div>
-              <div className="text-[11px] text-dim font-mono mt-1">Padeleando desde {fmt(owner.created_at)}</div>
-              {owner.bio && (
-                // El recorte es sólo cosa de mobile: en desktop una bio de 200
-                // caracteres entra en dos o tres líneas, así que cortarla y
-                // ofrecer "ver más" era prometer algo que ya estaba a la vista.
-                <div className="mt-3 sm:max-w-[62ch]">
-                  <p className={`text-[13px] text-secondary font-sans leading-relaxed m-0 sm:line-clamp-none ${bioOpen ? '' : 'line-clamp-3'}`}>
-                    {owner.bio}
-                  </p>
-                  {bioLong && (
-                    <button
-                      type="button"
-                      onClick={() => setBioOpen(v => !v)}
-                      className="sm:hidden mt-1 text-[11px] font-mono text-brand bg-transparent border-0 p-0 cursor-pointer hover:underline"
-                    >
-                      {bioOpen ? 'ver menos' : 'ver más'}
-                    </button>
-                  )}
-                </div>
-              )}
-              {isOwnProfile && (
-                <div className="mt-2 flex flex-col items-center sm:items-start">
-                  {user?.subscription?.plan === 'premium' ? (
-                    <button
-                      type="button"
-                      onClick={() => navigate('/subscription/manage')}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-brand border border-brand rounded px-1.5 py-0.5 bg-transparent cursor-pointer hover:bg-brand/10 transition-colors"
-                    >
-                      <BadgeCheck size={11} />
-                      PREMIUM
-                      {user.subscription.starts_at && (
-                        <> · desde {new Date(user.subscription.starts_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</>
-                      )}
-                      {user.subscription.ends_at && (
-                        <> al {new Date(user.subscription.ends_at).toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit' })}</>
-                      )}
-                    </button>
-                  ) : (
-                    // Un solo chip, del mismo tamaño que el de premium. El
-                    // rescate de "pagué y no se activó" bajó al panel de editar
-                    // perfil: es un trámite de cuenta, no parte de la identidad
-                    // pública, y colgando acá partía la cabecera en dos.
-                    <button
-                      type="button"
-                      onClick={() => setShowPremiumModal(true)}
-                      className="inline-flex items-center gap-1.5 text-[11px] font-mono text-muted hover:text-brand transition-colors bg-transparent cursor-pointer group border border-muted rounded px-1.5 py-0.5"
-                    >
-                      <Badge size={11} className="text-muted group-hover:text-brand transition-colors" />
-                      Plan FREE
-                    </button>
-                  )}
-                </div>
-              )}
-              {avatarError && <div className="text-[11px] text-danger font-mono mt-2">{avatarError}</div>}
-              <SocialLinksDisplay links={savedLinks} />
-
-              {/* Contadores. En mobile forman una tira a todo el ancho con
-                  divisores: el número pesa y la etiqueta acompaña, en vez de
-                  tres textos grises del mismo tamaño. */}
-              <div className="flex mt-4 border-y border-border sm:border-0 sm:mt-3 sm:gap-7 sm:justify-start">
-                <button
-                  onClick={() => openFollowModal('followers')}
-                  className="flex-1 sm:flex-none py-2.5 sm:py-0 border-r border-border sm:border-0 bg-transparent cursor-pointer text-center sm:text-left"
-                >
-                  <div className="text-[16px] sm:text-[20px] font-semibold text-white leading-none">{followersCount}</div>
-                  <div className="text-[10px] font-mono tracking-widest text-muted mt-1">SEGUIDORES</div>
-                </button>
-                <button
-                  onClick={() => openFollowModal('following')}
-                  className={`flex-1 sm:flex-none py-2.5 sm:py-0 bg-transparent cursor-pointer text-center sm:text-left ${headerPct !== null ? 'border-r border-border sm:border-0' : ''}`}
-                >
-                  <div className="text-[16px] sm:text-[20px] font-semibold text-white leading-none">{followingCount}</div>
-                  <div className="text-[10px] font-mono tracking-widest text-muted mt-1">SEGUIDOS</div>
-                </button>
-                {headerPct !== null && (
-                  <div className="flex-1 sm:flex-none py-2.5 sm:py-0 text-center sm:text-left">
-                    <div className="text-[16px] sm:text-[20px] font-semibold leading-none" style={{ color: headerPct >= 60 ? '#4af07a' : headerPct >= 40 ? '#e8f04a' : '#f07a4a' }}>
-                      {headerPct}%
-                    </div>
-                    <div className="text-[10px] font-mono tracking-widest text-muted mt-1">VICTORIAS</div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Acciones — desktop */}
-            <div className="hidden sm:flex items-center gap-2 shrink-0 pt-2">
-              <button
-                onClick={() => setShowShare(true)}
-                title="Compartir perfil"
-                aria-label="Compartir perfil"
-                className="w-9 h-9 flex items-center justify-center rounded border border-border-strong text-muted hover:border-brand hover:text-brand bg-transparent transition-colors cursor-pointer"
-              >
-                <Share2 size={14} />
-              </button>
-              {!isOwnProfile && (
-                <button
-                  onClick={user ? handleFollowToggle : () => setShowInviteModal(true)}
-                  onMouseEnter={() => setFollowHover(true)}
-                  onMouseLeave={() => setFollowHover(false)}
-                  disabled={followBusy}
-                  className={`flex items-center gap-2 px-4 py-2 rounded font-condensed font-bold text-[13px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
-                    isFollowing
-                      ? followHover
-                        ? 'border-danger text-danger bg-transparent'
-                        : 'border-border-strong text-muted bg-transparent'
-                      : 'bg-brand text-base border-brand hover:brightness-110'
-                  }`}
-                >
-                  {isFollowing
-                    ? followHover
-                      ? <><UserPlus size={14} /> DEJAR DE SEGUIR</>
-                      : <><UserCheck size={14} /> SIGUIENDO</>
-                    : <><UserPlus size={14} /> SEGUIR</>
-                  }
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Acciones — mobile: seguir y compartir en la misma fila, al final
-              del bloque de identidad y no flotando arriba a la derecha. */}
-          <div className="flex sm:hidden gap-2 mt-4">
-            {!isOwnProfile && (
-              <button
-                onClick={user ? handleFollowToggle : () => setShowInviteModal(true)}
-                disabled={followBusy}
-                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded font-condensed font-bold text-[13px] tracking-widest border transition-colors cursor-pointer disabled:opacity-40 ${
-                  isFollowing
-                    ? 'border-border-strong text-muted bg-transparent'
-                    : 'bg-brand text-base border-brand'
-                }`}
-              >
-                {isFollowing
-                  ? <><UserCheck size={14} /> SIGUIENDO</>
-                  : <><UserPlus size={14} /> SEGUIR</>
-                }
-              </button>
-            )}
-            <button
-              onClick={() => setShowShare(true)}
-              aria-label="Compartir perfil"
-              className={`flex items-center justify-center gap-2 py-2.5 rounded border border-border-strong text-muted bg-transparent transition-colors cursor-pointer ${
-                isOwnProfile ? 'flex-1 font-condensed font-bold text-[13px] tracking-widest' : 'w-12'
-              }`}
-            >
-              <Share2 size={14} />
-              {isOwnProfile && 'COMPARTIR PERFIL'}
-            </button>
-          </div>
-
-          {/* Centinela de la mini cabecera: cuando sale de pantalla, entra la barra. */}
-          <div ref={setSentinel} aria-hidden="true" className="h-px" />
-        </div>
+        {/* Centinela de la mini cabecera: cuando sale de pantalla, entra la barra. */}
+        <div ref={setSentinel} aria-hidden="true" className="h-px mb-5" />
 
         {/* Editar perfil (colapsable) */}
         {isOwnProfile && (
@@ -1018,176 +899,190 @@ export default function ProfileView() {
           </div>
         )}
 
-        {/* Estadísticas */}
-        {stats && (stats.torneos > 0 || stats.partidos > 0) && (() => {
-          const pct = stats.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : 0;
-          const pctColor = pct >= 60 ? '#4af07a' : pct >= 40 ? '#e8f04a' : '#f07a4a';
-          return (
-            <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
-              <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-4">
-                <BarChart3 size={13} className="shrink-0" />ESTADÍSTICAS PERSONALES
-              </div>
-
-              {/* Torneos · Partidos · Racha actual — misma fila */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
-                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
-                  <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.torneos}</div>
-                  <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>TORNEOS</div>
-                  <div className="text-[10px] font-mono mt-0.5" style={{ color: stats.torneos_este_mes > 0 ? '#4ab8f0' : '#555' }}>
-                    {stats.torneos_este_mes > 0 ? `${stats.torneos_este_mes} este mes` : 'ninguno este mes'}
-                  </div>
-                  <div className="h-0.5 rounded-full mt-2" style={{ background: '#4ab8f0', opacity: 0.35 }} />
-                </div>
-                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
-                  <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.partidos}</div>
-                  <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>PARTIDOS</div>
-                  <div className="h-0.5 rounded-full mt-2" style={{ background: '#4af07a', opacity: 0.35 }} />
-                </div>
-                <div className="rounded-lg px-3 sm:px-4 py-3 border flex flex-col justify-between"
-                  style={{ background: stats.racha > 0 ? '#e8f04a08' : undefined, borderColor: stats.racha > 0 ? '#e8f04a33' : '#1e1e1e' }}>
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-condensed font-black text-[32px] leading-none" style={{ color: stats.racha > 0 ? '#e8f04a' : '#333' }}>
-                        {stats.racha}
-                      </div>
-                      <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>RACHA ACTUAL</div>
-                    </div>
-                    <Flame size={16} style={{ color: stats.racha > 0 ? '#e8f04a' : '#2a2a2a', marginTop: 2 }} />
-                  </div>
-                </div>
-              </div>
-
-              {/* Win percentage */}
-              {stats.partidos > 0 && (
-                <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong mb-4">
-                  <div className="flex justify-between items-end mb-2">
-                    <span className="text-[10px] font-mono tracking-widest" style={{ color: '#555' }}>% VICTORIAS</span>
-                    <span className="font-condensed font-black text-[22px] leading-none" style={{ color: pctColor }}>{pct}%</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#111' }}>
-                    <div className="h-full rounded-full" style={{ width: `${pct}%`, background: pctColor, transition: 'width 0.5s ease' }} />
-                  </div>
-                  <div className="text-[10px] font-mono mt-1.5" style={{ color: '#444' }}>
-                    {stats.victorias} {stats.victorias === 1 ? 'victoria' : 'victorias'} de {stats.partidos} partidos
-                  </div>
-                </div>
+        {/* Pestañas. Antes eran diez bloques apilados en una sola columna: con
+            cuatro partidos era scroll vacío y con doscientos, un muro. */}
+        <div className="flex border-b border-border -mx-4 sm:-mx-6 px-2 mb-5 overflow-x-auto">
+          {PROFILE_TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              className={`bg-transparent border-0 px-3.5 py-3.5 font-condensed font-bold text-[12.5px] tracking-wide cursor-pointer border-b-2 whitespace-nowrap transition-colors flex items-center gap-2 ${
+                tab === t.id ? 'text-brand border-b-brand' : 'text-muted border-b-transparent hover:text-brand'
+              }`}
+            >
+              {t.label}
+              {t.id === 'partidos' && recent_matches?.length > 0 && (
+                <span className={`font-mono text-[9.5px] rounded px-1.5 py-0.5 ${
+                  tab === t.id ? 'bg-brand text-base' : 'bg-border-mid text-secondary'
+                }`}>{recent_matches.length}</span>
               )}
+            </button>
+          ))}
+        </div>
 
-              {/* Títulos de cualquier formato, no sólo el americano. */}
-              {(stats.titulos_liga > 0 || stats.torneos_americanos > 0) && (
-                <div className={`grid gap-3 ${stats.torneos_americanos > 0 ? 'grid-cols-3' : 'grid-cols-1'}`}>
-                  <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border"
-                    style={{ borderColor: stats.titulos_liga > 0 ? '#f0d04a44' : undefined }}>
-                    <div className="flex items-start justify-between">
-                      <div className="font-condensed font-black text-[32px] leading-none"
-                        style={{ color: stats.titulos_liga > 0 ? '#f0d04a' : '#333' }}>
-                        {stats.titulos_liga ?? 0}
-                      </div>
-                      {stats.titulos_liga > 0 && <Trophy size={16} style={{ color: '#f0d04a', marginTop: 2 }} />}
-                    </div>
-                    <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>
-                      {stats.titulos_liga === 1 ? 'LIGA GANADA' : 'LIGAS GANADAS'}
-                    </div>
-                    <div className="h-0.5 rounded-full mt-2" style={{ background: '#f0d04a', opacity: stats.titulos_liga > 0 ? 0.35 : 0.08 }} />
-                  </div>
-                  {stats.torneos_americanos > 0 && (
-                    <>
-                      <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border border-border-strong">
-                        <div className="font-condensed font-black text-[32px] text-white leading-none">{stats.torneos_americanos}</div>
-                        <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>AMERICANOS</div>
-                        <div className="text-[10px] font-mono mt-0.5" style={{ color: '#555' }}>jugados</div>
-                        <div className="h-0.5 rounded-full mt-2" style={{ background: '#a84af0', opacity: 0.35 }} />
-                      </div>
-                      <div className="bg-base rounded-lg px-3 sm:px-4 py-3 border"
-                        style={{ borderColor: stats.campeon_americano > 0 ? '#a84af044' : undefined }}>
-                        <div className="flex items-start justify-between">
-                          <div className="font-condensed font-black text-[32px] leading-none"
-                            style={{ color: stats.campeon_americano > 0 ? '#a84af0' : '#333' }}>
-                            {stats.campeon_americano}
-                          </div>
-                          {stats.campeon_americano > 0 && <Trophy size={16} style={{ color: '#a84af0', marginTop: 2 }} />}
-                        </div>
-                        <div className="text-[10px] font-mono mt-1.5 tracking-[1.5px] sm:tracking-widest" style={{ color: '#444' }}>
-                          {stats.campeon_americano === 1 ? 'AMERICANO GANADO' : 'AMERICANOS GANADOS'}
-                        </div>
-                        <div className="h-0.5 rounded-full mt-2" style={{ background: '#a84af0', opacity: stats.campeon_americano > 0 ? 0.35 : 0.08 }} />
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+        {tab === 'stats' && (<>
+        {/* El interruptor de privacidad va arriba de todo: decide sobre la
+            pestaña entera, no sólo sobre el bloque premium del fondo. */}
+        {isOwnProfile && owner.is_premium && (
+          <div
+            className="flex items-center justify-between flex-wrap gap-3.5 rounded-xl px-3.5 py-3 mb-4"
+            style={{
+              borderWidth: 1,
+              borderStyle: 'solid',
+              borderColor: 'color-mix(in srgb, var(--color-premium) 30%, transparent)',
+              background:  'color-mix(in srgb, var(--color-premium) 6%, transparent)',
+            }}
+          >
+            <div className="flex flex-col min-w-0">
+              <span className="font-condensed font-bold text-[13px] text-white">
+                {advancedPublic ? 'Estadísticas avanzadas públicas' : 'Estadísticas avanzadas privadas'}
+              </span>
+              <span className="text-[11.5px] text-dim mt-[3px]">
+                {advancedPublic
+                  ? 'Cualquiera que visite tu perfil las ve'
+                  : 'Sólo vos las ves, acá y en la captura'}
+              </span>
+              {advancedError && <span className="text-[11.5px] text-danger mt-1">{advancedError}</span>}
             </div>
-          );
-        })()}
+            {/* El riel deja ver que hay dos posiciones, que un botón con el
+                estado escrito no comunicaba. */}
+            <button
+              type="button"
+              onClick={handleToggleAdvancedPublic}
+              disabled={advancedBusy}
+              role="switch"
+              aria-checked={advancedPublic}
+              aria-label="Estadísticas avanzadas públicas"
+              title={advancedPublic ? 'Hacerlas privadas' : 'Hacerlas públicas'}
+              className="shrink-0 inline-flex items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            >
+              <span className={`inline-flex items-center gap-1.5 font-condensed font-bold text-[10.5px] tracking-[0.1em] transition-colors ${
+                advancedPublic ? 'text-premium-hi' : 'text-muted'
+              }`}>
+                {advancedPublic ? <Globe size={12} /> : <Lock size={12} />}
+                {advancedPublic ? 'PÚBLICAS' : 'PRIVADAS'}
+              </span>
+              <span className={`relative w-[46px] h-[26px] rounded-full border transition-colors ${
+                advancedPublic ? 'bg-premium border-premium' : 'bg-base border-border-strong'
+              }`}>
+                <span
+                  className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-transform duration-200 ${
+                    advancedPublic ? 'translate-x-5' : 'translate-x-0 bg-dim'
+                  }`}
+                  style={advancedPublic ? { background: 'var(--color-premium-ink)' } : undefined}
+                />
+              </span>
+            </button>
+          </div>
+        )}
 
+        <ProfileStats
+          stats={stats}
+          clubStats={club_stats ?? []}
+          partners={frequent_partners ?? []}
+        />
+
+        {/* Estadísticas avanzadas — al fondo para no interrumpir el flujo.
+            Un visitante sólo las ve si el premium las publicó; el servidor ya
+            manda los campos vacíos cuando no corresponde. */}
+        {stats?.partidos > 0 && (canSeeAdvanced ? (
+          <>
+            <SectionRule action={<PremiumChip />}>ESTADÍSTICAS AVANZADAS</SectionRule>
+            {/* Iguala al alto del bloque completo (con sets y palizas) para que el chunk no desplace nada. */}
+            <Suspense fallback={<div className="mb-6 rounded-lg bg-surface border border-border-mid" style={{ height: 1370 }} />}>
+              <AdvancedStats
+                stats={stats}
+                monthlyStats={monthly_stats ?? []}
+                dailyActivity={data.daily_activity ?? []}
+                weekdayStats={data.weekday_stats ?? []}
+              />
+            </Suspense>
+          </>
+        ) : isOwnProfile ? (
+          <>
+            <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
+            <div className="relative mb-6 rounded-xl overflow-hidden select-none mx-auto border border-border-mid">
+              <img
+                src={statsPreview}
+                alt=""
+                aria-hidden="true"
+                draggable="false"
+                // Sin blur: lo de atrás ya es un dibujo, no datos. Difuminar el
+                // contenido real sería teatro —se saca desde el inspector—, y
+                // sobre un asset falso el desenfoque sólo lo hace ver sucio.
+                className="w-full block"
+                style={{ transform: 'scale(1.01)' }}
+              />
+              <div
+                className="absolute inset-0 grid place-items-center"
+                style={{ background: 'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-base) 55%, transparent) 55%, var(--color-base) 100%)' }}
+              >
+                <div
+                  className="text-center bg-surface rounded-2xl px-6 py-5 max-w-[min(92%,420px)] shadow-2xl"
+                  style={{ borderWidth: 1, borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--color-premium) 35%, transparent)' }}
+                >
+                  <PremiumChip className="mb-2.5" />
+                  <div className="font-condensed font-bold text-[15.5px] text-white">Tu juego, en detalle</div>
+                  <p className="text-[12.5px] text-secondary mt-1.5 mb-0 leading-relaxed max-w-[36ch] mx-auto">
+                    En qué días jugás mejor, tu mejor racha, games a favor, remontadas y palizas.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPremiumModal(true)}
+                    className="inline-flex items-center gap-2 bg-brand text-base border-0 px-5 py-2.5 mt-3.5 font-condensed font-bold text-sm tracking-wide cursor-pointer rounded-lg"
+                  >
+                    <Gem size={14} /> DESBLOQUEAR CON PREMIUM
+                  </button>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : owner.is_premium ? (
+          <>
+            <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
+            <div className="border border-dashed border-border-strong rounded-xl p-8 text-center mb-6">
+              <div className="font-condensed font-bold text-[15px] text-white">Este perfil las mantiene privadas</div>
+              <p className="text-[13px] text-muted mt-2 mb-0 leading-relaxed max-w-[46ch] mx-auto">
+                Su dueño eligió que sus estadísticas avanzadas no sean públicas. Las de arriba se ven siempre.
+              </p>
+            </div>
+          </>
+        ) : null)}
+        </>)}
+
+        {tab === 'resumen' && (<>
         {/* Últimos partidos */}
         {recent_matches?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
-            <div className="flex items-center justify-between mb-3">
-              <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555]">
-                <Swords size={13} className="shrink-0" />ÚLTIMOS PARTIDOS
-              </div>
-              <span className="font-mono text-[10px] text-dim">{recent_matches.length} registrados</span>
-            </div>
-            <div className="flex flex-col gap-2">
-              {(showAllMatches ? recent_matches : recent_matches.slice(0, 5)).map((m) => {
-                const win  = m.result === 'win';
-                const draw = m.result === 'draw';
-                const color = win ? '#4af07a' : draw ? '#e8f04a' : '#f07a4a';
-                const firstName = (n) => n?.split(' ')[0] ?? '?';
-                // De una categoría privada llega el resultado, no la jornada.
-                const priv = m.private_group;
-                return (
-                  <div key={m.id} onClick={priv ? undefined : () => navigate(`/cat/${m.group_id}/torneo/${m.tournament_id}`)}
-                    className={`bg-base rounded-lg px-3 py-2.5 border border-border-strong flex items-center gap-3 transition-colors ${priv ? '' : 'cursor-pointer hover:border-border-mid'}`}>
-                    <div className="shrink-0 w-8 h-8 rounded flex items-center justify-center font-condensed font-black text-[13px]"
-                      style={{ background: `${color}18`, color, border: `1px solid ${color}44` }}>
-                      {win ? 'V' : draw ? 'E' : 'D'}
-                    </div>
-                    <div className="shrink-0 font-condensed font-black text-[20px] leading-none w-14 text-center"
-                      style={{ color }}>
-                      {m.my_score}<span className="text-white font-normal text-[20px]"> - </span>{m.opp_score}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[12px] text-white font-mono truncate">
-                        <span className="text-muted">con </span>{firstName(m.partner_name)}
-                      </div>
-                      <div className="text-[12px] font-mono truncate" style={{ color: '#888' }}>
-                        <span className="text-[#444]">vs </span>
-                        {firstName(m.opp1_name)} & {firstName(m.opp2_name)}
-                      </div>
-                      <div className="text-[10px] text-dim font-mono mt-0.5 truncate flex items-center gap-1">
-                        {priv
-                          ? <><Lock size={9} className="shrink-0" />Categoría privada</>
-                          : m.tournament_name}
-                        {m.bracket_round && <span className="text-brand"> · {ROUND_LABEL[m.bracket_round] ?? m.bracket_round}</span>}
-                      </div>
-                    </div>
-                    <div className="shrink-0 text-[10px] text-dim font-mono">
-                      {m.played_at ? `${m.played_at.slice(8, 10)}/${m.played_at.slice(5, 7)}` : ''}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {recent_matches.length > 5 && (
+          <>
+          <SectionRule action={
+            recent_matches.length > 5 ? (
               <button
                 type="button"
-                onClick={() => setShowAllMatches(v => !v)}
-                className="mt-3 w-full text-center text-[11px] font-mono text-dim hover:text-white transition-colors cursor-pointer bg-transparent border-none py-1"
+                onClick={() => setTab('partidos')}
+                className="shrink-0 font-mono text-[11px] text-muted hover:text-brand transition-colors bg-transparent border-0 cursor-pointer"
               >
-                {showAllMatches ? '▲ Ver menos' : `▼ Ver todos (${recent_matches.length})`}
+                Ver los {recent_matches.length}
               </button>
-            )}
+            ) : null
+          }>ÚLTIMOS PARTIDOS</SectionRule>
+          <div className="border border-border-mid rounded-xl overflow-hidden">
+            {recent_matches.slice(0, 5).map((m) => (
+              <MatchRow
+                key={m.id}
+                m={m}
+                onOpen={() => navigate(`/cat/${m.group_id}/torneo/${m.tournament_id}`)}
+              />
+            ))}
           </div>
+        </>
         )}
 
         {/* Compañeros frecuentes */}
         {frequent_partners?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
-            <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
-              <Handshake size={13} className="shrink-0" />COMPAÑEROS FRECUENTES
-            </div>
+          <>
+          <SectionRule>COMPAÑEROS FRECUENTES</SectionRule>
+            
             <div className="rounded-lg overflow-hidden border border-border-strong">
               {frequent_partners.map((p, i) => (
                 <div key={i}
@@ -1218,15 +1113,15 @@ export default function ProfileView() {
                 </div>
               ))}
             </div>
-          </div>
+          
+        </>
         )}
 
         {/* Ranking entre la gente que sigue. Sólo lo ve el dueño del perfil. */}
         {isOwnProfile && follow_ranking?.length > 1 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
-            <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
-              <Users size={13} className="shrink-0" />ENTRE TUS SEGUIDOS
-            </div>
+          <>
+          <SectionRule>ENTRE TUS SEGUIDOS</SectionRule>
+            
             <div className="rounded-lg overflow-hidden border border-border-strong">
               {follow_ranking.map((r, i) => (
                 <div key={r.id}
@@ -1254,147 +1149,22 @@ export default function ProfileView() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
-
-        {/* Sólo los torneos con club asignado, así que el total puede ser menor. */}
-        {club_stats?.length > 0 && (
-          <div className="bg-surface border border-border-mid rounded-lg p-4 sm:p-5 mb-4 sm:mb-6">
-            <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-[3px] text-[#555] mb-3">
-              <MapPin size={13} className="shrink-0" />CLUBES FRECUENTES
-            </div>
-            <div className="rounded-lg overflow-hidden border border-border-strong">
-              {club_stats.map((c, i) => {
-                const pct = c.partidos > 0 ? Math.round((c.victorias / c.partidos) * 100) : 0;
-                return (
-                  <div key={c.id}
-                    onClick={() => navigate(`/club/${c.id}`)}
-                    className="flex items-center gap-3 px-4 py-3 border-b border-border-strong last:border-b-0 cursor-pointer hover:bg-surface transition-colors"
-                    style={{ background: '#0d0d0d' }}>
-                    <div className="shrink-0 font-condensed font-black text-[13px] w-4 text-center" style={{ color: '#333' }}>
-                      {i + 1}
-                    </div>
-                    <ClubLogo name={c.name} src={c.photo_url} size={32} />
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13px] font-mono truncate text-white">{c.name}</div>
-                      {c.location_name && (
-                        <div className="text-[10px] font-mono text-dim truncate">{c.location_name}</div>
-                      )}
-                    </div>
-                    <div className="shrink-0 flex items-center gap-2">
-                      <div className="text-right">
-                        <div className="font-condensed font-black text-[18px] text-white leading-none">{c.partidos}</div>
-                        <div className="text-[10px] font-mono text-dim">
-                          {c.partidos === 1 ? 'partido' : 'partidos'} · {pct}%
-                        </div>
-                      </div>
-                      <ChevronUp size={13} className="text-dim rotate-90 shrink-0" />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          
+        </>
         )}
 
         {/* Categorías */}
-        <div className="flex items-center gap-2 font-condensed font-bold text-[16px] tracking-[3px] text-muted mb-4">
-          <LayoutGrid size={14} className="shrink-0" />CATEGORÍAS PROPIAS
-        </div>
-        {groups.length === 0 && (
-          <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
-            {isOwnProfile ? 'Todavía no creaste ninguna categoría.' : 'Este usuario no tiene categorías públicas.'}
-          </div>
-        )}
-        <div className="flex flex-col gap-2.5 mb-4 sm:mb-6">
-          {groups.map((g, i) => (
-            <GroupCard key={g.id} g={g} delay={i * 60} onClick={() => navigate(`/cat/${g.id}`)} />
-          ))}
-        </div>
+        <SectionRule>CATEGORÍAS</SectionRule>
+        <ProfileCategories
+          merged={mergedGroups}
+          isOwnProfile={isOwnProfile}
+          onOpen={(id) => navigate(`/cat/${id}`)}
+        />
 
-        {/* Estadísticas avanzadas — al fondo para no interrumpir el flujo.
-            Un visitante sólo las ve si el premium las publicó; el servidor ya
-            manda los campos vacíos cuando no corresponde. */}
-        {stats?.partidos > 0 && (canSeeAdvanced ? (
-            <>
-              {isOwnProfile && (
-                <div className="flex items-start justify-between gap-3 bg-surface border border-border-mid rounded-lg px-4 py-3 mb-3">
-                  <div className="min-w-0">
-                    <div className="font-condensed font-bold text-[13px] tracking-wide text-white">
-                      {advancedPublic ? 'Estadísticas avanzadas públicas' : 'Estadísticas avanzadas privadas'}
-                    </div>
-                    <div className="text-[11px] font-mono text-dim mt-0.5">
-                      {advancedPublic
-                        ? 'Cualquiera que visite tu perfil las ve y puede compartir la captura completa'
-                        : 'Sólo vos las ves, acá y en la captura del perfil'}
-                    </div>
-                    {advancedError && <div className="text-[11px] font-mono text-danger mt-1">{advancedError}</div>}
-                  </div>
-                  {/* Interruptor: el riel deja ver que hay dos posiciones, que un
-                      botón con el estado escrito no comunicaba. */}
-                  <button
-                    type="button"
-                    onClick={handleToggleAdvancedPublic}
-                    disabled={advancedBusy}
-                    role="switch"
-                    aria-checked={advancedPublic}
-                    aria-label="Estadísticas avanzadas públicas"
-                    title={advancedPublic ? 'Hacerlas privadas' : 'Hacerlas públicas'}
-                    className="shrink-0 flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer disabled:opacity-50 disabled:cursor-default"
-                  >
-                    <span className={`flex items-center gap-1.5 font-condensed font-bold text-[11px] tracking-wide transition-colors ${advancedPublic ? 'text-brand' : 'text-muted'}`}>
-                      {advancedPublic ? <Globe size={12} /> : <Lock size={12} />}
-                      {advancedPublic ? 'PÚBLICAS' : 'PRIVADAS'}
-                    </span>
-                    <span className={`relative w-12 h-7 rounded-full border transition-colors ${
-                      advancedPublic ? 'bg-brand border-brand' : 'bg-base border-border-strong'
-                    }`}>
-                      <span className={`absolute top-[3px] left-[3px] w-[19px] h-[19px] rounded-full transition-transform duration-200 ${
-                        advancedPublic ? 'translate-x-[20px] bg-surface' : 'translate-x-0 bg-dim'
-                      }`} />
-                    </span>
-                  </button>
-                </div>
-              )}
-              {/* Iguala al alto del bloque completo (con sets y palizas) para que el chunk no desplace nada. */}
-              <Suspense fallback={<div className="mb-6 rounded-lg bg-surface border border-border-mid" style={{ height: 1370 }} />}>
-                <AdvancedStats
-                  stats={stats}
-                  monthlyStats={monthly_stats ?? []}
-                  dailyActivity={data.daily_activity ?? []}
-                  weekdayStats={data.weekday_stats ?? []}
-                />
-              </Suspense>
-            </>
-          ) : isOwnProfile && (
-            <div className="relative mb-6 rounded-lg overflow-hidden select-none mx-auto border border-border-mid">
-              <img
-                src={statsPreview}
-                alt=""
-                aria-hidden="true"
-                draggable="false"
-                className="w-full rounded-lg"
-                style={{ filter: 'blur(5px)', transform: 'scale(1.03)' }}
-              />
-              <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-base/50 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <Gem size={20} className="text-brand" />
-                  <span className="font-condensed font-bold text-lg text-white tracking-wide">ESTADÍSTICAS AVANZADAS</span>
-                </div>
-                <p className="text-sm font-sans text-secondary text-center px-6">
-                  Desbloqueá todas las estadísticas con Premium.
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setShowPremiumModal(true)}
-                  className="flex items-center gap-2 bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-sm tracking-wide cursor-pointer rounded-lg"
-                >
-                  <Gem size={14} /> VER PLANES
-                </button>
-              </div>
-            </div>
-          )
-        )}
+        </>)}
+
+
+        {tab === 'partidos' && <ProfileMatches matches={recent_matches ?? []} stats={stats} />}
       </div>
 
       {cropFile && (

@@ -71,8 +71,13 @@ export default function PlayerAvatar({ name, src, size = 32, premium = false, cl
           height: size,
           borderRadius: '50%',
           padding: pad,
-          background: 'linear-gradient(135deg, #f59e0b, #fde68a, #f59e0b)',
-          boxShadow: `0 0 ${Math.round(size * 0.3)}px #f59e0b66`,
+          // Tokenizado: en tema claro el dorado se oscurece o el aro desaparece
+          // sobre el fondo blanco. El glow se apaga en avatares chicos, donde
+          // el resplandor terminaba siendo más grande que el avatar.
+          background: 'linear-gradient(135deg, var(--color-premium), var(--color-premium-hi), var(--color-premium))',
+          boxShadow: size >= 40
+            ? `0 0 ${Math.round(size * 0.3)}px color-mix(in srgb, var(--color-premium) 40%, transparent)`
+            : 'none',
           flexShrink: 0,
           ...style,
         }}

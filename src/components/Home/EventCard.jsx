@@ -1,29 +1,9 @@
 import { MapPin, Building2, Users, Radio, CalendarDays } from 'lucide-react';
 import FadeInCard from '../shared/FadeInCard';
 import { fmtHora } from '../../utils/helpers';
+import { dateLabel } from '../../utils/homePanel';
 
-// Las fechas sin hora se parsean como UTC y en Argentina retroceden un día.
-function localDate(d) {
-  const str = String(d);
-  return new Date(str.length === 10 ? `${str}T00:00` : str);
-}
-
-const DAY_MS = 86400000;
-
-// "HOY" y "MAÑANA" pesan más que la fecha; el resto se abrevia.
-function dateLabel(eventDate) {
-  if (!eventDate) return null;
-  const d = localDate(eventDate);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = Math.round((d - today) / DAY_MS);
-  if (diff === 0) return 'HOY';
-  if (diff === 1) return 'MAÑANA';
-  const s = d.toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'short' });
-  return s.charAt(0).toUpperCase() + s.slice(1).replace('.', '');
-}
-
-const CARD_BG = 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)';
+const CARD_BG = 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)';
 
 export default function EventCard({ t, delay = 0, onClick, footer = null, badge = null, className = '' }) {
   const day = dateLabel(t.event_date);

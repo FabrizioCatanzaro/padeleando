@@ -1,6 +1,6 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { fmt, fmtHora, calcStandings, compareStandingRows, tournamentDisplayStatus, TOURNAMENT_STATUS_META, isAmericanoDraft, managementWarnings } from "../../utils/helpers";
+import { fmt, fmtHora, calcStandings, compareStandingRows, tournamentDisplayStatus, TOURNAMENT_STATUS_META, isAmericanoDraft, isLive, managementWarnings } from "../../utils/helpers";
 import { useTournament } from "../../hooks/useTournament";
 import { useDocumentTitle } from "../../hooks/useDocumentTitle";
 import Standings    from "../Standings/Standings";
@@ -119,7 +119,7 @@ export default function Main() {
   // Avisos que se resuelven desde gestión (mismo helper que usa PairManager).
   const warningCount = managementWarnings(tournament).length;
   const statusMeta = TOURNAMENT_STATUS_META[tournamentDisplayStatus({
-    status: tournament.status, hasLiveMatch: !!tournament.live_match, hasPlayed: playedCount > 0, isDraft,
+    status: tournament.status, hasLiveMatch: isLive(tournament), hasPlayed: playedCount > 0, isDraft,
   })];
 
   // Ganador(es) de la torneo — solo cuando está finalizada

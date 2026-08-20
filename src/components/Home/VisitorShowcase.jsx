@@ -4,7 +4,7 @@ import Carousel from './Carousel';
 import EventCard, { LiveBadge } from './EventCard';
 import GroupCard from '../shared/GroupCard';
 import { CardSkeleton } from '../shared/Skeleton';
-import { CONTACT_META, contactHref, formatPrice } from '../../utils/signup';
+import SignupFooter from './SignupFooter';
 
 // El alto mínimo es el del esqueleto, para que la vitrina no encoja al cargar.
 const SLOT = 'snap-start shrink-0 w-[270px] min-h-[136px] flex';
@@ -17,40 +17,6 @@ function SkeletonRow() {
   return [0, 1, 2].map((i) => (
     <Slot key={i}><div className="w-full"><CardSkeleton lines={3} /></div></Slot>
   ));
-}
-
-// Los contactos son lo único accionable para alguien sin cuenta: van como links directos.
-function SignupFooter({ t }) {
-  const price = formatPrice(t.signup?.price, t.signup?.unit);
-  const contacts = t.signup?.contacts ?? [];
-  return (
-    <div className="mt-2 pt-2 border-t border-border-mid">
-      {price && <div className="font-condensed font-bold text-[15px] text-brand leading-none mb-2">{price}</div>}
-      {contacts.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {contacts.slice(0, 3).map((c) => {
-            const meta = CONTACT_META[c.type];
-            const href = contactHref(c, t.name);
-            if (!meta || !href) return null;
-            const Icon = meta.icon;
-            return (
-              <a
-                key={c.type}
-                href={href}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                aria-label={meta.label}
-                className="inline-flex items-center gap-1 border border-border-mid rounded-full px-2 py-1 font-mono text-[10px] text-secondary hover:border-brand hover:text-brand transition-colors no-underline"
-              >
-                <Icon size={11} />{meta.label}
-              </a>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
 }
 
 export default function VisitorShowcase({ data, loading }) {

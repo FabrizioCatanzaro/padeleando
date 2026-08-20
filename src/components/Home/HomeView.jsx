@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
@@ -22,6 +22,12 @@ import Btn from '../shared/Btn';
 import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
 import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps } from '../../utils/onboarding';
+import SearchPalette from './SearchPalette';
+import CategoryList from './CategoryList';
+import Discover from './Discover';
+import { StatRail, LiveBand, NextBand } from './PanelBands';
+import useHomeSearch from '../../hooks/useHomeSearch';
+import { mergeGroups, countByRole, railStats, nextByGroup } from '../../utils/homePanel';
 
 const EMPTY_SIGNUP = { open: false, price: null, unit: 'player', contacts: [] };
 
@@ -72,7 +78,7 @@ export default function HomeView() {
   const [coorgGroups,  setCoorgGroups]  = useState([]);
   const [favGroups,    setFavGroups]    = useState([]);
   // Sólo hay algo que esperar si hay sesión: un visitante no dispara ninguna
-  // petición para pintar la portada. Arrancando en true, el primer render
+  // petición para pintar sus categorías. Arrancando en true, el primer render
   // devolvía el esqueleto de la vista con sesión y al apagarse se insertaba el
   // hero completo, empujando el resto ~480 px. Ese era el CLS de 0,685.
   const [loading,      setLoading]      = useState(isLoggedIn);
@@ -87,19 +93,6 @@ export default function HomeView() {
   const [signup,  setSignup]  = useState(EMPTY_SIGNUP);
   const [showEmojiModal, setShowEmojiModal] = useState(false);
   const [club,           setClub]           = useState(null);
-  const [searchQ,        setSearchQ]        = useState('');
-  const searchInputRef = useRef(null);
-  const [searchUsers,    setSearchUsers]    = useState([]);
-  const [searchGroups,   setSearchGroups]   = useState([]);
-  const [searchClubs,    setSearchClubs]    = useState([]);
-  const [searchTours,    setSearchTours]    = useState([]);
-  const [searching,      setSearching]      = useState(false);
-  const [committedQ,     setCommittedQ]     = useState('');
-  const [committedUsers, setCommittedUsers] = useState([]);
-  const [committedGroups,setCommittedGroups]= useState([]);
-  const [committedClubs, setCommittedClubs] = useState([]);
-  const [committedTours, setCommittedTours] = useState([]);
-  const [committing,     setCommitting]     = useState(false);
   const [error,             setError]             = useState(null)
   const [showPremiumModal,  setShowPremiumModal]  = useState(false)
   const [premiumReason,     setPremiumReason]     = useState(null)
@@ -116,12 +109,19 @@ export default function HomeView() {
   const [stepsDismissed, setStepsDismissed] = useState(isFirstStepsDismissed);
 
   const [homeData, setHomeData] = useState(null);
-  // Arranca en true para visitantes: si empezara en false, la sección entera no
+  // Arranca en true para todos: si empezara en false, la sección entera no
   // existiría en el primer render y se insertaría al arrancar la carga,
   // empujando todo lo de abajo. Ese salto era un CLS de 0,685 —el elemento que
   // Lighthouse marcaba como desplazado— y no lo causaba el logo.
-  const [homeLoading, setHomeLoading] = useState(!isLoggedIn);
+  const [homeLoading, setHomeLoading] = useState(true);
 
+  // Listado unificado y vitrina de descubrimiento (sólo con sesión).
+  const [roleFilter,   setRoleFilter]   = useState('all');
+  const [discoverTab,  setDiscoverTab]  = useState('signup');
+  const [paletteOpen,  setPaletteOpen]  = useState(false);
+
+  const search = useHomeSearch();
+  const searchInputRef = useRef(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -165,87 +165,34 @@ export default function HomeView() {
     return () => { if (permStatus) permStatus.onchange = null; };
   }, []);
 
-  // Portada del visitante: en vivo, próximas, inscripciones y categorías activas en una petición
+  // Portada pública: en vivo, próximas, inscripciones y categorías activas en una
+  // petición. Antes se saltaba con sesión, así que el único que veía las jornadas
+  // abiertas era justamente quien no tenía cuenta para anotarse.
   useEffect(() => {
-    if (isLoggedIn) return;
     setHomeLoading(true);
     api.home.get()
       .then(setHomeData)
       .catch(() => setHomeData(null))
       .finally(() => setHomeLoading(false));
-  }, [isLoggedIn]);
+  }, []);
 
-  // Búsqueda de perfiles, categorías y clubes con debounce
+  // Atajo del buscador. Sin sesión la barra ya está en pantalla y no hace falta.
   useEffect(() => {
-    if (!searchQ.trim() || searchQ.length < 2) { setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); return; }
-    const t = setTimeout(async () => {
-      setSearching(true);
-      try {
-        const [users, groups, clubs, tours] = await Promise.all([
-          api.auth.search(searchQ),
-          api.groups.search(searchQ),
-          api.clubs.list(searchQ),
-          api.tournaments.search(searchQ),
-        ]);
-        setSearchUsers(users);
-        setSearchGroups(groups);
-        setSearchClubs(clubs);
-        setSearchTours(tours);
-      } catch {
-        setSearchUsers([]);
-        setSearchGroups([]);
-        setSearchClubs([]);
-        setSearchTours([]);
-      } finally { setSearching(false); }
-    }, 300);
-    return () => clearTimeout(t);
-  }, [searchQ]);
+    if (!isLoggedIn) return;
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isLoggedIn]);
 
   function toggleEmoji(e) {
     setSelectedEmojis(prev =>
       prev.includes(e) ? prev.filter(x => x !== e) : prev.length < 2 ? [...prev, e] : prev
     )
-  }
-
-  async function handleSearch() {
-    const q = searchQ.trim();
-    if (q.length < 2) return;
-    setCommitting(true);
-    try {
-      const [users, groups, clubs, tours] = await Promise.all([
-        api.auth.search(q),
-        api.groups.search(q),
-        api.clubs.list(q),
-        api.tournaments.search(q),
-      ]);
-      setCommittedQ(q);
-      setCommittedUsers(users);
-      setCommittedGroups(groups);
-      setCommittedClubs(clubs);
-      setCommittedTours(tours);
-      setSearchUsers([]);
-      setSearchGroups([]);
-      setSearchClubs([]);
-      setSearchTours([]);
-    } catch {
-      setCommittedUsers([]);
-      setCommittedGroups([]);
-      setCommittedClubs([]);
-      setCommittedTours([]);
-    } finally { setCommitting(false); }
-  }
-
-  function clearSearch() {
-    setSearchQ('');
-    setCommittedQ('');
-    setCommittedUsers([]);
-    setCommittedGroups([]);
-    setCommittedClubs([]);
-    setCommittedTours([]);
-    setSearchUsers([]);
-    setSearchGroups([]);
-    setSearchClubs([]);
-    setSearchTours([]);
   }
 
   function fetchNearbyClubs() {
@@ -286,6 +233,16 @@ export default function HomeView() {
       },
       { timeout: 8000, maximumAge: 5 * 60 * 1000 }
     );
+  }
+
+  function goNearby() {
+    setDiscoverTab('clubs');
+    if (nearbyStatus === 'idle') fetchNearbyClubs();
+    // El scroll va en el próximo frame: la pestaña recién cambió y la sección
+    // puede haber crecido.
+    requestAnimationFrame(() => {
+      document.getElementById('descubrir')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   }
 
   async function handleCreate() {
@@ -350,24 +307,65 @@ export default function HomeView() {
     setShowNew(true);
   }
 
+  // ── Derivados del panel ──────────────────────────────────────────────────
+  const homeLive     = homeData?.live ?? [];
+  const homeUpcoming = homeData?.upcoming ?? [];
+  const homeSignup   = homeData?.signup ?? [];
+
+  const myGroupIds = useMemo(
+    () => new Set([...groups, ...coorgGroups, ...partGroups, ...favGroups].map((g) => g.id)),
+    [groups, coorgGroups, partGroups, favGroups],
+  );
+  // Ofrecerle a alguien anotarse a una jornada que él mismo organiza no tiene
+  // sentido; una de una categoría donde sólo juega, sí.
+  const managedIds = useMemo(
+    () => new Set([...groups, ...coorgGroups].map((g) => g.id)),
+    [groups, coorgGroups],
+  );
+
+  const liveMine     = useMemo(() => homeLive.filter((t) => myGroupIds.has(t.group_id)), [homeLive, myGroupIds]);
+  const liveGroupIds = useMemo(() => new Set(liveMine.map((t) => t.group_id)), [liveMine]);
+  const upcomingMine = useMemo(() => homeUpcoming.filter((t) => myGroupIds.has(t.group_id)), [homeUpcoming, myGroupIds]);
+  const nextMap      = useMemo(() => nextByGroup(upcomingMine), [upcomingMine]);
+
+  const discoverSignup = useMemo(
+    () => homeSignup.filter((t) => !managedIds.has(t.group_id)),
+    [homeSignup, managedIds],
+  );
+  const discoverUpcoming = useMemo(() => {
+    const shown = new Set(discoverSignup.map((t) => t.id));
+    return homeUpcoming.filter((t) => !managedIds.has(t.group_id) && !shown.has(t.id));
+  }, [homeUpcoming, managedIds, discoverSignup]);
+
+  const merged = useMemo(
+    () => mergeGroups({ groups, coorgGroups, partGroups, favGroups, liveGroupIds }),
+    [groups, coorgGroups, partGroups, favGroups, liveGroupIds],
+  );
+  const roleCounts = useMemo(() => countByRole(merged), [merged]);
+  const rail       = useMemo(() => railStats(merged, liveMine.length, upcomingMine.length), [merged, liveMine.length, upcomingMine.length]);
+
   if (loading) return (
     <div className="text-content font-sans pb-16">
       <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
-        <Skeleton className="h-11 w-full rounded-lg mb-8" />
-        <div className="flex items-center justify-between mb-4">
-          <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-7 w-20" />
+        <div className="flex items-center justify-between gap-4 mb-5">
+          <Skeleton className="h-9 w-52 rounded-lg" />
+          <Skeleton className="h-10 w-40 rounded-lg" />
         </div>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-          <CardSkeleton lines={3} />
-          <CardSkeleton lines={3} />
-          <CardSkeleton lines={2} />
+        <Skeleton className="h-[86px] w-full rounded-xl mb-4" />
+        <Skeleton className="h-[92px] w-full rounded-xl mb-6" />
+        <div className="flex gap-2 mb-4">
+          <Skeleton className="h-7 w-20 rounded-full" />
+          <Skeleton className="h-7 w-20 rounded-full" />
+          <Skeleton className="h-7 w-24 rounded-full" />
         </div>
+        <Skeleton className="h-[280px] w-full rounded-xl" />
       </div>
     </div>
   );
 
   const nearbyVisible = nearbyClubs;
+  const committedQ = search.committedQ;
+  const { users: committedUsers, groups: committedGroups, clubs: committedClubs, tours: committedTours } = search.committed;
 
   // Onboarding. El rol viene del servidor; `pickedRole` sólo cubre el instante
   // entre que el usuario toca y que /me se refresca.
@@ -385,6 +383,8 @@ export default function HomeView() {
     dismissFirstSteps();
     setStepsDismissed(true);
   }
+
+  const firstName = (user?.name ?? '').trim().split(' ')[0];
 
   return (
     <div className="text-content font-sans pb-16">
@@ -442,136 +442,135 @@ export default function HomeView() {
           </div>
         )}
 
-        {/* ── Buscador ── */}
-        <div className="relative mb-8">
-          {!committedQ && (
-            <h2 className="font-condensed font-bold text-sm tracking-widest text-muted mb-2.5">
-              {isLoggedIn ? 'BUSCADOR' : 'ENCONTRÁ JUGADORES, CATEGORÍAS Y CLUBES'}
-            </h2>
-          )}
-          <div className="flex gap-2">
-            <div className="relative flex-1">
-              <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-              <input
-                ref={searchInputRef}
-                className={`w-full bg-surface border border-border-mid text-white pl-10 ${searchQ ? 'pr-10' : 'pr-4'} py-3 rounded-lg text-sm outline-none font-sans placeholder:text-muted focus:border-border-strong transition-colors`}
-                placeholder="Buscar jugadores, torneos, categorías o clubes..."
-                value={searchQ}
-                onChange={(e) => setSearchQ(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter')  handleSearch();
-                  if (e.key === 'Escape') { clearSearch(); }
-                }}
-              />
-              {searchQ && (
-                <button
-                  onClick={() => { clearSearch(); searchInputRef.current?.focus(); }}
-                  aria-label="Limpiar búsqueda"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-transparent border-0 rounded-full text-muted cursor-pointer hover:text-white hover:bg-border-mid transition-colors"
-                >
-                  <X size={15} />
-                </button>
-              )}
+        {/* ── Buscador del visitante ── */}
+        {!isLoggedIn && (
+          <div className="relative mb-8">
+            {!committedQ && (
+              <h2 className="font-condensed font-bold text-sm tracking-widest text-muted mb-2.5">
+                ENCONTRÁ JUGADORES, CATEGORÍAS Y CLUBES
+              </h2>
+            )}
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
+                <input
+                  ref={searchInputRef}
+                  className={`w-full bg-surface border border-border-mid text-white pl-10 ${search.q ? 'pr-10' : 'pr-4'} py-3 rounded-lg text-sm outline-none font-sans placeholder:text-muted focus:border-border-strong transition-colors`}
+                  placeholder="Buscar jugadores, torneos, categorías o clubes..."
+                  value={search.q}
+                  onChange={(e) => search.setQ(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter')  search.commit();
+                    if (e.key === 'Escape') search.clear();
+                  }}
+                />
+                {search.q && (
+                  <button
+                    onClick={() => { search.clear(); searchInputRef.current?.focus(); }}
+                    aria-label="Limpiar búsqueda"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-transparent border-0 rounded-full text-muted cursor-pointer hover:text-white hover:bg-border-mid transition-colors"
+                  >
+                    <X size={15} />
+                  </button>
+                )}
+              </div>
+              <button
+                onClick={search.commit}
+                disabled={search.q.trim().length < 2 || search.committing}
+                aria-label="Buscar"
+                className="bg-surface border border-border-mid text-white px-4 py-3 rounded-lg cursor-pointer hover:border-border-strong transition-colors disabled:opacity-30"
+              >
+                {search.committing ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
+              </button>
             </div>
-            <button
-              onClick={handleSearch}
-              disabled={searchQ.trim().length < 2 || committing}
-              aria-label="Buscar"
-              className="bg-surface border border-border-mid text-white px-4 py-3 rounded-lg cursor-pointer hover:border-border-strong transition-colors disabled:opacity-30"
-            >
-              {committing ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-            </button>
-          </div>
 
-          {/* Dropdown de sugerencias */}
-          {searchQ.trim().length >= 2 && (searching || searchUsers.length > 0 || searchGroups.length > 0 || searchClubs.length > 0 || searchTours.length > 0) && (
-            <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-alt border border-border-strong rounded-lg overflow-hidden shadow-xl max-h-72 overflow-y-auto">
-              {searching && (
-                <div className="px-4 py-3 text-xs font-mono text-muted">Buscando...</div>
-              )}
-              {!searching && searchUsers.length === 0 && searchGroups.length === 0 && searchClubs.length === 0 && searchTours.length === 0 && (
-                <div className="px-4 py-3 text-xs font-mono text-muted">Sin resultados</div>
-              )}
-              {!searching && searchUsers.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">PERFILES</div>
-                  {searchUsers.map((u) => (
-                    <div key={u.id}
-                      onClick={() => { navigate(`/u/${u.username}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
-                      className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                    >
-                      <span className="font-condensed font-bold text-base text-white">{u.name}</span>
-                      <span className="text-[11px] font-mono text-dim">@{u.username}</span>
-                    </div>
-                  ))}
-                </>
-              )}
-              {!searching && searchGroups.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CATEGORÍAS</div>
-                  {searchGroups.map((g) => (
-                    <div key={g.id}
-                      onClick={() => { navigate(`/cat/${g.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
-                      className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                    >
-                      <span className="font-condensed font-bold text-base text-white">
-                        {g.emojis?.length > 0 && <span className="mr-1">{g.emojis.join(' ')}</span>}{g.name}
-                      </span>
-                      <span className="text-[11px] font-mono text-dim">@{g.owner_username}</span>
-                    </div>
-                  ))}
-                </>
-              )}
-              {!searching && searchTours.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">TORNEOS</div>
-                  {searchTours.map((t) => (
-                    <div key={t.id}
-                      onClick={() => { navigate(`/view/${t.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
-                      className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                    >
-                      <span className="font-condensed font-bold text-base text-white truncate">{t.name}</span>
-                      <span className="text-[11px] font-mono text-dim truncate">
-                        {t.group_emojis?.length > 0 && <span className="mr-1">{t.group_emojis.join(' ')}</span>}
-                        {t.group_name}{t.day && <span> · {fmt(t.day)}</span>}
-                      </span>
-                    </div>
-                  ))}
-                </>
-              )}
-              {!searching && searchClubs.length > 0 && (
-                <>
-                  <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CLUBES</div>
-                  {searchClubs.map((c) => (
-                    <div key={c.id}
-                      onClick={() => { navigate(`/club/${c.id}`); setSearchQ(''); setSearchUsers([]); setSearchGroups([]); setSearchClubs([]); setSearchTours([]); }}
-                      className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                    >
-                      {c.photo_url
-                        ? <img src={c.photo_url} alt="" className="w-8 h-8 rounded-md object-cover border border-border-mid shrink-0" />
-                        : <span className="w-8 h-8 rounded-md bg-surface border border-border-mid flex items-center justify-center shrink-0"><Building2 size={15} className="text-muted" /></span>}
-                      <div className="min-w-0">
-                        <div className="font-condensed font-bold text-white truncate">{c.name}</div>
-                        {c.location_name && <div className="text-[11px] font-mono text-dim truncate">{c.location_name}</div>}
+            {/* Dropdown de sugerencias */}
+            {search.q.trim().length >= 2 && (search.searching || search.liveCount > 0) && (
+              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-alt border border-border-strong rounded-lg overflow-hidden shadow-xl max-h-72 overflow-y-auto">
+                {search.searching && search.liveCount === 0 && (
+                  <div className="px-4 py-3 text-xs font-mono text-muted">Buscando...</div>
+                )}
+                {search.live.users.length > 0 && (
+                  <>
+                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">PERFILES</div>
+                    {search.live.users.map((u) => (
+                      <div key={u.id}
+                        onClick={() => { navigate(`/u/${u.username}`); search.clear(); }}
+                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
+                      >
+                        <span className="font-condensed font-bold text-base text-white">{u.name}</span>
+                        <span className="text-[11px] font-mono text-dim">@{u.username}</span>
                       </div>
-                    </div>
-                  ))}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+                    ))}
+                  </>
+                )}
+                {search.live.groups.length > 0 && (
+                  <>
+                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CATEGORÍAS</div>
+                    {search.live.groups.map((g) => (
+                      <div key={g.id}
+                        onClick={() => { navigate(`/cat/${g.id}`); search.clear(); }}
+                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
+                      >
+                        <span className="font-condensed font-bold text-base text-white">
+                          {g.emojis?.length > 0 && <span className="mr-1">{g.emojis.join(' ')}</span>}{g.name}
+                        </span>
+                        <span className="text-[11px] font-mono text-dim">@{g.owner_username}</span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {search.live.tours.length > 0 && (
+                  <>
+                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">TORNEOS</div>
+                    {search.live.tours.map((t) => (
+                      <div key={t.id}
+                        onClick={() => { navigate(`/view/${t.id}`); search.clear(); }}
+                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
+                      >
+                        <span className="font-condensed font-bold text-base text-white truncate">{t.name}</span>
+                        <span className="text-[11px] font-mono text-dim truncate">
+                          {t.group_emojis?.length > 0 && <span className="mr-1">{t.group_emojis.join(' ')}</span>}
+                          {t.group_name}{t.day && <span> · {fmt(t.day)}</span>}
+                        </span>
+                      </div>
+                    ))}
+                  </>
+                )}
+                {search.live.clubs.length > 0 && (
+                  <>
+                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CLUBES</div>
+                    {search.live.clubs.map((c) => (
+                      <div key={c.id}
+                        onClick={() => { navigate(`/club/${c.id}`); search.clear(); }}
+                        className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
+                      >
+                        {c.photo_url
+                          ? <img src={c.photo_url} alt="" className="w-8 h-8 rounded-md object-cover border border-border-mid shrink-0" />
+                          : <span className="w-8 h-8 rounded-md bg-surface border border-border-mid flex items-center justify-center shrink-0"><Building2 size={15} className="text-muted" /></span>}
+                        <div className="min-w-0">
+                          <div className="font-condensed font-bold text-white truncate">{c.name}</div>
+                          {c.location_name && <div className="text-[11px] font-mono text-dim truncate">{c.location_name}</div>}
+                        </div>
+                      </div>
+                    ))}
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* ── Vitrinas del visitante: en vivo, próximas, inscripciones y categorías activas ── */}
         {!isLoggedIn && !committedQ && (
           <VisitorShowcase data={homeData} loading={homeLoading} />
         )}
 
-        {/* ── Clubes cerca tuyo ── */}
-        {!committedQ && nearbyStatus !== 'unsupported' && (
+        {/* ── Clubes cerca tuyo (visitante) ── */}
+        {!isLoggedIn && !committedQ && nearbyStatus !== 'unsupported' && (
           <div className="mb-10">
             {/* Estados previos a los resultados: misma altura para evitar saltos de layout */}
-            {nearbyStatus !== 'done' && nearbyStatus !== 'unsupported' && (
+            {nearbyStatus !== 'done' && (
               <div className="border border-border-mid rounded-lg p-6 sm:p-8 text-center bg-surface/40 min-h-[168px] flex flex-col items-center justify-center">
                 {nearbyStatus === 'loading' ? (
                   <>
@@ -621,9 +620,9 @@ export default function HomeView() {
                       {nearbyVisible.slice(0, nearbyPage).map((c, i) => (
                         <FadeInCard
                           key={c.id}
-                          delay={i * 60}
+                          delay={Math.min(i, 5) * 50}
                           className="border border-border-mid rounded-lg cursor-pointer overflow-hidden card-link flex items-center gap-3 p-3"
-                          style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
+                          style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)' }}
                           onClick={() => navigate(`/club/${c.id}`)}
                         >
                           {c.photo_url ? (
@@ -705,22 +704,22 @@ export default function HomeView() {
               <div className="font-condensed font-bold text-sm tracking-widest text-muted">
                 RESULTADOS PARA &quot;{committedQ}&quot;
               </div>
-              <button onClick={clearSearch} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
+              <button onClick={search.clear} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
                 <X size={16} />
               </button>
             </div>
-            {committing && <div className="font-mono text-xs text-muted py-4">Buscando...</div>}
-            {!committing && committedUsers.length === 0 && committedGroups.length === 0 && committedClubs.length === 0 && committedTours.length === 0 && (
+            {search.committing && <div className="font-mono text-xs text-muted py-4">Buscando...</div>}
+            {!search.committing && committedUsers.length === 0 && committedGroups.length === 0 && committedClubs.length === 0 && committedTours.length === 0 && (
               <div className="font-mono text-xs text-muted py-4">Sin resultados.</div>
             )}
-            {!committing && committedUsers.length > 0 && (
+            {!search.committing && committedUsers.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">PERFILES</div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
                   {committedUsers.map((u) => (
                     <FadeInCard key={u.id}
                       className="border border-border-mid rounded-lg cursor-pointer overflow-hidden p-4 card-link"
-                      style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #222222 100%)' }}
+                      style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border-mid) 100%)' }}
                       onClick={() => navigate(`/u/${u.username}`)}>
                       <div className="font-condensed font-bold text-xl text-white">{u.name}</div>
                       <div className="font-mono text-xs text-dim mt-1">@{u.username}</div>
@@ -729,7 +728,7 @@ export default function HomeView() {
                 </div>
               </>
             )}
-            {!committing && committedGroups.length > 0 && (
+            {!search.committing && committedGroups.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">CATEGORÍAS</div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
@@ -739,16 +738,16 @@ export default function HomeView() {
                 </div>
               </>
             )}
-            {!committing && committedTours.length > 0 && (
+            {!search.committing && committedTours.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">TORNEOS</div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
                   {committedTours.map((t, i) => (
                     <FadeInCard
                       key={t.id}
-                      delay={i * 60}
+                      delay={Math.min(i, 5) * 50}
                       className="border border-border-mid rounded-lg cursor-pointer overflow-hidden p-4 card-link"
-                      style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
+                      style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)' }}
                       onClick={() => navigate(`/view/${t.id}`)}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -769,16 +768,16 @@ export default function HomeView() {
                 </div>
               </>
             )}
-            {!committing && committedClubs.length > 0 && (
+            {!search.committing && committedClubs.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">CLUBES</div>
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3 mb-8">
                   {committedClubs.map((c, i) => (
                     <FadeInCard
                       key={c.id}
-                      delay={i * 60}
+                      delay={Math.min(i, 5) * 50}
                       className="border border-border-mid rounded-lg cursor-pointer overflow-hidden card-link flex items-center gap-3 p-3"
-                      style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
+                      style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)' }}
                       onClick={() => navigate(`/club/${c.id}`)}
                     >
                       {c.photo_url ? (
@@ -808,92 +807,91 @@ export default function HomeView() {
           </div>
         )}
 
-        {/* ── Onboarding: una pregunta, después el checklist ── */}
-        {!committedQ && isLoggedIn && !loading && (
-          showRolePicker
-            ? <RolePicker onPick={(r) => { setPickedRole(r); setRoleDismissed(r == null); }} />
-            : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
-        )}
-
-        {/* ── Mis categorías ── */}
+        {/* ══ Panel del usuario con sesión ══ */}
         {!committedQ && isLoggedIn && (
           <>
-            {/* Header sección + botón nueva categoría */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-condensed font-bold text-sm tracking-widest text-muted">MIS CATEGORÍAS</h2>
-              <Btn variant="primary" size="sm" icon={Plus} onClick={openNewModal}>NUEVA</Btn>
+            <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
+              <div>
+                <h1 className="font-condensed font-bold text-[22px] sm:text-[26px] text-white leading-tight m-0">
+                  Buenas{firstName && <>, <span className="text-brand">{firstName}</span></>}
+                </h1>
+                <p className="font-mono text-[12px] text-muted mt-1.5 m-0">
+                  {liveMine.length > 0
+                    ? `${liveMine.length} ${liveMine.length === 1 ? 'jornada jugándose' : 'jornadas jugándose'} ahora`
+                    : upcomingMine.length > 0
+                      ? `${upcomingMine.length} ${upcomingMine.length === 1 ? 'jornada próxima' : 'jornadas próximas'}`
+                      : 'Todo tranquilo por acá'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPaletteOpen(true)}
+                  aria-label="Buscar"
+                  className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer"
+                >
+                  <Search size={16} />
+                  <kbd className="hidden sm:inline font-mono text-[9.5px] tracking-wider border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
+                </button>
+                {nearbyStatus !== 'unsupported' && (
+                  <button
+                    onClick={goNearby}
+                    className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer font-sans text-[12px]"
+                  >
+                    <MapPin size={16} /><span className="hidden sm:inline">Cerca</span>
+                  </button>
+                )}
+                <Btn variant="primary" icon={Plus} onClick={openNewModal}>NUEVA</Btn>
+              </div>
             </div>
 
-            {groups.length === 0 ? (
-              <div className="border border-dashed border-border-strong rounded-lg p-8 text-center mb-8">
-                <p className="text-muted text-sm font-sans mb-1">Todavía no tenés categorías creadas.</p>
-                <p className="text-dim text-[12px] font-mono mb-4">
-                  Una categoría agrupa a la gente que juega junta; los torneos van adentro.
-                </p>
-                <Btn variant="primary" icon={Plus} onClick={openNewModal}>CREAR PRIMERA CATEGORÍA</Btn>
-                <div className="mt-3">
-                  <Link to="/tutorial#crear-categoria" className="text-[12px] font-mono text-muted hover:text-brand transition-colors">
-                    Ver cómo funciona
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-10">
-                {groups.map((g, i) => (
-                  <GroupCard key={g.id} g={g} delay={i * 60} onClick={() => navigate(`/cat/${g.id}`)} />
-                ))}
-              </div>
+            <StatRail stats={rail} />
+            <LiveBand tournaments={liveMine} onOpen={(id) => navigate(`/view/${id}`)} />
+            {liveMine.length === 0 && <NextBand t={upcomingMine[0] ?? null} onOpen={(id) => navigate(`/view/${id}`)} />}
+
+            {/* ── Onboarding: una pregunta, después el checklist ── */}
+            {!loading && (
+              showRolePicker
+                ? <RolePicker onPick={(r) => { setPickedRole(r); setRoleDismissed(r == null); }} />
+                : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
             )}
 
-            {/* Categorías que co-organizo */}
-            {coorgGroups.length > 0 && (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-condensed font-bold text-sm tracking-widest text-muted">CO-ORGANIZANDO</h2>
-                  <span className="font-mono text-xs text-secondary border border-dim px-2 py-0.5 rounded-full">{coorgGroups.length}</span>
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-10">
-                  {coorgGroups.map((g, i) => (
-                    <GroupCard key={g.id} g={g} delay={i * 60} badge="co-org" onClick={() => navigate(`/cat/${g.id}`)} />
-                  ))}
-                </div>
-              </>
-            )}
+            <CategoryList
+              merged={merged}
+              counts={roleCounts}
+              liveGroupIds={liveGroupIds}
+              nextMap={nextMap}
+              filter={roleFilter}
+              onFilter={setRoleFilter}
+              onOpen={(id) => navigate(`/cat/${id}`)}
+              onNew={openNewModal}
+            />
 
-            {/* Grupos en los que participo */}
-            {partGroups.length > 0 && (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-condensed font-bold text-sm tracking-widest text-muted">PARTICIPANDO EN</h2>
-                  <span className="font-mono text-xs text-secondary border border-dim px-2 py-0.5 rounded-full">{partGroups.length}</span>
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-10">
-                  {partGroups.map((g, i) => (
-                    <GroupCard key={g.id} g={g} delay={i * 60} badge="jugador" onClick={() => navigate(`/cat/${g.id}`)} />
-                  ))}
-                </div>
-
-              </>
-            )}
-
-            {/* Categorías favoritas */}
-            {favGroups.length > 0 && (
-              <>
-                <div className="flex items-center gap-3 mb-4">
-                  <h2 className="font-condensed font-bold text-sm tracking-widest text-muted">FAVORITAS</h2>
-                  <span className="font-mono text-xs text-secondary border border-dim px-2 py-0.5 rounded-full">{favGroups.length}</span>
-                </div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3">
-                  {favGroups.map((g, i) => (
-                    <GroupCard key={g.id} g={g} delay={i * 60} badge="favorita" onClick={() => navigate(`/cat/${g.id}`)} />
-                  ))}
-                </div>
-              </>
-            )}
+            <Discover
+              tab={discoverTab}
+              onTab={setDiscoverTab}
+              signup={discoverSignup}
+              upcoming={discoverUpcoming}
+              loading={homeLoading}
+              nearbyClubs={nearbyClubs}
+              nearbyStatus={nearbyStatus}
+              onFetchNearby={fetchNearbyClubs}
+              onHideNearby={() => { setNearbyStatus('idle'); setNearbyClubs([]); }}
+              onOpenTournament={(id) => navigate(`/view/${id}`)}
+              onOpenClub={(id) => navigate(`/club/${id}`)}
+            />
           </>
         )}
 
       </div>
+
+      {isLoggedIn && (
+        <SearchPalette
+          open={paletteOpen}
+          onClose={() => setPaletteOpen(false)}
+          search={search}
+          onNavigate={(to) => { navigate(to); search.clear(); }}
+        />
+      )}
 
       {/* ── Modal nueva categoría ── */}
       {showNew && (
