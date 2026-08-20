@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Building2, ChevronRight } from 'lucide-react';
-import SectionRule from './SectionRule';
+import SectionRule from '../shared/SectionRule';
 import StatTile, { StatTiles } from '../shared/StatTile';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import ClubLogo from '../shared/ClubLogo';

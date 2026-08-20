@@ -19,7 +19,7 @@ import LazyNotFound from '../NotFound/LazyNotFound';
 import MatchRow from './MatchRow';
 import ProfileMatches from './ProfileMatches';
 import ProfileHero, { PlanBand } from './ProfileHero';
-import SectionRule from './SectionRule';
+import SectionRule from '../shared/SectionRule';
 import ProfileStats from './ProfileStats';
 import ProfileCategories from './ProfileCategories';
 import PremiumChip from '../shared/PremiumChip';
