@@ -23,7 +23,7 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
   });
 
   return (
-    <div className="mb-4 flex flex-col gap-2.5">
+    <div className="flex flex-col gap-2.5">
       <div className="flex gap-2">
         <div className="relative flex-1 min-w-0">
           <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-dim pointer-events-none" />
@@ -35,7 +35,7 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
           />
           {filters.q && (
             <button type="button" onClick={() => set({ q: '' })} aria-label="Borrar búsqueda"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-[#555] hover:text-white cursor-pointer transition-colors">
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-transparent border-none text-dim hover:text-white cursor-pointer transition-colors">
               <X size={14} />
             </button>
           )}
@@ -49,14 +49,14 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
       {open && (
         <div className="bg-surface border border-border-mid rounded-lg p-3.5 flex flex-col gap-3.5">
           <div>
-            <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">ESTADO</label>
+            <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">ESTADO</label>
             <div className="flex flex-wrap gap-1.5">
               {STATUS_ORDER.map((s) => {
                 const on = filters.statuses.includes(s);
                 return (
                   <button key={s} type="button" onClick={() => toggleIn('statuses', s)}
                     className={`px-2.5 py-1 rounded-full border text-[11px] font-mono tracking-wide cursor-pointer transition-colors ${
-                      on ? CHIP_COLORS[TOURNAMENT_STATUS_META[s].color] : 'border-border-strong text-[#666] bg-transparent hover:text-white'
+                      on ? CHIP_COLORS[TOURNAMENT_STATUS_META[s].color] : 'border-border-strong text-muted bg-transparent hover:text-white'
                     }`}>
                     {TOURNAMENT_STATUS_META[s].label}
                   </button>
@@ -66,7 +66,7 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">TIPO</label>
+            <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">TIPO</label>
             <div className="flex flex-wrap gap-1.5">
               {[{ v: 'liga', label: 'LIGA', cls: 'border-cyan text-cyan bg-cyan/10' },
                 { v: 'americano', label: 'AMERICANO', cls: 'border-brand text-brand bg-brand/10' }].map((o) => {
@@ -74,7 +74,7 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
                 return (
                   <button key={o.v} type="button" onClick={() => toggleIn('formats', o.v)}
                     className={`px-2.5 py-1 rounded-full border text-[11px] font-mono tracking-wide cursor-pointer transition-colors ${
-                      on ? o.cls : 'border-border-strong text-[#666] bg-transparent hover:text-white'
+                      on ? o.cls : 'border-border-strong text-muted bg-transparent hover:text-white'
                     }`}>
                     {o.label}
                   </button>
@@ -84,7 +84,7 @@ export default function TournamentFilters({ filters, onChange, open, onToggle, t
           </div>
 
           <div>
-            <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">FECHA</label>
+            <label className="block text-[10px] font-mono tracking-widest text-dim mb-1.5">FECHA</label>
             <div className="flex items-center gap-2">
               <div className="relative flex-1 min-w-0">
                 <Calendar size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-dim pointer-events-none" />

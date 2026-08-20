@@ -71,3 +71,24 @@ export function contactHref(contact, tournamentName) {
 export function hasSignupInfo(signup) {
   return !!signup?.open && (signup.price != null || (signup.contacts?.length ?? 0) > 0);
 }
+
+// En hora local y no con toISOString: en Argentina, después de las 21 el día UTC
+// ya es el siguiente y una jornada de hoy se leería como pasada.
+function todayKey() {
+  const d = new Date();
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+
+// La insignia de "inscripción abierta" en la tarjeta de una jornada.
+//
+// resolveSignup hereda del grupo, así que una categoría con signup_open se lo
+// pasa a TODAS sus jornadas: sin estas guardas la insignia aparecería en cada
+// tarjeta y dejaría de significar algo. Misma regla que la consulta `signup` de
+// GET /api/home, para que las dos superficies coincidan.
+export function showsSignup(tournament, signup) {
+  if (!hasSignupInfo(signup)) return false;
+  if (tournament?.status === 'finished') return false;
+  const day = String(tournament?.event_date ?? '').slice(0, 10);
+  return !day || day >= todayKey();
+}

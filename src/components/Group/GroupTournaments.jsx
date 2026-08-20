@@ -1,38 +1,89 @@
 import { useNavigate } from 'react-router-dom';
-import { Users, User, Flame, Trophy, Building2 } from 'lucide-react';
-import FadeInCard from '../shared/FadeInCard';
-import Badge from '../shared/Badge';
+import { Plus, ChevronRight, Radio } from 'lucide-react';
 import Btn from '../shared/Btn';
 import TournamentFilters from './TournamentFilters';
-import {
-  fmt, fmtHora, tournamentDisplayStatus, isAmericanoDraft, TOURNAMENT_STATUS_META,
-} from '../../utils/helpers';
+import SortMenu from './SortMenu';
+import TournamentCard from './TournamentCard';
 
 // Listado de torneos de la categoría: la pestaña por defecto. Salió de GroupView
 // cuando la pantalla pasó a tener pestañas, para que ese archivo no siguiera
 // creciendo con el cuerpo de todas.
 export default function GroupTournaments({
   group, groupId, canManage, filters, changeFilters, filtersOpen, setFiltersOpen,
-  activeFilters, filtered, visibleCount, setVisibleCount,
+  activeFilters, filtered, visibleCount, setVisibleCount, sort, setSort, onNewTournament,
 }) {
   const navigate = useNavigate();
+  const total = group.tournaments?.length ?? 0;
+
+  // La jornada en vivo sube a su propia banda y sale de la lista, pero sólo con
+  // la lista limpia: si el usuario está filtrando, esconderle un resultado que
+  // coincide es peor que repetirlo.
+  const live = activeFilters === 0 ? filtered.find((t) => !!t.live_match) : null;
+  const rest = live ? filtered.filter((t) => t.id !== live.id) : filtered;
+
+  if (total === 0) {
+    return canManage ? (
+      <div className="border border-dashed border-border-strong rounded-xl p-8 text-center">
+        <p className="text-muted text-sm font-sans mb-1">Todavía no hay torneos en esta categoría.</p>
+        <p className="text-dim text-[12px] font-mono mb-4">Cada fecha que juegan es un torneo. Ahí elegís Liga o Americano.</p>
+        <Btn variant="primary" icon={Plus} onClick={onNewTournament}>CREAR EL PRIMERO</Btn>
+      </div>
+    ) : (
+      <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
+        No hay torneos todavía.<br />¡Creá el primero!
+      </div>
+    );
+  }
 
   return (
     <>
-      {(!group.tournaments || group.tournaments.length === 0) && !canManage && (
-        <div className="text-center text-dim py-10 px-5 font-sans leading-loose">No hay torneos todavía.<br/>¡Creá el primero!</div>
+      {live && (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => navigate(`/cat/${groupId}/torneo/${live.id}`)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/cat/${groupId}/torneo/${live.id}`); } }}
+          className="border border-danger/35 rounded-xl px-4 py-4 mb-4 bg-surface cursor-pointer hover:border-danger/60 transition-colors flex items-center gap-4 flex-wrap outline-none"
+        >
+          <div className="min-w-0 flex-1">
+            <span className="inline-flex items-center gap-2 font-condensed font-bold text-[10px] tracking-widest text-danger">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-danger opacity-60" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-danger" />
+              </span>
+              SE ESTÁ JUGANDO AHORA
+            </span>
+            <div className="font-condensed font-bold text-[19px] text-white mt-2 leading-tight">{live.name}</div>
+            <div className="font-mono text-[11.5px] text-secondary mt-1 truncate">
+              {live.player_count > 0 && `${live.player_count} jugadores`}
+              {live.club_name && ` · ${live.club_name}`}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 shrink-0">
+            <Radio size={16} className="text-danger" />
+            <ChevronRight size={16} className="text-dim" />
+          </div>
+        </div>
       )}
 
-      {group.tournaments?.length > 0 && (
-        <TournamentFilters
-          filters={filters}
-          onChange={changeFilters}
-          open={filtersOpen}
-          onToggle={() => setFiltersOpen(o => !o)}
-          total={group.tournaments.length}
-          shown={filtered.length}
-        />
-      )}
+      <div className="flex items-start gap-2 mb-3 flex-wrap">
+        <div className="flex-1 min-w-[180px]">
+          <TournamentFilters
+            filters={filters}
+            onChange={changeFilters}
+            open={filtersOpen}
+            onToggle={() => setFiltersOpen((o) => !o)}
+            total={total}
+            shown={filtered.length}
+          />
+        </div>
+        <SortMenu value={sort} onChange={setSort} />
+        {canManage && (
+          <Btn variant="primary" size="md" icon={Plus} onClick={onNewTournament} className="shrink-0">
+            NUEVO TORNEO
+          </Btn>
+        )}
+      </div>
 
       {activeFilters > 0 && filtered.length === 0 && (
         <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
@@ -41,93 +92,21 @@ export default function GroupTournaments({
       )}
 
       <div className="flex flex-col gap-2.5">
-        {filtered.slice(0, visibleCount).map((t, i) => {
-          const isAmericano = t.format === 'americano';
-          const fmtColor = isAmericano ? '#e8f04a' : '#63b3ed';
-          const fmtBg    = isAmericano ? 'rgba(232,240,74,0.07)' : 'rgba(99,179,237,0.07)';
-          const fmtBorder = isAmericano ? 'rgba(232,240,74,0.18)' : 'rgba(99,179,237,0.18)';
-          const count = isAmericano ? t.pair_count : t.player_count;
-          const CountIcon = isAmericano ? Users : User;
-          const displayStatus = tournamentDisplayStatus({
-            status: t.status, hasLiveMatch: !!t.live_match, hasPlayed: (t.match_count ?? 0) > 0,
-            isDraft: isAmericanoDraft({ format: t.format, pairCount: t.pair_count }),
-          });
-          const statusMeta = TOURNAMENT_STATUS_META[displayStatus];
-          // Línea superior: brand si es borrador, cyan si es próximo, verde si está en curso/en vivo, nada si finalizó.
-          const topLineClass = displayStatus === 'draft'
-            ? 'from-brand/50 via-brand/20 to-transparent'
-            : displayStatus === 'upcoming'
-              ? 'from-cyan/50 via-cyan/20 to-transparent'
-              : 'from-green/50 via-green/20 to-transparent';
-          return (
-          <FadeInCard key={t.id} delay={Math.min(i, 5) * 60}
-            className="border border-border-mid rounded-lg cursor-pointer overflow-hidden card-link"
-            style={{ background: 'linear-gradient(145deg, #0d0d0d 0%, #1c1c1c 100%)' }}
-            onClick={() => { navigate(`/cat/${groupId}/torneo/${t.id}`); }}>
-            {displayStatus !== 'finished' && (
-              <div className={`h-px ml-7 bg-gradient-to-r ${topLineClass}`} />
-            )}
-            <div className="flex min-w-0">
-              <div
-                className="flex items-center justify-center shrink-0 w-7"
-                style={{ background: fmtBg, borderRight: `1px solid ${fmtBorder}` }}
-              >
-                <span
-                  className="font-mono font-bold tracking-widest select-none"
-                  style={{ fontSize: 8, color: fmtColor, writingMode: 'vertical-rl', transform: 'rotate(180deg)', letterSpacing: '0.2em' }}
-                >
-                  {isAmericano ? 'AMERICANO' : 'LIGA'}
-                </span>
-              </div>
-              <div className="px-4 py-3.5 flex-1 min-w-0">
-                <div className="flex justify-between items-start gap-2 mb-2">
-                  <div className="font-condensed font-bold text-lg text-content leading-tight">{t.name}</div>
-                  <Badge variant="status" color={statusMeta.color} icon={statusMeta.icon} pulse={statusMeta.pulse}>
-                    {statusMeta.label}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  {count > 0 && (
-                    <span className="flex items-center gap-1 font-mono text-sm text-dim">
-                      <CountIcon size={11} />{count}
-                    </span>
-                  )}
-                  {t.match_count > 0 && (
-                    <span className="flex items-center gap-1 font-mono text-sm text-dim">
-                      <Flame size={11} />{t.match_count}
-                    </span>
-                  )}
-                  {!isAmericano && t.mode && (
-                    <span className="font-mono text-sm text-dim">
-                      {t.mode === 'pairs' ? '(en parejas)' : '(equipos libres)'}
-                    </span>
-                  )}
-                  <span className="font-mono text-sm text-dim ml-auto">
-                    {fmt(t.event_date ?? t.created_at)}
-                    {t.event_time && <span className="text-brand ml-1.5">{fmtHora(t.event_time)}</span>}
-                  </span>
-                </div>
-                {t.club_name && (
-                  <div className="flex items-center gap-1.5 text-sm text-secondary font-mono mt-2">
-                    <Building2 size={11} className="shrink-0" />
-                    <span className="truncate">{t.club_name}</span>
-                  </div>
-                )}
-                {t.status === 'finished' && t.winner_label && (
-                  <div className="flex items-center gap-1.5 text-sm text-brand font-mono mt-2">
-                    <Trophy size={11} /> {t.winner_label}
-                  </div>
-                )}
-              </div>
-            </div>
-          </FadeInCard>
-          );
-        })}
+        {rest.slice(0, visibleCount).map((t, i) => (
+          <TournamentCard
+            key={t.id}
+            t={t}
+            group={group}
+            delay={Math.min(i, 5) * 50}
+            onClick={() => navigate(`/cat/${groupId}/torneo/${t.id}`)}
+          />
+        ))}
       </div>
-      {visibleCount < filtered.length && (
+
+      {visibleCount < rest.length && (
         <div className="flex justify-center mt-4">
-          <Btn size="sm" onClick={() => setVisibleCount(c => c + 10)}>
-            CARGAR MÁS ({filtered.length - visibleCount} restantes)
+          <Btn size="sm" onClick={() => setVisibleCount((c) => c + 10)}>
+            CARGAR MÁS ({rest.length - visibleCount} restantes)
           </Btn>
         </div>
       )}
