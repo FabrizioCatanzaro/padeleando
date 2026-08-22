@@ -207,6 +207,12 @@ input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
   .ticker-track.ticker-animate { animation: none; }
 }
 
+/* Placa de estadística. En oscuro la superficie alternativa levanta la tarjeta
+   sobre el negro; en claro pasa lo contrario —#eef0f5 sobre #f5f7fa no se
+   despega— así que ahí va en blanco. */
+.stat-slab { background: var(--color-surface-alt); }
+html.light .stat-slab { background: var(--color-surface); }
+
 /* Card clickeable con glow de brand en hover */
 .card-link {
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
