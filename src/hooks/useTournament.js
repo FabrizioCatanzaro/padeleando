@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../utils/api';
-import { adaptTournament, adaptMatch, patchBracketNames, getTournamentWinnerLabel } from '../utils/helpers';
+import { adaptTournament, adaptMatch, adaptScheduled, patchBracketNames, getTournamentWinnerLabel } from '../utils/helpers';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 
@@ -112,13 +112,56 @@ export function useTournament(groupId, tournamentId) {
       sets_format:  matchData.sets_format ?? null,
       sets:         matchData.sets ?? [],
       court:        matchData.court ?? null,
+      // Si venía programado, el backend lo saca del fixture en la misma
+      // llamada: en dos viajes, un fallo entre medio lo dejaría duplicado.
+      scheduledId:  matchData.scheduledId ?? null,
     });
     // El backend ordena por created_at DESC: el nuevo va al principio.
-    setTournament((prev) =>
-      prev ? { ...prev, matches: [adaptMatch(created), ...prev.matches] } : prev
-    );
+    setTournament((prev) => (prev ? {
+      ...prev,
+      matches: [adaptMatch(created), ...prev.matches],
+      scheduled_matches: matchData.scheduledId
+        ? (prev.scheduled_matches ?? []).filter((s) => s.id !== matchData.scheduledId)
+        : (prev.scheduled_matches ?? []),
+    } : prev));
     flash();
     showToast('Partido registrado');
+  }
+
+  // ── Fixture ───────────────────────────────────────────────────────────────
+  async function handleAddScheduled(data) {
+    const created = await api.scheduled.create({
+      tournamentId: tournament.id,
+      team1: data.team1,
+      team2: data.team2,
+      court: data.court ?? null,
+      scheduled_at: data.scheduled_at ?? null,
+    });
+    setTournament((prev) => (prev ? {
+      ...prev,
+      scheduled_matches: [...(prev.scheduled_matches ?? []), adaptScheduled(created)],
+    } : prev));
+    showToast('Partido programado');
+    return adaptScheduled(created);
+  }
+
+  async function handleEditScheduled(id, data) {
+    const updated = await api.scheduled.update(id, data);
+    setTournament((prev) => (prev ? {
+      ...prev,
+      scheduled_matches: (prev.scheduled_matches ?? []).map(
+        (s) => (s.id === id ? adaptScheduled(updated) : s),
+      ),
+    } : prev));
+  }
+
+  async function handleDeleteScheduled(id) {
+    await api.scheduled.delete(id);
+    setTournament((prev) => (prev ? {
+      ...prev,
+      scheduled_matches: (prev.scheduled_matches ?? []).filter((s) => s.id !== id),
+    } : prev));
+    showToast('Sacado del fixture');
   }
 
   async function handleEditMatch(matchId, matchData) {
@@ -346,6 +389,7 @@ export function useTournament(groupId, tournamentId) {
     tournament, groupName, groupEmojis, groupOwnerIsPremium, loading, error, notFound, saved, isOwner,
     handleCreate,
     handleAddMatch,    handleEditMatch,    handleDeleteMatch,
+    handleAddScheduled, handleEditScheduled, handleDeleteScheduled,
     handleAddPlayer,   handleEditPlayer,   handleDeletePlayer,
     handleAddPair,     handleEditPair,     handleDeletePair,
     handleResetScores, handleDeleteTournament,

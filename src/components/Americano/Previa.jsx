@@ -1,11 +1,13 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef } from "react";
-import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, AMERICANO_MIN_PAIRS } from "../../utils/helpers";
+import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, scoreFromSets, pairKeyOf, AMERICANO_MIN_PAIRS } from "../../utils/helpers";
 import MatchCard from "../Matches/MatchCard";
 import MatchForm from "../Matches/MatchForm";
+import ScheduledCard from "../Matches/ScheduledCard";
+import ScheduleForm from "../Matches/ScheduleForm";
 import Modal from "../shared/Modal";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
-import { Share2, Trash2, Dices } from "lucide-react";
+import { Share2, Trash2, Dices, CalendarPlus } from "lucide-react";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -32,8 +34,9 @@ function findPlayedMatch(tournament, entry) {
 }
 
 export default function Previa({
-  tournament, isOwner, categoryName,
+  tournament, isOwner, categoryName, myPlayerIds = [],
   onAddMatch, onEditMatch, onDeleteMatch, onSetLiveMatch,
+  onAddScheduled, onEditScheduled, onDeleteScheduled,
   onGenerateSchedule, onGenerateBracket,
 }) {
   const SCHEDULE_KEY = `previa_schedule_${tournament.id}`;
@@ -64,6 +67,9 @@ export default function Previa({
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmClearSchedule, setConfirmClearSchedule] = useState(false);
   const [shareFixture, setShareFixture] = useState(false);
+  // Programar un partido nuevo de la previa, o editar la programación de uno.
+  const [scheduling, setScheduling] = useState(null);
+  const [confirmUnschedule, setConfirmUnschedule] = useState(null);
 
   useEffect(() => {
     const key = getLiveKey(tournament.id);
@@ -123,9 +129,83 @@ export default function Previa({
   }
 
   function handleCancelMatch(liveId) {
+    const cancelado = liveMatches.find(m => m.id === liveId);
     const remaining = liveMatches.filter(m => m.id !== liveId);
     setLiveMatches(remaining);
     syncLive(remaining);
+    // "Empezar ahora" anota el partido en el fixture para que sobreviva a cerrar
+    // la tarjeta. Si el que cierra es quien lo anotó, se deshace.
+    if (cancelado?.form?.scheduledCreado && cancelado.form.scheduledId) {
+      onDeleteScheduled?.(cancelado.form.scheduledId);
+    }
+  }
+
+  /**
+   * Empezar un partido que nadie programó: lo anota en el fixture y arranca el
+   * cronómetro, para que sobreviva a cerrar la tarjeta.
+   */
+  async function empezarAhora(liveId) {
+    const lm = liveMatches.find(m => m.id === liveId);
+    if (!lm) return;
+    if (lm.timer?.startedAt != null || lm.form?.scheduledId) return;
+    const { form } = lm;
+    if (!form.team1Pair || !form.team2Pair) return;
+    const team1 = expandPair(form.team1Pair, tournament.pairs);
+    const team2 = expandPair(form.team2Pair, tournament.pairs);
+
+    let scheduledId = null;
+    try {
+      scheduledId = (await onAddScheduled?.({
+        team1, team2, court: form.court ?? null, scheduled_at: null,
+      }))?.id ?? null;
+    } catch {
+      // Si no se pudo anotar, igual arranca: el cronómetro es lo urgente.
+    }
+    setLiveMatches(prev => prev.map(m => (m.id === liveId ? {
+      ...m,
+      form: { ...m.form, scheduledId: scheduledId ?? m.form.scheduledId ?? null, scheduledCreado: !!scheduledId },
+      timer: { startedAt: Date.now(), stoppedAt: null },
+    } : m)));
+  }
+
+
+  /**
+   * Lo mismo que Empezar ahora, pero sin arrancar el cronómetro: el partido se
+   * anota en el fixture y la tarjeta se cierra. Es la salida para cuando abriste
+   * NUEVO PARTIDO y en realidad lo querías para más tarde.
+   */
+  async function programarDesdeForm(liveId) {
+    const lm = liveMatches.find(m => m.id === liveId);
+    if (!lm || lm.timer?.startedAt != null || lm.form?.scheduledId) return;
+    const { form } = lm;
+    if (!form.team1Pair || !form.team2Pair) return;
+    const team1 = expandPair(form.team1Pair, tournament.pairs);
+    const team2 = expandPair(form.team2Pair, tournament.pairs);
+
+    await onAddScheduled?.({ team1, team2, court: form.court ?? null, scheduled_at: null });
+    const remaining = liveMatches.filter(m => m.id !== liveId);
+    setLiveMatches(remaining);
+    syncLive(remaining);
+  }
+
+  /**
+   * Abre un partido del fixture como partido en curso. `arrancar` decide si el
+   * cronómetro sale corriendo.
+   */
+  function abrirProgramado(sm, arrancar) {
+    if (liveMatches.some(m => m.form?.scheduledId === sm.id)) return;
+    const buscar = (team) => tournament.pairs.find(
+      p => (p.p1 === team[0] && p.p2 === team[1]) || (p.p1 === team[1] && p.p2 === team[0]),
+    )?.id ?? '';
+    setLiveMatches(prev => [...prev, {
+      id: genId(),
+      form: {
+        ...emptyForm(),
+        team1Pair: buscar(sm.team1), team2Pair: buscar(sm.team2),
+        court: sm.court ?? null, scheduledId: sm.id,
+      },
+      timer: arrancar ? { startedAt: Date.now(), stoppedAt: null } : EMPTY_TIMER,
+    }]);
   }
 
   async function handleSaveMatch(liveId) {
@@ -133,10 +213,12 @@ export default function Previa({
     if (!liveMatch) return;
     const { form } = liveMatch;
 
+    // A 1 set el marcador son los juegos de ese set; a 3, los sets ganados.
+    // Antes acá se leía siempre el primer set y los sets no se guardaban: un
+    // partido a tres sets de la previa quedaba registrado como si fuera a uno.
     let s1, s2;
-    if (form.sets_format && form.sets?.[0]) {
-      s1 = parseInt(form.sets[0].s1);
-      s2 = parseInt(form.sets[0].s2);
+    if (form.sets_format) {
+      [s1, s2] = scoreFromSets(form.sets_format, form.sets ?? []);
     } else {
       s1 = parseInt(form.score1);
       s2 = parseInt(form.score2);
@@ -146,6 +228,7 @@ export default function Previa({
     if (!form.team1Pair || !form.team2Pair) return alert("Seleccioná las dos parejas");
     const team1 = expandPair(form.team1Pair, tournament.pairs);
     const team2 = expandPair(form.team2Pair, tournament.pairs);
+    const nv = form.sets_format ? visibleSetsCount(form.sets_format, form.sets) : 0;
 
     // Si el cronómetro está corriendo, detenerlo y calcular la duración
     let duration = form.duration_seconds;
@@ -153,7 +236,14 @@ export default function Previa({
       duration = Math.floor((Date.now() - liveMatch.timer.startedAt) / 1000);
     }
 
-    const matchData = { team1, team2, score1: s1, score2: s2, date: form.date, duration_seconds: duration, court: form.court ?? null };
+    const matchData = {
+      team1, team2, score1: s1, score2: s2, date: form.date,
+      duration_seconds: duration, court: form.court ?? null,
+      sets_format: form.sets_format ?? null,
+      sets: nv > 0 ? (form.sets ?? []).slice(0, nv) : [],
+      // Si salió del fixture, el backend lo saca de ahí al registrarlo.
+      scheduledId: form.scheduledId ?? null,
+    };
 
     const remaining = liveMatches.filter(m => m.id !== liveId);
     if (remaining.length === 0) localStorage.removeItem(getLiveKey(tournament.id));
@@ -263,6 +353,26 @@ export default function Previa({
 
   const MAX_PREVIA_MATCHES = 2;
 
+  // Los ids del fixture abiertos ahora mismo en un formulario: mientras se están
+  // cargando no siguen figurando como "por jugar".
+  const idsAbiertos = new Set(liveMatches.map(m => m.form?.scheduledId).filter(Boolean));
+  const programados = (tournament.scheduled_matches ?? []).filter(sm => !idsAbiertos.has(sm.id));
+  const esMio = (sm) => myPlayerIds.length > 0
+    && [...sm.team1, ...sm.team2].some(id => myPlayerIds.includes(id));
+
+  // Para el tope de la previa, un partido programado ya ocupa uno de los dos
+  // lugares: si no contara, se podrían programar tres para la misma pareja.
+  // `pairMatchCounts` (sólo jugados) sigue mandando en si la previa terminó,
+  // porque el cuadro se arma con resultados, no con promesas.
+  const cuposUsados = { ...pairMatchCounts };
+  for (const sm of tournament.scheduled_matches ?? []) {
+    for (const equipo of [sm.team1, sm.team2]) {
+      const clave = pairKeyOf(equipo);
+      const par = tournament.pairs.find(p => pairKeyOf([p.p1, p.p2]) === clave);
+      if (par) cuposUsados[par.id] = (cuposUsados[par.id] ?? 0) + 1;
+    }
+  }
+
   // Partido en curso (cargado en liveMatches) que corresponde a una entrada del calendario
   function findLiveForEntry(entry) {
     const t1 = String(entry.team1.id), t2 = String(entry.team2.id);
@@ -320,6 +430,16 @@ export default function Previa({
           onCancel={() => setConfirmClearSchedule(false)}
         />
       )}
+      {confirmUnschedule && (
+        <Modal
+          title="Sacar del fixture"
+          message="El partido deja de estar programado. No se borra ningún resultado, porque todavía no se jugó."
+          confirmText="Sacar"
+          confirmDanger
+          onConfirm={async () => { const id = confirmUnschedule; setConfirmUnschedule(null); await onDeleteScheduled(id); }}
+          onCancel={() => setConfirmUnschedule(null)}
+        />
+      )}
       {shareFixture && (
         <ShareFixtureModal
           tournament={tournament}
@@ -329,9 +449,9 @@ export default function Previa({
         />
       )}
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">FASE PREVIA</div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {sorted.length > 0 && (
             <button
               onClick={() => setShareFixture(true)}
@@ -354,6 +474,14 @@ export default function Previa({
                 className="bg-transparent text-muted border border-border-strong px-3 py-2.5 cursor-pointer rounded-sm hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Dices size={15} className={generating ? 'animate-spin' : undefined} />
+              </button>
+              <button
+                onClick={() => setScheduling({ nuevo: true })}
+                disabled={previaComplete}
+                title={previaComplete ? 'Todas las parejas ya jugaron sus partidos de la fase previa' : 'Programar un partido'}
+                className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3.5 py-2.5 font-sans text-[12.5px] cursor-pointer rounded-sm hover:text-white hover:border-soft transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <CalendarPlus size={14} /> Programar
               </button>
               <button
                 onClick={() => addNewMatch()}
@@ -505,22 +633,77 @@ export default function Previa({
           form={liveMatch.form}
           setForm={updater => handleFormChange(liveMatch.id, updater)}
           tournament={tournament}
-          pairMatchCounts={pairMatchCounts}
+          pairMatchCounts={cuposUsados}
           pairMatchLimit={MAX_PREVIA_MATCHES}
           onSave={() => handleSaveMatch(liveMatch.id)}
           onCancel={() => handleCancelMatch(liveMatch.id)}
+          onEmpezar={() => empezarAhora(liveMatch.id)}
+          onProgramar={() => programarDesdeForm(liveMatch.id)}
           isEditing={false}
           timerState={liveMatch.timer}
           onTimerChange={newTimer => handleTimerChange(liveMatch.id, newTimer)}
         />
       ))}
 
+      {/* Programar: equipos, cancha y hora, sin resultado. */}
+      {scheduling && (
+        <ScheduleForm
+          tournament={tournament}
+          scheduled={scheduling.nuevo ? null : scheduling}
+          onSave={async (data) => {
+            if (scheduling.nuevo) await onAddScheduled(data);
+            else await onEditScheduled(scheduling.id, data);
+            setScheduling(null);
+          }}
+          onCancel={() => setScheduling(null)}
+        />
+      )}
+
+      {/* PRÓXIMOS — el fixture de la previa. Para el que viene a jugar es la
+          respuesta a "¿contra quién y en qué cancha?". */}
+      {programados.length > 0 && (
+        <div className="mb-5">
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">PRÓXIMOS</span>
+            <span className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-dim shrink-0">
+              {programados.length} {programados.length === 1 ? 'programado' : 'programados'}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {programados.map(sm => (
+              <ScheduledCard
+                key={sm.id}
+                match={sm}
+                tournament={tournament}
+                isOwner={isOwner}
+                esMio={esMio(sm)}
+                onEmpezar={() => abrirProgramado(sm, true)}
+                onCargar={() => abrirProgramado(sm, false)}
+                onEdit={() => setScheduling(sm)}
+                onDelete={() => setConfirmUnschedule(sm.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sorted.length > 0 && programados.length > 0 && (
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">JUGADOS</span>
+          <span className="flex-1 h-px bg-border" />
+          <span className="text-[11px] text-dim shrink-0">{sorted.length}</span>
+        </div>
+      )}
+
       {/* Match list */}
       {sorted.length === 0 && liveMatches.length === 0 ? (
         isDraft ? null : (
         <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
-          No hay partidos registrados todavía.<br />
-          {isOwner ? `Usá el botón del dado para generar el calendario o "NUEVO PARTIDO" para agregar uno manualmente.` : '¡Pronto habrá resultados!'}
+          {programados.length > 0
+            ? <>Todavía no se jugó ninguno de los partidos programados.</>
+            : <>No hay partidos registrados todavía.<br />
+              {isOwner ? `Usá el botón del dado para generar el calendario o "NUEVO PARTIDO" para agregar uno manualmente.` : '¡Pronto habrá resultados!'}</>}
         </div>
         )
       ) : (

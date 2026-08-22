@@ -3,15 +3,21 @@ import { useState, useEffect, useRef } from "react";
 import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
 import MatchCard from "./MatchCard";
 import MatchForm from "./MatchForm";
+import ScheduledCard from "./ScheduledCard";
+import ScheduleForm from "./ScheduleForm";
 import Modal from "../shared/Modal";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
-import { Share2 } from "lucide-react";
+import { Share2, CalendarPlus } from "lucide-react";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
 const genId       = () => Math.random().toString(36).slice(2, 7);
 
-export default function Matches({ tournament, isOwner, categoryName, onAddMatch, onEditMatch, onDeleteMatch, onSetLiveMatch }) {
+export default function Matches({
+  tournament, isOwner, categoryName, myPlayerIds = [],
+  onAddMatch, onEditMatch, onDeleteMatch, onSetLiveMatch,
+  onAddScheduled, onEditScheduled, onDeleteScheduled,
+}) {
   const isPairs = tournament.mode === "pairs";
   const canEdit = isOwner && tournament.status !== 'finished';
 
@@ -32,6 +38,9 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
   const [editForm,      setEditForm]      = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [shareFixture,  setShareFixture]  = useState(false);
+  // Programar un partido nuevo, o editar la programación de uno existente.
+  const [scheduling,    setScheduling]    = useState(null);
+  const [confirmUnschedule, setConfirmUnschedule] = useState(null);
 
   // Persistir a localStorage
   useEffect(() => {
@@ -115,10 +124,100 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
     setLiveMatches((prev) => [...prev, { id: genId(), form: emptyForm(), timer: EMPTY_TIMER }]);
   }
 
-  function handleCancelMatch(liveId) {
+  /**
+   * Empezar un partido que nadie programó: lo anota en el fixture y arranca el
+   * cronómetro. Anotarlo es lo que hace que sobreviva a cerrar la tarjeta —el
+   * `live_match` de hoy se arma desde los formularios abiertos, así que al
+   * cerrarlos el reloj del espectador se quedaba sin dueño.
+   */
+  async function empezarAhora(liveId) {
+    const lm = liveMatches.find((m) => m.id === liveId);
+    if (!lm) return;
+    // Ya arrancó o ya está anotado: no se anota de nuevo.
+    if (lm.timer?.startedAt != null || lm.form?.scheduledId) return;
+    const { form } = lm;
+    const team1 = isPairs ? expandPair(form.team1Pair, tournament.pairs) : form.team1;
+    const team2 = isPairs ? expandPair(form.team2Pair, tournament.pairs) : form.team2;
+    if (!team1?.[0] || !team1?.[1] || !team2?.[0] || !team2?.[1]) return;
+
+    let scheduledId = null;
+    try {
+      scheduledId = (await onAddScheduled?.({
+        team1, team2, court: form.court ?? null, scheduled_at: null,
+      }))?.id ?? null;
+    } catch {
+      // Si no se pudo anotar, igual arranca: el cronómetro es lo urgente y el
+      // partido se puede cargar lo mismo.
+    }
+    setLiveMatches((prev) => prev.map((m) => (m.id === liveId ? {
+      ...m,
+      form: {
+        ...m.form,
+        scheduledId: scheduledId ?? m.form.scheduledId ?? null,
+        scheduledCreado: !!scheduledId,
+      },
+      timer: { startedAt: Date.now(), stoppedAt: null },
+    } : m)));
+  }
+
+
+  /**
+   * Lo mismo que Empezar ahora, pero sin arrancar el cronómetro: el partido se
+   * anota en el fixture y la tarjeta se cierra. Es la salida para cuando abriste
+   * NUEVO PARTIDO y en realidad lo querías para más tarde.
+   */
+  async function programarDesdeForm(liveId) {
+    const lm = liveMatches.find((m) => m.id === liveId);
+    if (!lm || lm.timer?.startedAt != null || lm.form?.scheduledId) return;
+    const { form } = lm;
+    const team1 = isPairs ? expandPair(form.team1Pair, tournament.pairs) : form.team1;
+    const team2 = isPairs ? expandPair(form.team2Pair, tournament.pairs) : form.team2;
+    if (!team1?.[0] || !team1?.[1] || !team2?.[0] || !team2?.[1]) return;
+
+    await onAddScheduled?.({ team1, team2, court: form.court ?? null, scheduled_at: null });
     const remaining = liveMatches.filter((m) => m.id !== liveId);
     setLiveMatches(remaining);
     syncLive(remaining);
+  }
+
+  /**
+   * Abre un partido del fixture como partido en curso. `arrancar` decide si el
+   * cronómetro sale corriendo: Empezar sí, Cargar resultado no —ese es el que
+   * se usa cuando el partido ya terminó y recién ahí lo cargás—.
+   */
+  function abrirProgramado(sm, arrancar) {
+    // Si ya está abierto, no se duplica: dos toques seguidos —o un toque sobre
+    // una tarjeta que quedó vieja en pantalla— abrían otra tarjeta cada vez.
+    if (liveMatches.some((m) => m.form?.scheduledId === sm.id)) return;
+    const base = emptyForm();
+    const form = { ...base, court: sm.court ?? null, scheduledId: sm.id };
+    if (isPairs) {
+      const buscar = (team) => tournament.pairs.find(
+        (p) => (p.p1 === team[0] && p.p2 === team[1]) || (p.p1 === team[1] && p.p2 === team[0]),
+      )?.id ?? '';
+      form.team1Pair = buscar(sm.team1);
+      form.team2Pair = buscar(sm.team2);
+    } else {
+      form.team1 = [...sm.team1];
+      form.team2 = [...sm.team2];
+    }
+    setLiveMatches((prev) => [...prev, {
+      id: genId(), form,
+      timer: arrancar ? { startedAt: Date.now(), stoppedAt: null } : EMPTY_TIMER,
+    }]);
+  }
+
+  function handleCancelMatch(liveId) {
+    const cancelado = liveMatches.find((m) => m.id === liveId);
+    const remaining = liveMatches.filter((m) => m.id !== liveId);
+    setLiveMatches(remaining);
+    syncLive(remaining);
+    // "Empezar ahora" anota el partido en el fixture para que sobreviva a cerrar
+    // la tarjeta. Si el que cierra es quien lo anotó, se deshace: cancelar tiene
+    // que dejar las cosas como estaban.
+    if (cancelado?.form?.scheduledCreado && cancelado.form.scheduledId) {
+      onDeleteScheduled?.(cancelado.form.scheduledId);
+    }
   }
 
   async function handleSaveMatch(liveId) {
@@ -162,6 +261,8 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
       sets_format: form.sets_format ?? null,
       sets: nv > 0 ? (form.sets ?? []).slice(0, nv) : [],
       court: form.court ?? null,
+      // Si salió del fixture, el backend lo saca de ahí al registrarlo.
+      scheduledId: form.scheduledId ?? null,
     };
 
     // ─── Fix bug: limpiar localStorage ANTES del await para evitar restore en remount ───
@@ -248,6 +349,16 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
   }
 
   const sorted = [...tournament.matches].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // Los ids del fixture que ahora mismo están abiertos en un formulario. Un
+  // partido no puede estar a la vez "por jugar" y "cargándose": mientras tenga
+  // su tarjeta de carga abierta, sale de PRÓXIMOS.
+  const idsAbiertos = new Set(
+    liveMatches.map((lm) => lm.form?.scheduledId).filter(Boolean),
+  );
+  const programados = (tournament.scheduled_matches ?? []).filter((sm) => !idsAbiertos.has(sm.id));
+  // El partido del que mira, para que el fixture le resuelva cuál es el suyo.
+  const esMio = (sm) => myPlayerIds.length > 0
+    && [...sm.team1, ...sm.team2].some((id) => myPlayerIds.includes(id));
 
   return (
     <div>
@@ -261,6 +372,16 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+      {confirmUnschedule && (
+        <Modal
+          title="Sacar del fixture"
+          message="El partido deja de estar programado. No se borra ningún resultado, porque todavía no se jugó."
+          confirmText="Sacar"
+          confirmDanger
+          onConfirm={async () => { const id = confirmUnschedule; setConfirmUnschedule(null); await onDeleteScheduled(id); }}
+          onCancel={() => setConfirmUnschedule(null)}
+        />
+      )}
       {shareFixture && (
         <ShareFixtureModal
           tournament={tournament}
@@ -269,9 +390,9 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
           onClose={() => setShareFixture(false)}
         />
       )}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center gap-2 flex-wrap mb-4">
         <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">PARTIDOS</div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end min-w-0">
           {sorted.length > 0 && (
             <button
               onClick={() => setShareFixture(true)}
@@ -280,6 +401,15 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
               className="bg-transparent text-muted border border-border-strong px-3 py-2.5 cursor-pointer rounded-sm hover:text-white transition-colors"
             >
               <Share2 size={15} />
+            </button>
+          )}
+          {canEdit && (
+            <button
+              onClick={() => setScheduling({ nuevo: true })}
+              title="Programar un partido"
+              className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3.5 py-2.5 font-sans text-[12.5px] cursor-pointer rounded-sm hover:text-white hover:border-soft transition-colors whitespace-nowrap"
+            >
+              <CalendarPlus size={14} /> Programar
             </button>
           )}
           {canEdit && (
@@ -305,12 +435,68 @@ export default function Matches({ tournament, isOwner, categoryName, onAddMatch,
           isEditing={false}
           timerState={liveMatch.timer}
           onTimerChange={(newTimer) => handleTimerChange(liveMatch.id, newTimer)}
+          onEmpezar={() => empezarAhora(liveMatch.id)}
+          onProgramar={() => programarDesdeForm(liveMatch.id)}
         />
       ))}
 
+      {/* El formulario de programar: equipos, cancha y hora, sin resultado. */}
+      {scheduling && (
+        <ScheduleForm
+          tournament={tournament}
+          scheduled={scheduling.nuevo ? null : scheduling}
+          onSave={async (data) => {
+            if (scheduling.nuevo) await onAddScheduled(data);
+            else await onEditScheduled(scheduling.id, data);
+            setScheduling(null);
+          }}
+          onCancel={() => setScheduling(null)}
+        />
+      )}
+
+      {/* PRÓXIMOS — lo que todavía no se jugó. Para el que viene a jugar es la
+          respuesta a "¿contra quién y en qué cancha?"; para el organizador, la
+          lista de la que va cargando resultados. */}
+      {programados.length > 0 && (
+        <div className="mb-5">
+          <div className="flex items-center gap-2.5 mb-2.5">
+            <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">PRÓXIMOS</span>
+            <span className="flex-1 h-px bg-border" />
+            <span className="text-[11px] text-dim shrink-0">
+              {programados.length} {programados.length === 1 ? 'programado' : 'programados'}
+            </span>
+          </div>
+          <div className="flex flex-col gap-2.5">
+            {programados.map((sm) => (
+              <ScheduledCard
+                key={sm.id}
+                match={sm}
+                tournament={tournament}
+                isOwner={canEdit}
+                esMio={esMio(sm)}
+                onEmpezar={() => abrirProgramado(sm, true)}
+                onCargar={() => abrirProgramado(sm, false)}
+                onEdit={() => setScheduling(sm)}
+                onDelete={() => setConfirmUnschedule(sm.id)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {sorted.length > 0 && programados.length > 0 && (
+        <div className="flex items-center gap-2.5 mb-2.5">
+          <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">JUGADOS</span>
+          <span className="flex-1 h-px bg-border" />
+          <span className="text-[11px] text-dim shrink-0">{sorted.length}</span>
+        </div>
+      )}
+
       {sorted.length === 0 ? (
         <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
-          No hay partidos registrados todavía.<br />¡Jugá el primero!
+          {programados.length > 0
+            ? <>Todavía no se jugó ninguno de los partidos programados.</>
+            : <>No hay partidos registrados todavía.<br />¡Jugá el primero!</>}
         </div>
       ) : (
         <div className="flex flex-col gap-2.5">

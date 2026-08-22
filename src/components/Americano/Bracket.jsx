@@ -1,13 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trophy, Pencil, Trash2, Info } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
-import { Timer, CourtSelector, MatchCardHeader, MinimizedMatch, SetsScoring } from "../Matches/MatchForm";
+import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
+import MatchForm from "../Matches/MatchForm";
 import Modal from "../shared/Modal";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
 import BracketStory from "../Snapshot/BracketStory";
-import MatchScoreboard from "../shared/MatchScoreboard";
+import { ScoreRow } from "../Matches/MatchCard";
 
 const PHASE_TITLE = { octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL" };
 const SLOT_LABEL  = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final" };
@@ -60,42 +60,6 @@ function SeedChip({ seed }) {
   );
 }
 
-// Marcador de una pareja dentro del nodo del cuadro: un número por set jugado,
-// o el resultado solo cuando el partido no se cargó por sets.
-function NodeScore({ match, side }) {
-  const sets     = match.sets ?? [];
-  const nVisible = match.sets_format === 3 ? visibleSetsCount(3, sets) : 0;
-  const wonMatch = match.winner_id === match[`pair${side}_id`];
-
-  if (nVisible === 0) {
-    return (
-      <span className={`font-mono font-bold text-[18px] ml-2 shrink-0 ${wonMatch ? "text-brand" : "text-muted"}`}>
-        {match[`score${side}`]}
-      </span>
-    );
-  }
-
-  return (
-    <span className="flex ml-2 shrink-0 font-mono font-bold text-[13px] tabular-nums">
-      {sets.slice(0, nVisible).map((s, i) => {
-        const w = setWinner(s);
-        return (
-          <span
-            key={i}
-            className={`w-[18px] text-center ${i > 0 ? "border-l border-border-mid" : ""} ${
-              w === side ? "text-brand" : "text-dim"
-            }`}
-          >
-            {side === 1 ? s.s1 : s.s2}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
-
-// ── Nombre de pareja en 2 líneas ───────────────────────────────────────────────
-// Los nombres se guardan como "Nombre1 & Nombre2"; los partimos en dos renglones
 // igual que en la tabla de posiciones para que ninguno quede recortado.
 function PairName({ name, className = "" }) {
   const idx = typeof name === "string" ? name.indexOf(" & ") : -1;
@@ -112,6 +76,49 @@ function PairName({ name, className = "" }) {
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `bracket_live_${id}`;
+
+/**
+ * Reconstruye los partidos en curso del cuadro a partir de lo que ya sabe el
+ * servidor (`live_match`), para cuando este navegador no los tiene guardados.
+ *
+ * Sólo se toman las entradas de una fase del cuadro y que apunten a un cruce que
+ * todavía no se jugó: si el resultado ya está cargado, `live_match` quedó viejo
+ * y no hay nada que reabrir.
+ */
+function recuperarVivosDelServidor(tournament) {
+  const bracket = tournament?.bracket;
+  const entradas = Array.isArray(tournament?.live_match) ? tournament.live_match : [];
+  if (!bracket || entradas.length === 0) return [];
+
+  const cruces = [
+    ...(bracket.octavos ?? []).map((m) => ({ m, phase: 'octavos' })),
+    ...(bracket.cuartos ?? []).map((m) => ({ m, phase: 'cuartos' })),
+    ...(bracket.semis   ?? []).map((m) => ({ m, phase: 'semis'   })),
+    ...(bracket.final ? [{ m: bracket.final, phase: 'final' }] : []),
+  ];
+
+  const usados = new Set();
+  const out = [];
+  for (const e of entradas) {
+    const encontrado = cruces.find(({ m, phase }) =>
+      !usados.has(m.id)
+      && m.winner_id == null
+      && phase === e.phase
+      && m.pair1_name === e.team1Label
+      && m.pair2_name === e.team2Label);
+    if (!encontrado) continue;
+    usados.add(encontrado.m.id);
+    out.push({
+      matchId: encontrado.m.id,
+      timer: { startedAt: e.startedAt ?? null, stoppedAt: null },
+      score: {
+        score1: 0, score2: 0, duration_seconds: null,
+        court: e.court ?? null, sets_format: null, sets: [],
+      },
+    });
+  }
+  return out;
+}
 
 // Inverso de la propagación del ganador: qué partido se alimenta del ganador de matchId.
 function findChildMatch(bracket, matchId) {
@@ -138,28 +145,18 @@ function countDependentResults(bracket, matchId) {
 }
 
 // ── Tarjeta de partido del bracket (sólo display + toggle EN VIVO) ─────────────
-function pairAvatarFor(pairId, tournament, size = 20) {
-  if (!pairId) return null;
-  const pair = tournament?.pairs?.find(p => p.id === pairId);
-  if (!pair) return null;
-  const p1 = tournament.players?.find(pl => pl.id === pair.p1);
-  const p2 = tournament.players?.find(pl => pl.id === pair.p2);
-  return (
-    <PairAvatar
-      name1={p1?.name ?? "?"}
-      name2={p2?.name ?? "?"}
-      src1={p1?.linked_avatar_url ?? null}
-      src2={p2?.linked_avatar_url ?? null}
-      size={size}
-    />
-  );
-}
 
 function BracketMatchCard({
   match, phase, isOwner, standings, tournament,
   editMode, draftMatch, allPairs, onPairChange, pairLocations,
-  isLive, onToggleLive,
+  anuncio, onToggleLive,
 }) {
+  // Un cruce anunciado puede estar todavía por jugarse (próximo, con su cancha)
+  // o ya jugándose. En el cuadro no se arma fixture de cruces sin parejas
+  // confirmadas, pero uno confirmado sí se anuncia con cancha antes de arrancar.
+  const enVivo   = anuncio?.estado === 'vivo';
+  const proximo  = anuncio?.estado === 'proximo';
+  const anunciado = enVivo || proximo;
   const isTBD1   = !match.pair1_name;
   const isTBD2   = !match.pair2_name;
   const isPlayed = match.winner_id !== null;
@@ -201,71 +198,85 @@ function BracketMatchCard({
     );
   }
 
+  // La cancha del anuncio manda sobre la del cruce: mientras el partido está
+  // programado o jugándose, el resultado —y con él `match.court`— todavía no se
+  // guardó, y sin esto un próximo con cancha asignada se veía sin cancha.
+  const cancha = courtLabel(tournament, anuncio?.court ?? match.court);
+  // Las celdas del marcador, con la misma forma que en liga: una por set jugado,
+  // o una sola con el resultado cuando no se cargó por sets.
+  const sets     = match.sets ?? [];
+  const nVisible = match.sets_format === 3 ? visibleSetsCount(3, sets) : 0;
+  const celdas = (side) => {
+    if (!isPlayed) return [];
+    if (nVisible === 0) {
+      return [{ v: match[`score${side}`], win: match.winner_id === match[`pair${side}_id`] }];
+    }
+    return sets.slice(0, nVisible).map((x) => {
+      const w = setWinner(x);
+      return { v: side === 1 ? x.s1 : x.s2, win: w === side };
+    });
+  };
+
   return (
-    <div className={`bg-surface border rounded-lg p-3 ${
-      isLive   ? 'border-green/60 ring-1 ring-green/30' :
+    <div className={`bg-surface border rounded-xl px-3 py-2.5 ${
+      enVivo   ? 'border-green/60 ring-1 ring-green/30' :
+      proximo  ? 'border-cyan/50' :
       isPlayed ? 'border-brand/50' :
                  'border-border-mid'
     }`}>
-      {/* Pareja 1 */}
-      <div className={`flex items-center justify-between py-1 px-1 rounded-sm ${isPlayed && match.winner_id === match.pair1_id ? "bg-brand/10" : ""}`}>
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <SeedChip seed={seed1} />
-          {isTBD1 ? (
-            <span className="font-condensed font-semibold text-[12px] sm:text-[14px] leading-tight text-muted italic">A confirmar</span>
-          ) : (
-            <PairName
-              name={match.pair1_name}
-              className={`font-condensed font-semibold text-[12px] sm:text-[14px] ${
-                isPlayed && match.winner_id === match.pair1_id ? "text-brand" : "text-white"
-              }`}
-            />
+      {(cancha != null || anunciado) && (
+        <div className="flex items-center gap-1.5 mb-2 flex-wrap">
+          {enVivo && (
+            <span className="inline-flex items-center gap-1 font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-green border border-green/40">
+              EN VIVO
+            </span>
           )}
-        </div>
-        {isPlayed && <NodeScore match={match} side={1} />}
-      </div>
-
-      <div className="border-t border-border my-1" />
-
-      {/* Pareja 2 */}
-      <div className={`flex items-center justify-between py-1 px-1 rounded-sm ${isPlayed && match.winner_id === match.pair2_id ? "bg-brand/10" : ""}`}>
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
-          <SeedChip seed={seed2} />
-          {isTBD2 ? (
-            <span className="font-condensed font-semibold text-[12px] sm:text-[14px] leading-tight text-muted italic">A confirmar</span>
-          ) : (
-            <PairName
-              name={match.pair2_name}
-              className={`font-condensed font-semibold text-[12px] sm:text-[14px] ${
-                isPlayed && match.winner_id === match.pair2_id ? "text-brand" : "text-white"
-              }`}
-            />
+          {proximo && (
+            <span className="inline-flex items-center gap-1 font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-cyan border border-cyan/40">
+              PRÓXIMO
+            </span>
           )}
-        </div>
-        {isPlayed && <NodeScore match={match} side={2} />}
-      </div>
-
-      {/* Cancha */}
-      {courtLabel(tournament, match.court) != null && (
-        <div className="text-center py-1">
-          <span className="text-[10px] font-mono font-bold text-brand border border-brand/40 px-1.5 py-0.5 rounded-sm">
-            CANCHA {courtLabel(tournament, match.court)}
-          </span>
+          {cancha != null && (
+            <span className="inline-flex items-center font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-brand border border-brand/40">
+              CANCHA {cancha}
+            </span>
+          )}
         </div>
       )}
 
-      {/* Toggle EN VIVO */}
+      <div className="flex flex-col gap-1.5">
+        <ScoreRow
+          compacto
+          color="brand"
+          win={isPlayed && match.winner_id === match.pair1_id}
+          prefix={<SeedChip seed={seed1} />}
+          label={isTBD1 ? <span className="text-muted italic">A confirmar</span> : <PairName name={match.pair1_name} />}
+          cells={celdas(1)}
+        />
+        <ScoreRow
+          compacto
+          color="cyan"
+          win={isPlayed && match.winner_id === match.pair2_id}
+          prefix={<SeedChip seed={seed2} />}
+          label={isTBD2 ? <span className="text-muted italic">A confirmar</span> : <PairName name={match.pair2_name} />}
+          cells={celdas(2)}
+        />
+      </div>
+
+      {/* Anunciar el cruce: sólo si las dos parejas ya están confirmadas. */}
       {isOwner && !isPlayed && !isTBD1 && !isTBD2 && (
         <div className="mt-2.5">
           <button
             onClick={onToggleLive}
             className={`w-full border py-1 font-condensed font-bold text-[11px] tracking-wide cursor-pointer rounded-sm transition-colors ${
-              isLive
-                ? 'bg-green/10 text-green border-green/40'
-                : 'bg-transparent text-muted border-dashed border-border-strong hover:text-white hover:border-border-mid'
+              enVivo  ? 'bg-green/10 text-green border-green/40' :
+              proximo ? 'bg-cyan/10 text-cyan border-cyan/40'
+                      : 'bg-transparent text-muted border-dashed border-border-strong hover:text-white hover:border-border-mid'
             }`}
           >
-            {isLive ? '● EN VIVO' : '◌ EN VIVO'}
+            {enVivo ? 'DEJAR DE MARCAR EN VIVO'
+              : proximo ? 'SACAR DE PRÓXIMOS'
+              : 'PROGRAMAR'}
           </button>
         </div>
       )}
@@ -289,192 +300,103 @@ function BracketByeCard({ bye }) {
   );
 }
 
-// ── Card de partido EN VIVO (debajo del cuadro) ────────────────────────────────
-function BracketLiveCard({ liveMatch, bracketMatch, phase, tournament, saving, onScoreChange, onScorePatch, onSave, onCancel, onTimerChange }) {
-  const { score1, score2, court, sets_format = null, sets = [] } = liveMatch.score;
-  const [minimized, setMinimized] = useState(false);
-  const [confirming, setConfirming] = useState(false);
+// ── El marcador del cuadro se carga con el mismo formulario que liga y previa ──
+// Un cruce ya trae puestos los equipos, así que el paso 1 va resuelto y cerrado;
+// los otros dos —Cancha y Resultado— son idénticos a los de cualquier partido.
+// Antes el cuadro tenía su propia tarjeta, parecida pero no igual, y cargar un
+// resultado se sentía distinto según la solapa en la que estuvieras.
+function formDeCuadro(bracketMatch, score = {}) {
+  return {
+    team1Pair: bracketMatch.pair1_id ?? '',
+    team2Pair: bracketMatch.pair2_id ?? '',
+    court: score.court ?? null,
+    score1: score.score1 ?? 0,
+    score2: score.score2 ?? 0,
+    sets_format: score.sets_format ?? null,
+    sets: score.sets ?? [],
+    duration_seconds: score.duration_seconds ?? null,
+  };
+}
 
-  const resultReady = sets_format
-    ? setsResultReady(sets_format, sets)
-    : Number(score1) !== Number(score2);
-  const isDirty = !!(liveMatch.timer?.startedAt != null || Number(score1) || Number(score2) || court != null || sets_format);
-  const requestCancel = () => { if (isDirty) setConfirming(true); else onCancel(); };
+// Del formulario vuelve un `form` entero; al cuadro sólo le interesa el
+// marcador, porque los equipos no los puede cambiar.
+function scoreDeForm(form) {
+  return {
+    score1: form.score1 ?? 0,
+    score2: form.score2 ?? 0,
+    duration_seconds: form.duration_seconds ?? null,
+    court: form.court ?? null,
+    sets_format: form.sets_format ?? null,
+    sets: form.sets ?? [],
+  };
+}
 
-  const timerEl = (
-    <Timer
-      timerState={liveMatch.timer}
-      onTimerChange={onTimerChange}
-      onStop={secs => onScoreChange('duration_seconds', secs)}
-    />
-  );
-
-  if (minimized) {
-    return (
-      <MinimizedMatch
-        team1Avatar={pairAvatarFor(bracketMatch.pair1_id, tournament, 28)}
-        team2Avatar={pairAvatarFor(bracketMatch.pair2_id, tournament, 28)}
-        score1={score1} score2={score2}
-        court={court}
-        timer={timerEl}
-        onExpand={() => setMinimized(false)}
-      />
-    );
-  }
-
-  return (
-    <div className="bg-surface border border-border-mid rounded-lg p-5 mb-4">
-      {confirming && (
-        <Modal
-          title="¿Descartar partido?"
-          confirmText="Descartar"
-          confirmDanger
-          onConfirm={() => { setConfirming(false); onCancel(); }}
-          onCancel={() => setConfirming(false)}
-        >
-          Se perderán los datos cargados de este partido en curso.
-        </Modal>
-      )}
-      <MatchCardHeader isEditing={false} title={PHASE_TITLE[phase] ?? "NUEVO PARTIDO"} onCancel={requestCancel} timer={timerEl} onMinimize={() => setMinimized(true)} />
-
-      <div className="flex justify-between items-center gap-2 mb-4">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {pairAvatarFor(bracketMatch.pair1_id, tournament, 26)}
-          <span className="font-condensed font-bold text-[16px] text-brand line-clamp-2 leading-tight">{bracketMatch.pair1_name}</span>
-        </div>
-        <span className="font-condensed font-bold text-[15px] text-border-strong tracking-[3px] mx-2 shrink-0">VS</span>
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
-          <span className="font-condensed font-bold text-[16px] text-cyan line-clamp-2 leading-tight">{bracketMatch.pair2_name}</span>
-          {pairAvatarFor(bracketMatch.pair2_id, tournament, 26)}
-        </div>
-      </div>
-
-      {tournamentCourts(tournament) > 1 && (
-        <CourtSelector courts={tournamentCourts(tournament)} value={liveMatch.score.court} onChange={v => onScoreChange('court', v)} />
-      )}
-
-      <div className="mt-4">
-        <SetsScoring
-          setsFormat={liveMatch.score.sets_format ?? null}
-          sets={liveMatch.score.sets ?? []}
-          score1={score1}
-          score2={score2}
-          onChange={onScorePatch}
-          row1={<><span className="truncate">{bracketMatch.pair1_name}</span></>}
-          row2={<><span className="truncate">{bracketMatch.pair2_name}</span></>}
-        />
-      </div>
-
-      <button
-        onClick={onSave}
-        disabled={saving || !resultReady}
-        className={`w-full border-0 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm mt-4 ${
-          saving || !resultReady
-            ? "bg-border-mid text-muted cursor-not-allowed"
-            : "bg-brand text-base cursor-pointer"
-        }`}
-      >
-        {saving ? "REGISTRANDO..." : "REGISTRAR PARTIDO"}
-      </button>
-    </div>
-  );
+// Aplica un updater de MatchForm (valor o función) sobre un score del cuadro.
+function aplicarAlScore(bracketMatch, score, updater) {
+  const actual = formDeCuadro(bracketMatch, score);
+  return scoreDeForm(typeof updater === 'function' ? updater(actual) : updater);
 }
 
 // ── Card de partido jugado del bracket ────────────────────────────────────────
 function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchNum, phase }) {
-  const win1 = match.winner_id === match.pair1_id;
+  const win1  = match.winner_id === match.pair1_id;
   const court = courtLabel(tournament, match.court);
+
+  // Mismas celdas que la tarjeta de liga: una por set jugado, o una sola con el
+  // resultado cuando el partido no se cargó por sets.
+  const sets     = match.sets ?? [];
+  const nVisible = match.sets_format === 3 ? visibleSetsCount(3, sets) : 0;
+  const celdas = (side) => {
+    if (nVisible === 0) {
+      return [{ v: match[`score${side}`], win: side === 1 ? win1 : !win1 }];
+    }
+    return sets.slice(0, nVisible).map((x) => {
+      const w = setWinner(x);
+      return { v: side === 1 ? x.s1 : x.s2, win: w === side };
+    });
+  };
+
   return (
-    <div className="bg-surface border border-border-mid rounded-lg px-4 py-3.5">
-      <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-border-mid text-[10px] font-mono">
-        <span className="tracking-[2px] text-brand/80">{phase ? (PHASE_TITLE[phase] ?? phase) : ""}</span>
-        <span className="tracking-[1px] text-muted">Cancha: {court != null && court !== '-' ? court : 'S/A'}</span>
-      </div>
-      <div className="flex items-start gap-3">
-        {matchNum != null && (
-          <span className="text-[10px] font-mono text-muted shrink-0 w-3 text-right mt-1.5">#{matchNum}</span>
+    <div className="bg-surface border border-border-mid rounded-xl px-4 py-3">
+      <div className="flex items-center gap-2 mb-2.5 flex-wrap">
+        {matchNum != null && <span className="text-[11.5px] text-muted font-mono tabular-nums">#{matchNum}</span>}
+        <span className="font-condensed font-bold text-[9px] tracking-[0.12em] text-brand border border-brand/40 px-2 py-[3px] rounded-[5px]">
+          {phase ? (PHASE_TITLE[phase] ?? phase) : 'CUADRO'}
+        </span>
+        {court != null && court !== '-' && (
+          <span className="font-condensed font-bold text-[9px] tracking-[0.12em] text-brand border border-brand/40 px-2 py-[3px] rounded-[5px]">
+            CANCHA {court}
+          </span>
         )}
-        <div className="flex-1 min-w-0">
-          <MatchScoreboard
-            label1={match.pair1_name}
-            label2={match.pair2_name}
-            score1={match.score1}
-            score2={match.score2}
-            sets={match.sets ?? []}
-            setsFormat={match.sets_format ?? null}
-            win1={win1}
-          />
-        </div>
+        <span className="flex-1" />
+        {isOwner && (
+          <span className="inline-flex gap-1 shrink-0">
+            <button
+              type="button" onClick={onEdit}
+              title="Editar el resultado" aria-label="Editar el resultado"
+              className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-lg border border-border-strong bg-transparent text-muted hover:text-white hover:border-soft cursor-pointer transition-colors"
+            >
+              <Pencil size={13} />
+            </button>
+            <button
+              type="button" onClick={onClear}
+              title="Borrar el resultado" aria-label="Borrar el resultado"
+              className="inline-flex items-center justify-center w-[30px] h-[30px] rounded-lg border border-border-strong bg-transparent text-danger hover:border-danger/60 cursor-pointer transition-colors"
+            >
+              <Trash2 size={13} />
+            </button>
+          </span>
+        )}
       </div>
-      {isOwner && (
-        <div className="mt-2.5 pt-2.5 border-t border-border-mid flex items-center gap-4">
-          <button
-            onClick={onEdit}
-            className="bg-transparent border-0 text-muted cursor-pointer text-[12px] font-sans px-1.5 py-0.5 flex items-center gap-1.5 hover:text-white"
-          >
-            ✎ Editar resultado
-          </button>
-          <button
-            onClick={onClear}
-            className="bg-transparent border-0 text-muted cursor-pointer text-[12px] font-sans px-1.5 py-0.5 flex items-center gap-1.5 hover:text-danger"
-          >
-            <Trash2 size={13} /> Borrar resultado
-          </button>
-        </div>
-      )}
+
+      <div className="flex flex-col gap-1.5">
+        <ScoreRow label={match.pair1_name} cells={celdas(1)} win={win1}  color="brand" />
+        <ScoreRow label={match.pair2_name} cells={celdas(2)} win={!win1} color="cyan" />
+      </div>
     </div>
   );
 }
 
-// ── Formulario de edición de resultado jugado ──────────────────────────────────
-function BracketEditCard({ match, tournament, saving, editScore, onScoreChange, onScorePatch, onSave, onCancel }) {
-  const s1 = Number(editScore.score1), s2 = Number(editScore.score2);
-  const resultReady = editScore.sets_format
-    ? setsResultReady(editScore.sets_format, editScore.sets ?? [])
-    : s1 !== s2;
-  return (
-    <div className="bg-surface border border-brand/40 rounded-lg p-5 mb-4">
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-brand font-mono text-[11px] font-bold tracking-wide">✎ EDITAR RESULTADO</span>
-        <button onClick={onCancel} className="bg-transparent border-0 text-muted cursor-pointer font-sans text-[13px] hover:text-white">
-          ✕ Cancelar
-        </button>
-      </div>
-      <div className="flex justify-between items-center gap-2 mb-4">
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-          {pairAvatarFor(match.pair1_id, tournament, 26)}
-          <span className="font-condensed font-bold text-[16px] text-brand line-clamp-2 leading-tight">{match.pair1_name}</span>
-        </div>
-        <span className="text-muted font-condensed font-bold text-[14px] px-1 shrink-0">VS</span>
-        <div className="flex items-center gap-2 flex-1 min-w-0 justify-end text-right">
-          <span className="font-condensed font-bold text-[16px] text-cyan line-clamp-2 leading-tight">{match.pair2_name}</span>
-          {pairAvatarFor(match.pair2_id, tournament, 26)}
-        </div>
-      </div>
-      <SetsScoring
-        setsFormat={editScore.sets_format ?? null}
-        sets={editScore.sets ?? []}
-        score1={s1}
-        score2={s2}
-        onChange={onScorePatch}
-        row1={<><span className="truncate">{match.pair1_name}</span></>}
-        row2={<><span className="truncate">{match.pair2_name}</span></>}
-      />
-      {tournamentCourts(tournament) > 1 && (
-        <CourtSelector courts={tournamentCourts(tournament)} value={editScore.court} onChange={v => onScoreChange('court', v)} />
-      )}
-      <button
-        onClick={onSave}
-        disabled={saving || !resultReady}
-        className={`w-full border-0 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm mt-4 ${
-          saving || !resultReady ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand text-base cursor-pointer"
-        }`}
-      >
-        {saving ? "GUARDANDO..." : "GUARDAR CAMBIOS"}
-      </button>
-    </div>
-  );
-}
 
 // ── Componente principal ───────────────────────────────────────────────────────
 export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpdateMatch, onClearMatch, onSetBracket, onDeleteBracket, onSetLiveMatch }) {
@@ -484,10 +406,17 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     // En modo readOnly NUNCA se leen partidos en curso: el localStorage se
     // comparte entre pestañas y muestra live matches del owner.
     if (!isOwner) return [];
+    let guardados = [];
     try {
       const raw = localStorage.getItem(getLiveKey(tournament.id));
-      return raw ? JSON.parse(raw) : [];
-    } catch { return []; }
+      const parsed = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(parsed)) guardados = parsed;
+    } catch { guardados = []; }
+    if (guardados.length > 0) return guardados;
+    // Este navegador no sabe del partido, pero el servidor sí: el organizador
+    // lo arrancó desde otro dispositivo, o limpió los datos del sitio. Sin esto
+    // el encabezado decía EN VIVO y el cuadro no mostraba nada.
+    return recuperarVivosDelServidor(tournament);
   });
   // Each entry: { matchId, timer: {...}, score: { score1, score2, duration_seconds } }
 
@@ -518,6 +447,12 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
   }, [bracket]);
 
   useEffect(() => {
+    // El espectador (y el cuadro dentro del modo TV) monta este mismo
+    // componente con isOwner=false y la lista vacía. Si escribiera, borraría del
+    // localStorage los partidos que el organizador tiene abiertos en otra
+    // pestaña del mismo navegador: era exactamente eso lo que hacía desaparecer
+    // el partido en vivo del cuadro mientras el encabezado lo seguía anunciando.
+    if (!isOwner) return;
     const key = getLiveKey(tournament.id);
     if (liveMatches.length > 0) localStorage.setItem(key, JSON.stringify(liveMatches));
     else                        localStorage.removeItem(key);
@@ -546,7 +481,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       onSetLiveMatch?.(labels.length > 0 ? labels : null);
     }
     prevLiveRef.current = liveMatches;
-  }, [liveMatches, tournament.id, findBracketMatchWithPhase, onSetLiveMatch]);
+  }, [liveMatches, tournament.id, isOwner, findBracketMatchWithPhase, onSetLiveMatch]);
 
   function handleToggleLive(matchId) {
     const existing = liveMatches.find(m => m.matchId === matchId);
@@ -565,15 +500,10 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     setLiveMatches(prev => prev.map(m => m.matchId === matchId ? { ...m, timer: newTimer } : m));
   }
 
-  function handleScoreChange(matchId, field, value) {
+  // MatchForm trabaja con un `form` entero; acá se traduce a nuestro `score`.
+  function handleFormChange(matchId, bracketMatch, updater) {
     setLiveMatches(prev => prev.map(m =>
-      m.matchId === matchId ? { ...m, score: { ...m.score, [field]: value } } : m
-    ));
-  }
-
-  function handleScorePatch(matchId, patch) {
-    setLiveMatches(prev => prev.map(m =>
-      m.matchId === matchId ? { ...m, score: { ...m.score, ...patch } } : m
+      m.matchId === matchId ? { ...m, score: aplicarAlScore(bracketMatch, m.score, updater) } : m
     ));
   }
 
@@ -744,18 +674,28 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
   const standings = bracket.standings ?? [];
 
-  // Estado "en vivo" de un cruce. Para el owner sale de sus liveMatches locales;
-  // para el espectador se deriva de la metadata que difunde el owner
-  // (tournament.live_match), matcheando por fase y nombres de pareja.
+  // Estado anunciado de un cruce: null, 'proximo' (con cancha, todavía sin
+  // arrancar) o 'vivo' (cronómetro corriendo). Para el owner sale de sus
+  // liveMatches locales; para el espectador se deriva de la metadata que
+  // difunde el owner (tournament.live_match), matcheando por fase y nombres.
   const liveEntries = Array.isArray(tournament.live_match) ? tournament.live_match : [];
-  function isMatchLive(match, phase) {
-    if (isOwner) return liveMatches.some(lm => lm.matchId === match.id);
-    if (!match.pair1_name || !match.pair2_name) return false;
-    return liveEntries.some(e =>
-      e.phase === phase &&
-      ((e.team1Label === match.pair1_name && e.team2Label === match.pair2_name) ||
-       (e.team1Label === match.pair2_name && e.team2Label === match.pair1_name))
+  function anuncioDelCruce(match, phase) {
+    if (isOwner) {
+      const lm = liveMatches.find(l => l.matchId === match.id);
+      if (!lm) return null;
+      return {
+        estado: lm.timer?.startedAt != null ? 'vivo' : 'proximo',
+        court: lm.score?.court ?? null,
+      };
+    }
+    if (!match.pair1_name || !match.pair2_name) return null;
+    const e = liveEntries.find(x =>
+      x.phase === phase &&
+      ((x.team1Label === match.pair1_name && x.team2Label === match.pair2_name) ||
+       (x.team1Label === match.pair2_name && x.team2Label === match.pair1_name))
     );
+    if (!e) return null;
+    return { estado: e.startedAt != null ? 'vivo' : 'proximo', court: e.court ?? null };
   }
 
   const hasResults = bracket.octavos?.some(m => m.winner_id) ||
@@ -939,7 +879,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                       allPairs={standings}
                       onPairChange={updateDraftPair}
                       pairLocations={pairLocations}
-                      isLive={isMatchLive(item.data, phase.key)}
+                      anuncio={anuncioDelCruce(item.data, phase.key)}
                       onToggleLive={() => handleToggleLive(item.data.id)}
                     />
                   ) : (
@@ -1002,23 +942,24 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       {/* Cards EN VIVO (debajo del cuadro) — sólo para el owner */}
       {isOwner && liveMatches.length > 0 && (
         <div className="mt-6">
-          <div className="font-condensed font-bold text-[12px] tracking-[3px] text-muted mb-3">PARTIDOS EN CURSO</div>
+          <div className="font-condensed font-bold text-[12px] tracking-[3px] text-muted mb-3">PARTIDOS ANUNCIADOS</div>
           {liveMatches.map(lm => {
             const result = findBracketMatchWithPhase(lm.matchId);
             if (!result) return null;
             return (
-              <BracketLiveCard
+              <MatchForm
                 key={lm.matchId}
-                liveMatch={lm}
-                bracketMatch={result.match}
-                phase={result.phase}
                 tournament={tournament}
+                fixedTeams
+                titulo={PHASE_TITLE[result.phase] ?? 'PARTIDO DEL CUADRO'}
                 saving={saving === lm.matchId}
-                onScoreChange={(field, value) => handleScoreChange(lm.matchId, field, value)}
-                onScorePatch={(patch) => handleScorePatch(lm.matchId, patch)}
+                form={formDeCuadro(result.match, lm.score)}
+                setForm={(updater) => handleFormChange(lm.matchId, result.match, updater)}
+                isEditing={false}
+                timerState={lm.timer}
+                onTimerChange={newTimer => handleTimerChange(lm.matchId, newTimer)}
                 onSave={() => handleSaveResult(lm.matchId)}
                 onCancel={() => handleToggleLive(lm.matchId)}
-                onTimerChange={newTimer => handleTimerChange(lm.matchId, newTimer)}
               />
             );
           })}
@@ -1034,14 +975,15 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
             {[...playedBracketMatches].reverse().map((m, i) => {
               const matchNum = playedBracketMatches.length - i;
               return editMatchId === m.id ? (
-                <BracketEditCard
+                <MatchForm
                   key={m.id}
-                  match={m}
                   tournament={tournament}
+                  fixedTeams
+                  titulo="EDITAR RESULTADO"
                   saving={saving === m.id}
-                  editScore={editScore}
-                  onScoreChange={(field, value) => setEditScore(prev => ({ ...prev, [field]: value }))}
-                  onScorePatch={(patch) => setEditScore(prev => ({ ...prev, ...patch }))}
+                  form={formDeCuadro(m, editScore)}
+                  setForm={(updater) => setEditScore(prev => aplicarAlScore(m, prev, updater))}
+                  isEditing
                   onSave={handleSaveEdit}
                   onCancel={() => setEditMatchId(null)}
                 />
