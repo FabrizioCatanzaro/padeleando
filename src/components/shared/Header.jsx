@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus } from 'lucide-react'
+import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, LayoutGrid, CreditCard, Shield, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -17,6 +17,9 @@ import ShareAppModal from './ShareAppModal'
 
 // Preferencia de sonido de la campana, apagada por defecto.
 const SOUND_KEY = 'notif_sound'
+
+const MENU_ITEM = 'w-full flex items-center gap-2.5 text-left px-4 py-2.5 text-sm font-sans bg-transparent border-0 cursor-pointer transition-colors hover:bg-border-mid'
+const MENU_ITEM_ICON = 16
 
 
 function timeAgo(dateStr) {
@@ -270,9 +273,10 @@ export default function Header() {
   const installItem = canInstallApp && (
     <button
       onClick={() => { setMenuOpen(false); openInstallPrompt(); }}
-      className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors cursor-pointer bg-transparent border-0 font-sans"
+      className={`${MENU_ITEM} text-content hover:text-white`}
     >
-      <Download size={15} /> Instalar app
+      <Download size={MENU_ITEM_ICON} className="shrink-0" />
+      Instalar app
     </button>
   );
 
@@ -401,29 +405,33 @@ export default function Header() {
 
                   <div className="py-1">
                     <button onClick={() => go('/')}
-                      className="w-full text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors cursor-pointer bg-transparent border-0 font-sans">
+                      className={`${MENU_ITEM} text-content hover:text-white`}>
+                      <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
                       Mis categorías
                     </button>
                     <button onClick={() => go('/subscription/manage')}
-                      className="w-full text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors cursor-pointer bg-transparent border-0 font-sans">
+                      className={`${MENU_ITEM} text-content hover:text-white`}>
+                      <CreditCard size={MENU_ITEM_ICON} className="shrink-0" />
                       Mi plan
                     </button>
                     <button onClick={() => { setMenuOpen(false); setShareAppOpen(true); }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors cursor-pointer bg-transparent border-0 font-sans flex items-center gap-2">
-                      <UserPlus size={14} className="shrink-0" />
+                      className={`${MENU_ITEM} text-content hover:text-white`}>
+                      <UserPlus size={MENU_ITEM_ICON} className="shrink-0" />
                       Invitar amigos
                     </button>
                     <Link
                       to="/tutorial"
                       onClick={() => setMenuOpen(false)}
-                      className="flex items-center gap-2 px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors font-sans"
+                      className={`${MENU_ITEM} text-content hover:text-white`}
                     >
+                      <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
                       Ayuda
                     </Link>
                     {installItem}
                     {user?.role === 'admin' && (
                       <button onClick={() => go('/admin')}
-                        className="w-full text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid transition-colors cursor-pointer bg-transparent border-0 font-sans">
+                        className={`${MENU_ITEM} text-content hover:text-white`}>
+                        <Shield size={MENU_ITEM_ICON} className="shrink-0" />
                         Admin
                       </button>
                     )}
@@ -432,8 +440,9 @@ export default function Header() {
                   <div className="border-t border-border-mid py-1">
                     <button
                       onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}
-                      className="w-full text-left px-4 py-2.5 text-sm text-danger hover:bg-border-mid transition-colors cursor-pointer bg-transparent border-0 font-sans"
+                      className={`${MENU_ITEM} text-danger`}
                     >
+                      <LogOut size={MENU_ITEM_ICON} className="shrink-0" />
                       Cerrar sesión
                     </button>
                   </div>
@@ -441,14 +450,16 @@ export default function Header() {
               ) : (
                 <div className="py-1">
                   <button onClick={() => go('/login')}
-                    className="w-full text-left px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors cursor-pointer bg-transparent border-0 font-sans">
+                    className={`${MENU_ITEM} text-content hover:text-white`}>
+                    <User size={MENU_ITEM_ICON} className="shrink-0" />
                     Iniciar sesión
                   </button>
                   <Link
                     to="/tutorial"
                     onClick={() => setMenuOpen(false)}
-                    className="flex items-center gap-2 px-4 py-2.5 text-sm text-content hover:bg-border-mid hover:text-white transition-colors font-sans"
+                    className={`${MENU_ITEM} text-content hover:text-white`}
                   >
+                    <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
                     Ayuda
                   </Link>
                   {installItem}
