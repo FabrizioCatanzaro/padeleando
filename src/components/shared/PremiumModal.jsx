@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { X, Check, Zap, Gift, ChevronDown, Loader2 } from 'lucide-react';
 import { api } from '../../utils/api';
+import {
+  ORIGINAL_PRICE, MONTHLY_PRICE, ANNUAL_PRICE,
+  FREE_FEATURES, PRO_FEATURES, PLAN_COMPARISON,
+} from '../../utils/plan';
 import sofiaImg from '../../assets/Sofia.webp';
 import romanImg from '../../assets/Romannn.webp';
 import leitoImg from '../../assets/Leito.webp';
@@ -9,30 +13,6 @@ const SOCIAL_AVATARS = [
   { src: sofiaImg, alt: 'Sofía' },
   { src: romanImg, alt: 'Román' },
   { src: leitoImg, alt: 'Leito' },
-];
-
-const FREE_FEATURES = [
-  '2 categorías máximo',
-  '2 torneos al mes',
-  'Estadísticas básicas',
-];
-
-const PRO_FEATURES = [
-  'Categorías ilimitadas',
-  'Torneos ilimitados',
-  'Estadísticas avanzadas',
-  'Álbum de fotos',
-  'Ícono premium en el perfil',
-  'Soporte prioritario',
-];
-
-const COMPARISON = [
-  { feature: 'Categorías',          free: '2 máx.',    pro: 'Ilimitadas' },
-  { feature: 'Torneos',            free: '2/mes',    pro: 'Ilimitados' },
-  { feature: 'Estadísticas',        free: 'Básicas',  pro: 'Avanzadas' },
-  { feature: 'Álbum de fotos',      free: false,      pro: true },
-  { feature: 'Ícono premium',       free: false,      pro: true },
-  { feature: 'Soporte',             free: 'Básico', pro: 'Prioritario' },
 ];
 
 const FAQS = [
@@ -53,10 +33,6 @@ const FAQS = [
     a: 'Con la que quieras. Después de pagar, tocá "Volver al sitio" en Mercado Pago y activamos tu Premium automáticamente, sin importar el email de tu cuenta.',
   },
 ];
-
-const ORIGINAL_PRICE = 7000;
-const MONTHLY_PRICE  = 3500;
-const ANNUAL_PRICE   = Math.round(ORIGINAL_PRICE * 0.8);
 
 export default function PremiumModal({ onClose, reason }) {
   const [billing, setBilling] = useState('monthly');
@@ -270,11 +246,11 @@ export default function PremiumModal({ onClose, reason }) {
               <span className="text-xs text-secondary font-semibold text-center">Básico</span>
               <span className="text-xs text-brand font-semibold text-center">Premium</span>
             </div>
-            {COMPARISON.map((row, i) => (
+            {PLAN_COMPARISON.map((row, i) => (
               <div
                 key={row.feature}
                 className={`grid grid-cols-3 px-4 py-3 items-center ${
-                  i < COMPARISON.length - 1 ? 'border-b border-border-strong/40' : ''
+                  i < PLAN_COMPARISON.length - 1 ? 'border-b border-border-strong/40' : ''
                 }`}
               >
                 <span className="text-xs text-secondary">{row.feature}</span>
