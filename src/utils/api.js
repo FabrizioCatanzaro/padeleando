@@ -161,6 +161,12 @@ export const api = {
     update: (id, b)  => req('PUT',    `/matches/${id}`, b),
     delete: (id)     => req('DELETE', `/matches/${id}`),
   },
+  // Fixture: partidos con equipos, cancha y hora, todavía sin resultado.
+  scheduled: {
+    create: (body)   => req('POST',   '/scheduled',       body),
+    update: (id, b)  => req('PATCH',  `/scheduled/${id}`, b),
+    delete: (id)     => req('DELETE', `/scheduled/${id}`),
+  },
   pairs: {
     create: (body)   => req('POST',   '/pairs',       body),
     update: (id, b)  => req('PUT',    `/pairs/${id}`, b),

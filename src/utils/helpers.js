@@ -505,6 +505,103 @@ export function buildFixtureText(
   return `${header}\n\n${blocks.join('\n\n')}`;
 }
 
+/**
+ * Un partido programado: mismos ids de jugador que un partido jugado, pero sin
+ * resultado. Se le arman team1/team2 para que las mismas funciones que dibujan
+ * un partido sirvan sin saber de dónde salió.
+ */
+export function adaptScheduled(m) {
+  return {
+    ...m,
+    team1: [m.team1_p1, m.team1_p2],
+    team2: [m.team2_p1, m.team2_p2],
+    createdAt: m.created_at ?? m.createdAt ?? null,
+    court: m.court ?? null,
+    scheduled_at: m.scheduled_at ?? null,
+    is_scheduled: true,
+  };
+}
+
+/**
+ * Quién ganó la jornada, o null si todavía no terminó. En un americano lo dice
+ * la final; en una liga, la punta de la tabla, con empate en pg y en diferencia.
+ *
+ * Estaba escrito dos veces —una en la página del organizador y otra en la del
+ * espectador— y las dos tenían que decir lo mismo. Ahora hay una sola.
+ */
+export function winnerLabelOf(tournament) {
+  if (!tournament || tournament.status !== 'finished') return null;
+  if (tournament.format === 'americano') {
+    return tournament.bracket?.final?.winner_name ?? null;
+  }
+  const standings = calcStandings(tournament.players, tournament.matches);
+  const filas = (tournament.mode === 'pairs' && tournament.pairs?.length > 0)
+    ? tournament.pairs.map((pair) => {
+      const stats = standings.find((r) => r.id === pair.p1)
+        ?? standings.find((r) => r.id === pair.p2)
+        ?? { pj: 0, pg: 0, sf: 0, sc: 0 };
+      const n1 = tournament.players.find((p) => p.id === pair.p1)?.name ?? '?';
+      const n2 = tournament.players.find((p) => p.id === pair.p2)?.name ?? '?';
+      return { ...stats, id: pair.id, name: `${n1} & ${n2}` };
+    }).sort(compareStandingRows)
+    : standings;
+  const topPg   = filas[0]?.pg ?? 0;
+  const topDiff = filas[0] ? filas[0].sf - filas[0].sc : 0;
+  const top = filas.filter((r) => r.pj > 0 && r.pg === topPg && (r.sf - r.sc) === topDiff);
+  return top.length ? top.map((r) => r.name).join(' / ') : null;
+}
+
+/**
+ * Partidos jugados de una jornada, contando el cuadro si es un americano. Lo
+ * usan el encabezado, el estado del torneo y el sonido del espectador.
+ */
+export function countPlayed(t) {
+  if (!t) return 0;
+  const bracketPlayed = t.format === 'americano'
+    ? [...(t.bracket?.octavos ?? []), ...(t.bracket?.cuartos ?? []),
+       ...(t.bracket?.semis ?? []), ...(t.bracket?.final ? [t.bracket.final] : [])]
+      .filter((m) => m.winner_id != null).length
+    : 0;
+  return playedMatches(t.matches ?? []).length + bracketPlayed;
+}
+
+/**
+ * Cómo se nombra cada fase de un americano. Vivía duplicado en la vista de
+ * espectador y en el cuadro, y el encabezado del organizador directamente no
+ * decía la fase: un partido de semis se anunciaba igual que uno de la previa.
+ */
+export const PHASE_LABEL = {
+  previa: 'FASE PREVIA', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL',
+};
+export const BRACKET_PHASES = new Set(['octavos', 'cuartos', 'semis', 'final']);
+
+/** Etiqueta de la fase del cuadro, o null si el partido no es del cuadro. */
+export const bracketPhaseLabel = (phase) =>
+  (BRACKET_PHASES.has(phase) ? PHASE_LABEL[phase] : null);
+
+/** Clave estable de una pareja a partir de sus dos jugadores, sin importar el orden. */
+export const pairKeyOf = (players) =>
+  [...(players ?? [])].filter(Boolean).map(String).sort().join('|');
+
+/**
+ * Cuántos partidos lleva cada pareja, contando los jugados Y los programados.
+ * En la fase previa de un americano el tope es 2, y un partido programado ya
+ * ocupa uno: si no contara, se podrían programar tres y romper la fase antes de
+ * jugarla.
+ * @returns {Map<string, number>} clave de pareja → cantidad
+ */
+export function countPairMatches(rows = []) {
+  const out = new Map();
+  for (const m of rows) {
+    for (const equipo of [m.team1, m.team2]) {
+      const k = pairKeyOf(equipo);
+      if (!k) continue;
+      out.set(k, (out.get(k) ?? 0) + 1);
+    }
+  }
+  return out;
+}
+
 export function adaptTournament(t) {
   const players = (t.players ?? []).map(p => ({ ...p, name: p.linked_name ?? p.name }));
   const pairs   = (t.pairs   ?? []).map(adaptPair);
@@ -518,6 +615,7 @@ export function adaptTournament(t) {
     players,
     pairs,
     matches: (t.matches ?? []).map(adaptMatch),
+    scheduled_matches: (t.scheduled_matches ?? []).map(adaptScheduled),
     bracket: patchBracketNames(t.bracket, pairs, players),
   };
 }

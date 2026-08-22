@@ -9,6 +9,7 @@ import {
   XAxis, YAxis, Tooltip, CartesianGrid,
 } from "recharts";
 import PremiumModal from "../shared/PremiumModal";
+import StatSlab, { StatSlabs } from "../shared/StatSlab";
 import ClubLogo from "../shared/ClubLogo";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
@@ -125,6 +126,7 @@ function CurrentStats({ tournament }) {
   const topDiff = standings[0] ? standings[0].sf - standings[0].sc : 0;
   const leaders = standings.filter((p) => p.pg === topPg && (p.sf - p.sc) === topDiff);
   const mvpLabel = tiedLabel(leaders.map((p) => p.name));
+  const mvpPct   = standings[0]?.pj > 0 ? Math.round((topPg / standings[0].pj) * 100) : null;
 
   // Detectar empates entre las mejores parejas
   const topWinRate   = partnerships[0]?.winRate ?? -1;
@@ -222,73 +224,61 @@ function CurrentStats({ tournament }) {
       <div className="flex justify-end mb-4">
         <ShareStoryButton onClick={() => setShowStory(true)} />
       </div>
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 mb-6">
-        <div className="flex flex-col bg-surface border border-secondary/27 rounded-lg text-center overflow-hidden">
-          <div className="bg-secondary text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-secondary/15">Partidos jugados</div>
-          <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-            <Swords size={30} className="text-secondary" />
-            <div className="font-condensed font-bold text-[26px] text-white">{played.length}</div>
-          </div>
-        </div>
-        {isAmericano && tournament.bracket?.final?.winner_id &&(
-          <div className="flex flex-col bg-surface border border-amber-500/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-amber-500 text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-amber-500/15">Campeones</div>
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-              <Trophy size={30} className="text-amber-500" />
-              <div className="font-condensed font-bold text-xl text-amber-500 leading-tight">{tournament.bracket?.final?.winner_name}</div>
-            </div>
-          </div>
+      <StatSlabs className="mb-6">
+        <StatSlab label="Partidos jugados" value={played.length} tone="secondary" icon={Swords} />
+
+        {isAmericano && tournament.bracket?.final?.winner_id && (
+          <StatSlab
+            label="Campeones"
+            value={tournament.bracket.final.winner_name}
+            kind="name"
+            tone="gold"
+            icon={Trophy}
+          />
         )}
 
         {/* En modo pairs el MVP individual no tiene sentido (ambos de la pareja tienen stats idénticas).
             Se muestra la mejor pareja en su lugar. En modo libre se muestra el MVP individual. */}
         {isPairs ? (
           topPairLabel && (
-            <div className="flex flex-col bg-surface border border-brand/27 rounded-lg text-center overflow-hidden">
-              <div className="bg-brand text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-brand/15">
-                {topPairIsTied ? "Mejor pareja · Empate" : "Mejor pareja"}
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-                <Flame size={30} className="text-brand" />
-                <div className={`font-condensed font-bold ${topPairIsTied ? 'text-lg' : 'text-xl'} text-brand leading-tight`}>{topPairLabel}</div>
-                <div className="text-[14px] text-secondary font-mono">{topPairWinRate}% ({topPairRecord}) · DIF {fmtDiff(topPairDiffVal)}</div>
-              </div>
-            </div>
+            <StatSlab
+              label={topPairIsTied ? "Mejor pareja · Empate" : "Mejor pareja"}
+              value={topPairLabel}
+              kind="name"
+              tone="brand"
+              icon={Flame}
+              sub={`${topPairWinRate}% (${topPairRecord}) · DIF ${fmtDiff(topPairDiffVal)}`}
+              meter={topPairWinRate}
+            />
           )
         ) : (
           leaders.length > 0 && (
-            <div className="flex flex-col bg-surface border border-brand/27 rounded-lg text-center overflow-hidden">
-              <div className="bg-brand text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-brand/15">
-                {leaders.length > 1 ? "MVP · Empate" : "MVP"}
-              </div>
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-                <Trophy size={30} className="text-brand" />
-                <div
-                  className={`font-condensed font-bold text-xl text-brand leading-tight ${leaders.length === 1 && leaders[0].linked_username ? 'cursor-pointer hover:opacity-75 transition-opacity' : ''}`}
-                  onClick={() => leaders.length === 1 && leaders[0].linked_username && navigate(`/u/${leaders[0].linked_username}`)}
-                >
-                  {mvpLabel}
-                </div>
-                <div className="text-[14px] text-secondary font-mono">{topPg} {topPg === 1 ? "victoria" : "victorias"}</div>
-              </div>
-            </div>
+            <StatSlab
+              label={leaders.length > 1 ? "MVP · Empate" : "MVP"}
+              value={mvpLabel}
+              kind="name"
+              tone="brand"
+              icon={Trophy}
+              sub={`${topPg} ${topPg === 1 ? "victoria" : "victorias"}`}
+              meter={mvpPct}
+              onOpen={leaders.length === 1 && leaders[0].linked_username
+                ? () => navigate(`/u/${leaders[0].linked_username}`)
+                : undefined}
+            />
           )
         )}
 
         {/* En modo libre se muestra la mejor pareja dinámica además del MVP */}
         {!isPairs && topPlayed >= 1 && (
-          <div className="flex flex-col bg-surface border border-cyan/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-cyan text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-cyan/15">
-              {topPairIsTied ? "Mejor pareja · Empate" : "Mejor pareja"}
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-              <Handshake size={30} className="text-cyan" />
-              <div className={`font-condensed font-bold ${topPairIsTied ? 'text-lg' : 'text-xl'} text-cyan leading-tight`}>
-                {topPairIsTied ? tiedPartnersLabel : topPartner.label}
-              </div>
-              <div className="text-[14px] text-secondary font-mono">{topWinRate}% ({topWins}/{topPlayed}) · DIF {fmtDiff(topPairDiffVal)}</div>
-            </div>
-          </div>
+          <StatSlab
+            label={topPairIsTied ? "Mejor pareja · Empate" : "Mejor pareja"}
+            value={topPairIsTied ? tiedPartnersLabel : topPartner.label}
+            kind="name"
+            tone="cyan"
+            icon={Handshake}
+            sub={`${topWinRate}% (${topWins}/${topPlayed}) · DIF ${fmtDiff(topPairDiffVal)}`}
+            meter={topWinRate}
+          />
         )}
 
         {biggestWin && (() => {
@@ -298,92 +288,79 @@ function CurrentStats({ tournament }) {
           const winScore    = win1 ? biggestWin.score1 : biggestWin.score2;
           const loseScore   = win1 ? biggestWin.score2 : biggestWin.score1;
           return (
-            <div className="flex flex-col bg-surface border border-danger/27 rounded-lg text-center overflow-hidden">
-              <div className="bg-danger text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-danger/15">Partido más amplio</div>
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-                <Bomb size={30} className="text-danger" />
-                <div className="font-condensed font-bold text-[26px] text-danger leading-tight">{winScore} — {loseScore}</div>
-                <div className="text-[13px] text-secondary font-mono">
-                  <span className="text-white">{winnerNames}</span> vs {loserNames}
-                </div>
-                {biggestWin.duration_seconds > 0 && (
-                  <div className="text-[12px] text-muted font-mono">en {fmtMMSS(biggestWin.duration_seconds)}</div>
-                )}
-              </div>
-            </div>
+            <StatSlab
+              label="Partido más amplio"
+              value={`${winScore} — ${loseScore}`}
+              tone="danger"
+              icon={Bomb}
+              sub={<><span className="text-white">{winnerNames}</span> vs {loserNames}
+                {biggestWin.duration_seconds > 0 ? ` · ${fmtMMSS(biggestWin.duration_seconds)}` : ""}</>}
+            />
           );
         })()}
+
         {longestMatch && (() => {
           const win1        = +longestMatch.score1 > +longestMatch.score2;
           const winnerNames = (win1 ? longestMatch.team1 : longestMatch.team2).map(getPlayerName).join(" & ");
           const loserNames  = (win1 ? longestMatch.team2 : longestMatch.team1).map(getPlayerName).join(" & ");
           return (
-            <div className="flex flex-col bg-surface border border-green/27 rounded-lg text-center overflow-hidden">
-              <div className="bg-green text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-green/15">Partido más largo</div>
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-                <Clock size={30} className="text-green" />
-                <div className="font-condensed font-bold text-[26px] text-green leading-tight">{fmtMMSS(longestMatch.duration_seconds)}</div>
-                <div className="text-[13px] text-secondary font-mono">
-                  <span className="text-white">{winnerNames}</span> vs {loserNames}
-                </div>
-              </div>
-            </div>
+            <StatSlab
+              label="Partido más largo"
+              value={fmtMMSS(longestMatch.duration_seconds)}
+              tone="green"
+              icon={Clock}
+              sub={<><span className="text-white">{winnerNames}</span> vs {loserNames}</>}
+            />
           );
         })()}
+
         {timedMatches.length > 0 && (
-          <div className="flex flex-col bg-surface border border-cyan/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-cyan text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-cyan/15">Tiempo de juego</div>
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-              <Hourglass size={30} className="text-cyan" />
-              <div className="font-condensed font-bold text-[26px] text-cyan leading-tight">{fmtDuracion(totalSeconds)}</div>
-              <div className="text-[13px] text-secondary font-mono">
-                {timedMatches.length} de {played.length} con tiempo
-              </div>
-            </div>
-          </div>
+          <StatSlab
+            label="Tiempo de juego"
+            value={fmtDuracion(totalSeconds)}
+            tone="cyan"
+            icon={Hourglass}
+            sub={`${timedMatches.length} de ${played.length} con tiempo`}
+            meter={Math.round((timedMatches.length / played.length) * 100)}
+          />
         )}
+
         {timedMatches.length >= 2 && (
-          <div className="flex flex-col bg-surface border border-cyan/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-cyan text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-cyan/15">Promedio de tiempo de juego</div>
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-              <Timer size={30} className="text-cyan" />
-              <div className="font-condensed font-bold text-[26px] text-cyan leading-tight">{fmtMMSS(avgSeconds)}</div>
-              <div className="text-[13px] text-secondary font-mono">
-                {timedMatches.length} de {played.length} con tiempo
-              </div>
-            </div>
-          </div>
+          <StatSlab
+            label="Promedio por partido"
+            value={fmtMMSS(avgSeconds)}
+            tone="cyan"
+            icon={Timer}
+            sub={`${timedMatches.length} de ${played.length} con tiempo`}
+          />
         )}
+
         {tightMatches.length > 0 && (
-          <div className="flex flex-col bg-surface border border-brand/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-brand text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-brand/15">Partidos parejos</div>
-            <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-              <Scale size={30} className="text-brand" />
-              <div className="font-condensed font-bold text-[26px] text-brand leading-tight">{tightPct}%</div>
-              <div className="text-[13px] text-secondary font-mono">
-                {tightMatches.length} de {played.length} por 1 game
-              </div>
-            </div>
-          </div>
+          <StatSlab
+            label="Partidos parejos"
+            value={`${tightPct}%`}
+            tone="brand"
+            icon={Scale}
+            sub={`${tightMatches.length} de ${played.length} por 1 game`}
+            meter={tightPct}
+          />
         )}
-        {shortestMatch && shortestMatch != longestMatch && (() => {
+
+        {shortestMatch && shortestMatch !== longestMatch && (() => {
           const win1        = +shortestMatch.score1 > +shortestMatch.score2;
           const winnerNames = (win1 ? shortestMatch.team1 : shortestMatch.team2).map(getPlayerName).join(" & ");
           const loserNames  = (win1 ? shortestMatch.team2 : shortestMatch.team1).map(getPlayerName).join(" & ");
           return (
-            <div className="flex flex-col bg-surface border border-secondary/27 rounded-lg text-center overflow-hidden">
-              <div className="bg-secondary text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-secondary/15">Partido más rápido</div>
-              <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-                <Clock size={30} className="text-secondary" />
-                <div className="font-condensed font-bold text-[26px] text-secondary leading-tight">{fmtMMSS(shortestMatch.duration_seconds)}</div>
-                <div className="text-[13px] text-secondary font-mono">
-                  <span className="text-white">{winnerNames}</span> vs {loserNames}
-                </div>
-              </div>
-            </div>
+            <StatSlab
+              label="Partido más rápido"
+              value={fmtMMSS(shortestMatch.duration_seconds)}
+              tone="secondary"
+              icon={Clock}
+              sub={<><span className="text-white">{winnerNames}</span> vs {loserNames}</>}
+            />
           );
         })()}
-      </div>
+      </StatSlabs>
 
       {!isPairs && !isAmericano && <PerPlayerTable standings={standings} />}
       {!isPairs && <PartnershipsTable partnerships={partnerships} />}
@@ -491,36 +468,22 @@ const RANK_PAGE_SIZE = 10;
 
 const RANK_COLORS = ['#e8f04a', '#4ab8f0', '#4af07a', '#a84af0', '#f07a4a'];
 
-const TONES = {
-  brand:     { border: 'border-brand/27',       head: 'bg-brand',       text: 'text-brand' },
-  cyan:      { border: 'border-cyan/27',        head: 'bg-cyan',        text: 'text-cyan' },
-  green:     { border: 'border-green/27',       head: 'bg-green',       text: 'text-green' },
-  secondary: { border: 'border-secondary/27',   head: 'bg-secondary',   text: 'text-secondary' },
-};
-
 const LEADER_ICONS = { crown: Crown, target: Target, handshake: Handshake };
 
 function LeaderCard({ title, leader, icon, tone, detail, onOpen }) {
   if (!leader) return null;
-  const Icon = LEADER_ICONS[icon] ?? Crown;
-  const t = TONES[tone] ?? TONES.brand;
   const clickable = !leader.tied && !!onOpen;
   return (
-    <div className={`flex flex-col bg-surface border ${t.border} rounded-lg text-center overflow-hidden`}>
-      <div className={`${t.head} text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5`}>
-        {leader.tied ? `Empate · ${title}` : title}
-      </div>
-      <div className="flex-1 flex flex-col items-center justify-center gap-1 px-4 pt-3 pb-4">
-        <Icon size={30} className={t.text} />
-        <div
-          className={`font-condensed font-bold ${leader.tied ? 'text-lg' : 'text-xl'} ${t.text} leading-tight ${clickable ? 'cursor-pointer hover:opacity-75 transition-opacity' : ''}`}
-          onClick={() => clickable && onOpen(leader)}
-        >
-          {leader.label}
-        </div>
-        <div className="text-[14px] text-secondary font-mono">{detail(leader)}</div>
-      </div>
-    </div>
+    <StatSlab
+      label={leader.tied ? `Empate · ${title}` : title}
+      value={leader.label}
+      kind="name"
+      tone={tone}
+      icon={LEADER_ICONS[icon] ?? Crown}
+      sub={detail(leader)}
+      meter={leader.pct}
+      onOpen={clickable ? () => onOpen(leader) : undefined}
+    />
   );
 }
 
@@ -583,20 +546,22 @@ function HeadToHead({ h2h, rows, selected, onSelect }) {
 
       {nemesis && !sameRival && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-          <div className="bg-surface border border-danger/27 rounded-lg overflow-hidden text-center">
-            <div className="bg-danger text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5">Rival más duro</div>
-            <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-              <div className="font-condensed font-bold text-xl text-danger leading-tight">{nemesis.name}</div>
-              <div className="text-[13px] text-secondary font-mono">{nemesis.g}G {nemesis.p}P ({nemesis.pct}%)</div>
-            </div>
-          </div>
-          <div className="bg-surface border border-green/27 rounded-lg overflow-hidden text-center">
-            <div className="bg-green text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5">Víctima favorita</div>
-            <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-              <div className="font-condensed font-bold text-xl text-green leading-tight">{victim.name}</div>
-              <div className="text-[13px] text-secondary font-mono">{victim.g}G {victim.p}P ({victim.pct}%)</div>
-            </div>
-          </div>
+          <StatSlab
+            label="Rival más duro"
+            value={nemesis.name}
+            kind="name"
+            tone="danger"
+            sub={`${nemesis.g}G ${nemesis.p}P · ${nemesis.pct}% a favor`}
+            meter={nemesis.pct}
+          />
+          <StatSlab
+            label="Víctima favorita"
+            value={victim.name}
+            kind="name"
+            tone="green"
+            sub={`${victim.g}G ${victim.p}P · ${victim.pct}% a favor`}
+            meter={victim.pct}
+          />
         </div>
       )}
 
@@ -920,7 +885,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   return (
     <>
       {title ? (
-        <div className="flex items-center justify-between gap-3 py-4 border-t border-border mt-10 mb-5">
+        <div className="flex items-center justify-between gap-3 pb-4 mb-5">
           <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">{title}</div>
           <ShareStoryButton variant="icon" onClick={() => setShowStory(true)} />
         </div>
@@ -931,48 +896,33 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
       )}
 
       {/* ── BÁSICAS (siempre visibles) ── */}
-      <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 mb-6">
-        <div className="bg-surface border border-cyan/27 rounded-lg text-center overflow-hidden">
-          <div className="text-surface text-[11px] bg-cyan font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-cyan/15">Torneos jugados</div>
-          <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-            <CalendarDays size={30} className="text-cyan" />
-            <div className="font-condensed font-bold text-[26px] text-white">{tournaments.length}</div>
-          </div>
-        </div>
-        <div className="bg-surface border border-secondary/27 rounded-lg text-center overflow-hidden">
-          <div className="bg-secondary text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-secondary/15">Partidos en total</div>
-          <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-            <Swords size={30} className="text-secondary" />
-            <div className="font-condensed font-bold text-[26px] text-white">{totalMatches}</div>
-          </div>
-        </div>
+      <StatSlabs className="mb-6">
+        <StatSlab label="Torneos jugados" value={tournaments.length} tone="cyan" icon={CalendarDays} />
+        <StatSlab label="Partidos en total" value={totalMatches} tone="secondary" icon={Swords} />
         {histTimed.length > 0 && (
-          <div className="bg-surface border border-green/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-green text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-green/15">Tiempo de juego</div>
-            <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-              <Hourglass size={30} className="text-green" />
-              <div className="font-condensed font-bold text-[26px] text-white">{fmtDuracion(histSeconds)}</div>
-              <div className="text-[13px] text-secondary font-mono">
-                {histTimed.length === totalMatches
-                  ? `${fmtDuracion(histSeconds / histTimed.length)} por partido`
-                  : `${histTimed.length} de ${totalMatches} con tiempo`}
-              </div>
-            </div>
-          </div>
+          <StatSlab
+            label="Tiempo de juego"
+            value={fmtDuracion(histSeconds)}
+            tone="green"
+            icon={Hourglass}
+            sub={histTimed.length === totalMatches
+              ? `${fmtDuracion(histSeconds / histTimed.length)} por partido`
+              : `${histTimed.length} de ${totalMatches} con tiempo`}
+            meter={totalMatches > 0 ? Math.round((histTimed.length / totalMatches) * 100) : null}
+          />
         )}
         {champLabel && (
-          <div className="bg-surface border border-amber-500/27 rounded-lg text-center overflow-hidden">
-            <div className="bg-amber-500 text-surface text-[11px] font-condensed font-bold tracking-[1.5px] uppercase pt-2.5 pb-1.5 border-b border-amber-500/15">
-              {topChamps.length > 1 ? "Empate · Más veces campeones" : "Más veces campeón"}
-            </div>
-            <div className="flex flex-col items-center gap-1 px-4 pt-3 pb-4">
-              <Trophy size={30} className="text-amber-500" />
-              <div className={`font-condensed font-bold text-amber-500 leading-tight ${topChamps.length > 1 ? 'text-lg' : 'text-xl'}`}>{champLabel}</div>
-              <div className="text-[14px] text-secondary font-mono">{topChampCount} {topChampCount === 1 ? "torneo" : "torneos"}</div>
-            </div>
-          </div>
+          <StatSlab
+            label={topChamps.length > 1 ? "Empate · Más veces campeones" : "Más veces campeón"}
+            value={champLabel}
+            kind="name"
+            tone="gold"
+            icon={Trophy}
+            sub={`${topChampCount} de ${tournaments.length} ${tournaments.length === 1 ? "torneo" : "torneos"}`}
+            meter={Math.round((topChampCount / tournaments.length) * 100)}
+          />
         )}
-      </div>
+      </StatSlabs>
 
       {/* ── AVANZADAS (solo si el dueño tiene premium) ── */}
       {ownerIsPremium ? (
@@ -981,7 +931,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
             <Gem size={15} className="text-brand shrink-0" />
             ESTADÍSTICAS AVANZADAS
           </div>
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3 mb-6">
+          <StatSlabs className="mb-6">
             <LeaderCard
               title="Jugador más ganador"
               leader={topPlayerWins}
@@ -1016,7 +966,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
                 />
               </>
             )}
-          </div>
+          </StatSlabs>
 
           <div className="mb-6">
             <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">

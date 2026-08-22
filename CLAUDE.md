@@ -32,7 +32,7 @@ Both repos are independent — they are **not** a monorepo.
 - Bcrypt for password hashing
 - Resend for transactional email (password reset, email verification)
 - Cloudinary for image uploads (avatars, tournament photos)
-- Mercado Pago for subscriptions (currently disabled)
+- Mercado Pago for subscriptions (routes live; list prices not final yet)
 
 ---
 
@@ -77,7 +77,7 @@ npm start         # Start without hot reload
 | `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud for image uploads |
 | `CLOUDINARY_API_KEY` | Cloudinary API key |
 | `CLOUDINARY_API_SECRET` | Cloudinary API secret |
-| `MP_ACCESS_TOKEN` | Mercado Pago token (subscription feature disabled) |
+| `MP_ACCESS_TOKEN` | Mercado Pago token (subscriptions) |
 | `NODE_ENV` | `production` or `development` |
 
 ---
@@ -221,7 +221,8 @@ Do not claim an improvement without measuring it — reading the code is not eno
 
 - **Don't write multi-line comments** — one short line at most, and only if it's indispensable; the reasoning belongs in the commit message.
 - **Don't bypass `api.js`** — the token refresh logic lives there; skipping it breaks auth.
-- **Don't add subscription/payment UI** — the Subscription feature is intentionally disabled (components exist but routes are commented out in App.jsx).
+- **Don't hardcode plan prices, features or the comparison table** — they all live in `src/utils/plan.js` (`PRICE_BY_BILLING`, `PRO_FEATURES`, `PLAN_COMPARISON`), which `PremiumModal` and `SubscriptionManage` import. The four `/subscription/*` routes are live in `App.jsx`, but **the list prices are not final**: when they are, they change in that one file (and in the Mercado Pago plans).
+- **Say "torneo", not "jornada", in anything the user reads.** The code and this file still call them jornadas; the UI copy does not.
 - **Don't store auth tokens in localStorage** — tokens use httpOnly cookies; only the `user` object (no secrets) is stored in localStorage.
 - **Don't use a `tailwind.config.js`** — Tailwind 4 doesn't use one; extend the theme via `@theme {}` in `index.css`.
 - **Don't calculate standings server-side** — standings are always derived client-side.

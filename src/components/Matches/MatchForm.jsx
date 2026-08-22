@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
-import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, CalendarPlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Modal from "../shared/Modal";
 
@@ -401,12 +401,58 @@ function canSaveMatch(form) {
 }
 
 // ── Guardar / cancelar ────────────────────────────────────────────────────────
-function FormActions({ isEditing, canSave, onSave, onCancel }) {
+/**
+ * Empezar un partido que nadie programó. No hace falta pasar por el fixture
+ * para tener un partido EN VIVO: se eligen los equipos y arranca. La diferencia
+ * con apretar play en el cronómetro es que además lo anota, así el partido
+ * sobrevive a que el organizador cierre la tarjeta.
+ */
+/** Resumen del marcador para cuando el paso Resultado está cerrado. */
+function resumenMarcador(form) {
+  const nv = form.sets_format ? visibleSetsCount(form.sets_format, form.sets ?? []) : 0;
+  if (nv > 0) return (form.sets ?? []).slice(0, nv).map((x) => `${x.s1 ?? 0}-${x.s2 ?? 0}`).join(' · ');
+  return `${form.score1 ?? 0} - ${form.score2 ?? 0}`;
+}
+
+/**
+ * Los dos atajos de un partido nuevo: arrancarlo ya, o dejarlo anotado para más
+ * tarde. Los dos lo meten en el fixture; lo único que los separa es si el
+ * cronómetro sale corriendo. Programar existe porque abrir "NUEVO PARTIDO"
+ * cuando en realidad lo querías para después no tenía salida: había que cerrar
+ * la tarjeta y empezar de nuevo desde Programar.
+ */
+function AtajosDelPartido({ visible, onEmpezar, onProgramar }) {
+  if (!visible || (!onEmpezar && !onProgramar)) return null;
+  const base = 'flex-1 min-w-[150px] inline-flex items-center justify-center gap-2 min-h-[40px] rounded-lg border bg-transparent cursor-pointer text-[12.5px] transition-colors';
+  return (
+    <div className="flex gap-2 flex-wrap mt-3">
+      {onEmpezar && (
+        <button
+          type="button" onClick={onEmpezar} className={base}
+          style={{ borderColor: 'color-mix(in srgb, var(--color-green) 45%, transparent)', color: 'var(--color-green)' }}
+        >
+          <CirclePlay size={14} /> Empezar ahora
+        </button>
+      )}
+      {onProgramar && (
+        <button
+          type="button" onClick={onProgramar} className={base}
+          style={{ borderColor: 'color-mix(in srgb, var(--color-cyan) 45%, transparent)', color: 'var(--color-cyan)' }}
+        >
+          <CalendarPlus size={14} /> Programar para después
+        </button>
+      )}
+    </div>
+  );
+}
+
+function FormActions({ isEditing, canSave, saving = false, onSave, onCancel }) {
+  const inerte = !canSave || saving;
   return (
     <div className="flex gap-2.5 mt-4">
-      <button onClick={onSave} disabled={!canSave}
-        className={`text-base border-0 flex-1 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm ${!canSave ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand cursor-pointer"}`}>
-        {isEditing ? "GUARDAR CAMBIOS" : "REGISTRAR PARTIDO"}
+      <button onClick={onSave} disabled={inerte}
+        className={`text-base border-0 flex-1 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm ${inerte ? "bg-border-mid text-muted cursor-not-allowed" : "bg-brand cursor-pointer"}`}>
+        {saving ? "GUARDANDO..." : isEditing ? "GUARDAR CAMBIOS" : "REGISTRAR PARTIDO"}
       </button>
       <button onClick={onCancel} className="bg-transparent text-muted border border-border-strong px-3 py-2 text-[12px] cursor-pointer rounded-sm font-sans">
         Cancelar
@@ -415,24 +461,78 @@ function FormActions({ isEditing, canSave, onSave, onCancel }) {
   );
 }
 
-// ── Recuadro de equipo/pareja (título integrado como encabezado) ────────────────
-function TeamBox({ label, accent = "brand", children }) {
-  const dot  = accent === "cyan" ? "bg-cyan"   : "bg-brand";
-  const text = accent === "cyan" ? "text-cyan" : "text-brand";
-  const tint = accent === "cyan" ? "bg-cyan/5" : "bg-brand/5";
+/**
+ * Un paso del formulario. Sólo el abierto se despliega; los cerrados quedan en
+ * una fila con el dato ya cargado y un "cambiar" para volver.
+ *
+ * Antes el formulario aparecía de a pedazos —los equipos primero, y recién con
+ * los dos completos brotaban cancha y marcador— sin decir en ningún lado que
+ * eso iba a pasar, y con todo abierto a la vez ocupaba una pantalla entera.
+ */
+function Step({ n, titulo, resumen, abierto, hecho, bloqueado = false, fijo = false, onAbrir, children }) {
+  // Los tres pasos se ven desde el principio, aunque todavía no se puedan
+  // abrir: el formulario dice de entrada cuánto falta. Antes brotaban recién al
+  // elegir los equipos y no se sabía que existían.
+  //
+  // `fijo` es el paso que ya viene resuelto y no se toca: en el cuadro los
+  // equipos los pone el cruce, no el organizador. Se muestra igual que un paso
+  // cerrado —mismo número, mismo tilde, mismo resumen— pero sin "cambiar".
+  const inerte = abierto || bloqueado || fijo;
+  const Cab = inerte ? 'div' : 'button';
   return (
-    <div className="flex-1 min-w-35 bg-base/40 border border-border rounded-md overflow-hidden">
-      <div className={`flex items-center gap-2 px-2.5 py-2 border-b border-border ${tint}`}>
-        <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
-        <span className={`text-[11px] tracking-[2px] font-mono font-bold ${text}`}>{label}</span>
+    <div className={`border-b border-border last:border-b-0 ${bloqueado ? 'opacity-45' : ''}`}>
+      <Cab
+        {...(inerte ? {} : { type: 'button', onClick: onAbrir })}
+        aria-disabled={bloqueado || undefined}
+        className={`flex items-center gap-3 w-full px-3.5 py-2.5 text-left bg-transparent border-0 ${
+          inerte ? '' : 'cursor-pointer hover:bg-base/40 transition-colors'
+        }`}
+      >
+        <span className={`w-5 h-5 rounded-full grid place-items-center text-[10px] font-bold shrink-0 border ${
+          abierto ? 'bg-brand border-brand text-base'
+            : hecho ? 'bg-green border-green text-base' : 'border-border-strong text-muted'
+        }`}>
+          {hecho && !abierto ? '✓' : n}
+        </span>
+        <span className={`font-condensed font-bold text-[11.5px] tracking-[0.1em] uppercase shrink-0 ${
+          abierto ? 'text-white' : 'text-muted'
+        }`}>
+          {titulo}
+        </span>
+        {!abierto && (
+          <>
+            <span className="flex-1 min-w-0 text-right text-[12.5px] text-content truncate">
+              {bloqueado ? '' : resumen}
+            </span>
+            {!bloqueado && !fijo && <span className="text-[11px] text-dim shrink-0">cambiar</span>}
+          </>
+        )}
+      </Cab>
+      {abierto && <div className="px-3.5 pb-3.5 pt-1">{children}</div>}
+    </div>
+  );
+}
+
+// ── Equipo/pareja: etiqueta arriba y el select a lo ancho ──────────────────────
+// Es la misma forma que usa ScheduleForm: cargar un partido y programarlo tienen
+// que verse igual, porque son el mismo gesto con distinto momento.
+export const TEAM_SELECT_CLS =
+  'w-full bg-base border border-border-strong text-white px-3 rounded-lg h-[42px] font-sans text-sm outline-none focus:border-brand/60 transition-colors';
+
+function TeamBox({ label, accent = "brand", children }) {
+  const text = accent === "cyan" ? "text-cyan" : "text-brand";
+  return (
+    <div className="flex-1 min-w-35">
+      <div className={`font-condensed font-bold text-[9.5px] tracking-[0.14em] uppercase mb-1.5 ${text}`}>
+        {label}
       </div>
-      <div className="flex flex-col gap-2 p-2.5">{children}</div>
+      <div className="flex flex-col gap-2">{children}</div>
     </div>
   );
 }
 
 // ── Pairs mode ────────────────────────────────────────────────────────────────
-function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, timerState, onTimerChange, pairMatchCounts, pairMatchLimit }) {
+function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, timerState, onTimerChange, onEmpezar, pairMatchCounts, pairMatchLimit, fixedTeams = false, titulo, saving = false, onProgramar }) {
   const { pairs, players } = tournament;
   const removedIds    = new Set(players.filter((p) => p.removed).map((p) => p.id));
   const selectablePairs = pairs.filter((p) => !removedIds.has(p.p1) && !removedIds.has(p.p2));
@@ -468,11 +568,33 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
 
   const [minimized, setMinimized] = useState(false);
   const teamsComplete = !!form.team1Pair && !!form.team2Pair;
+  // Editar un partido ya cargado entra directo al marcador: los equipos y la
+  // cancha ya están, y lo que se viene a corregir casi siempre es el resultado.
+  // Con los equipos ya puestos —un cruce del cuadro, un programado que se
+  // arranca— el formulario abre en Cancha si falta elegirla, y si no, en
+  // Resultado.
+  const [paso, setPaso] = useState(() => {
+    if (isEditing) return 3;
+    if (!teamsComplete) return 1;
+    return tournamentCourts(tournament) > 1 && form.court == null ? 2 : 3;
+  });
+
+  // Avanzar de paso es efecto del click, no de un useEffect: así no hay un
+  // render intermedio con el paso viejo.
+  function elegirPareja(campo, valor) {
+    const siguiente = { ...form, [campo]: valor };
+    setForm(siguiente);
+    if (siguiente.team1Pair && siguiente.team2Pair) {
+      setPaso(tournamentCourts(tournament) > 1 && siguiente.court == null ? 2 : 3);
+    }
+  }
   const timerEl = !isEditing && teamsComplete
     ? <Timer timerState={timerState} onTimerChange={onTimerChange} onStop={(s) => setForm((f) => ({ ...f, duration_seconds: s ?? null }))} />
     : null;
 
-  const isDirty = !!(form.team1Pair || form.team2Pair || timerState?.startedAt != null
+  // Con los equipos fijos, tenerlos elegidos no es "datos cargados": vinieron
+  // con el cruce. Cerrar sin haber tocado nada no tiene que preguntar nada.
+  const isDirty = !!((!fixedTeams && (form.team1Pair || form.team2Pair)) || timerState?.startedAt != null
     || form.sets_format != null || form.score1 || form.score2 || form.court != null);
   const { requestCancel, cancelModal } = useCancelGuard({ isDirty, isEditing, onCancel });
   const canMinimize = teamsComplete && !isEditing;
@@ -490,17 +612,29 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
     );
   }
 
+  const hayCanchas = tournamentCourts(tournament) > 1;
+  const resumenEquipos = teamsComplete
+    ? `${getPairLabel(form.team1Pair, pairs, players)} vs ${getPairLabel(form.team2Pair, pairs, players)}`
+    : '—';
+
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+    <div className="bg-surface border border-border-mid rounded-lg mb-6 overflow-hidden">
       {cancelModal}
-      <MatchCardHeader isEditing={isEditing} onCancel={requestCancel} timer={timerEl}
-        onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
-      <div className={teamsComplete ? "grid gap-x-5 gap-y-4 sm:grid-cols-2 items-start" : ""}>
+      <div className="px-5 pt-5">
+        <MatchCardHeader isEditing={isEditing} title={titulo} onCancel={requestCancel} timer={timerEl}
+          onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
+      </div>
+      <div className="border-t border-border">
+      <Step
+        n={1} titulo="Equipos" resumen={resumenEquipos}
+        abierto={!fixedTeams && paso === 1} hecho={teamsComplete}
+        fijo={fixedTeams} onAbrir={() => setPaso(1)}
+      >
         <div className="flex flex-col gap-3 min-w-0">
-          <div className={`flex gap-3 flex-wrap ${teamsComplete ? "sm:flex-col" : ""}`}>
+          <div className="flex flex-col gap-3">
             <TeamBox label="PAREJA 1" accent="brand">
-              <select className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-                value={form.team1Pair || ""} onChange={(e) => setForm({ ...form, team1Pair: e.target.value })}>
+              <select className={TEAM_SELECT_CLS}
+                value={form.team1Pair || ""} onChange={(e) => elegirPareja('team1Pair', e.target.value)}>
                 <option value="">Seleccionar pareja</option>
                 {selectablePairs.map((p) => (
                   <option
@@ -514,8 +648,8 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
               </select>
             </TeamBox>
             <TeamBox label="PAREJA 2" accent="cyan">
-              <select className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-                value={form.team2Pair || ""} onChange={(e) => setForm({ ...form, team2Pair: e.target.value })}>
+              <select className={TEAM_SELECT_CLS}
+                value={form.team2Pair || ""} onChange={(e) => elegirPareja('team2Pair', e.target.value)}>
                 <option value="">Seleccionar pareja</option>
                 {selectablePairs.map((p) => (
                   <option
@@ -529,12 +663,27 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
               </select>
             </TeamBox>
           </div>
-          {teamsComplete && tournamentCourts(tournament) > 1 && (
-            <CourtSelector courts={tournamentCourts(tournament)} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
-          )}
         </div>
+      </Step>
 
-        {teamsComplete && (
+      {hayCanchas && (
+        <Step
+          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${form.court}` : 'Sin asignar'}
+          abierto={teamsComplete && paso === 2} hecho={teamsComplete && form.court != null}
+          bloqueado={!teamsComplete} onAbrir={() => setPaso(2)}
+        >
+          <CourtSelector
+            courts={tournamentCourts(tournament)} value={form.court}
+            onChange={(v) => { setForm({ ...form, court: v }); setPaso(3); }}
+          />
+        </Step>
+      )}
+
+      <Step
+          n={hayCanchas ? 3 : 2} titulo="Resultado" resumen={resumenMarcador(form)}
+          abierto={teamsComplete && paso === 3} hecho={teamsComplete && canSaveMatch(form)}
+          bloqueado={!teamsComplete} onAbrir={() => setPaso(3)}
+        >
           <SetsScoring
             setsFormat={form.sets_format} sets={form.sets ?? []}
             score1={form.score1} score2={form.score2}
@@ -542,29 +691,40 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
             row1={<>{pairAvatarFor(form.team1Pair, 24)}<span className="truncate">{getPairLabel(form.team1Pair, pairs, players)}</span></>}
             row2={<>{pairAvatarFor(form.team2Pair, 24)}<span className="truncate">{getPairLabel(form.team2Pair, pairs, players)}</span></>}
           />
-        )}
+        </Step>
       </div>
-      {teamsComplete && (
-        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} onSave={onSave} onCancel={requestCancel} />
-      )}
+      {/* Fuera de los pasos: guardar tiene que poder hacerse sin abrir ninguno. */}
+      <div className="px-5 pb-5">
+        <AtajosDelPartido
+          visible={teamsComplete && !isEditing && !fixedTeams && timerState?.startedAt == null && !form.scheduledId}
+          onEmpezar={onEmpezar}
+          onProgramar={onProgramar}
+        />
+        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} saving={saving} onSave={onSave} onCancel={requestCancel} />
+      </div>
     </div>
   );
 }
 
 // ── Free mode ─────────────────────────────────────────────────────────────────
-function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, timerState, onTimerChange }) {
+function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, timerState, onTimerChange, onEmpezar, onProgramar, fixedTeams = false, saving = false }) {
   const { players } = tournament;
   const selectablePlayers = players.filter((p) => !p.removed);
   const allSelected = [...form.team1, ...form.team2].filter(Boolean);
 
-  function updateTeam(side, index, value) {
-    const updated = [...form[side]];
-    updated[index] = value;
-    setForm({ ...form, [side]: updated });
-  }
-
   const [minimized, setMinimized] = useState(false);
   const teamsComplete = !!(form.team1[0] && form.team1[1] && form.team2[0] && form.team2[1]);
+  const [paso, setPaso] = useState(isEditing || teamsComplete ? 3 : 1);
+
+  // Igual que en parejas: el salto de paso ocurre al elegir, no en un efecto.
+  function elegirJugador(side, index, value) {
+    const updated = [...form[side]];
+    updated[index] = value;
+    const siguiente = { ...form, [side]: updated };
+    setForm(siguiente);
+    const listos = !!(siguiente.team1[0] && siguiente.team1[1] && siguiente.team2[0] && siguiente.team2[1]);
+    if (listos) setPaso(tournamentCourts(tournament) > 1 && siguiente.court == null ? 2 : 3);
+  }
   const timerEl = !isEditing && teamsComplete
     ? <Timer timerState={timerState} onTimerChange={onTimerChange} onStop={(s) => setForm((f) => ({ ...f, duration_seconds: s ?? null }))} />
     : null;
@@ -604,18 +764,29 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
     );
   }
 
+  const hayCanchas = tournamentCourts(tournament) > 1;
+  const resumenEquipos = teamsComplete
+    ? `${teamNames(form.team1)} vs ${teamNames(form.team2)}`
+    : '—';
+
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-5 mb-6">
+    <div className="bg-surface border border-border-mid rounded-lg mb-6 overflow-hidden">
       {cancelModal}
-      <MatchCardHeader isEditing={isEditing} onCancel={requestCancel} timer={timerEl}
-        onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
-      <div className={teamsComplete ? "grid gap-x-5 gap-y-4 sm:grid-cols-2 items-start" : ""}>
+      <div className="px-5 pt-5">
+        <MatchCardHeader isEditing={isEditing} onCancel={requestCancel} timer={timerEl}
+          onMinimize={canMinimize ? () => setMinimized(true) : undefined} />
+      </div>
+      <div className="border-t border-border">
+      <Step
+        n={1} titulo="Equipos" resumen={resumenEquipos}
+        abierto={paso === 1} hecho={teamsComplete} onAbrir={() => setPaso(1)}
+      >
         <div className="flex flex-col gap-3 min-w-0">
-          <div className={`flex gap-3 flex-wrap ${teamsComplete ? "sm:flex-col" : ""}`}>
+          <div className="flex flex-col gap-3">
             <TeamBox label="EQUIPO 1" accent="brand">
               {[0, 1].map((i) => (
-                <select key={i} className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-                  value={form.team1[i]} onChange={(e) => updateTeam("team1", i, e.target.value)}>
+                <select key={i} className={TEAM_SELECT_CLS}
+                  value={form.team1[i]} onChange={(e) => elegirJugador("team1", i, e.target.value)}>
                   <option value="">Jugador {i + 1}</option>
                   {selectablePlayers.map((p) => (
                     <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team1[i] !== p.id}>
@@ -627,8 +798,8 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
             </TeamBox>
             <TeamBox label="EQUIPO 2" accent="cyan">
               {[0, 1].map((i) => (
-                <select key={i} className="w-full min-w-0 bg-base border border-border-mid text-content px-3 py-2.25 font-sans text-[13px] rounded-sm outline-none"
-                  value={form.team2[i]} onChange={(e) => updateTeam("team2", i, e.target.value)}>
+                <select key={i} className={TEAM_SELECT_CLS}
+                  value={form.team2[i]} onChange={(e) => elegirJugador("team2", i, e.target.value)}>
                   <option value="">Jugador {i + 1}</option>
                   {selectablePlayers.map((p) => (
                     <option key={p.id} value={p.id} disabled={allSelected.includes(p.id) && form.team2[i] !== p.id}>
@@ -639,12 +810,27 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
               ))}
             </TeamBox>
           </div>
-          {teamsComplete && tournamentCourts(tournament) > 1 && (
-            <CourtSelector courts={tournamentCourts(tournament)} value={form.court} onChange={(v) => setForm({ ...form, court: v })} />
-          )}
         </div>
+      </Step>
 
-        {teamsComplete && (
+      {hayCanchas && (
+        <Step
+          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${form.court}` : 'Sin asignar'}
+          abierto={teamsComplete && paso === 2} hecho={teamsComplete && form.court != null}
+          bloqueado={!teamsComplete} onAbrir={() => setPaso(2)}
+        >
+          <CourtSelector
+            courts={tournamentCourts(tournament)} value={form.court}
+            onChange={(v) => { setForm({ ...form, court: v }); setPaso(3); }}
+          />
+        </Step>
+      )}
+
+      <Step
+          n={hayCanchas ? 3 : 2} titulo="Resultado" resumen={resumenMarcador(form)}
+          abierto={teamsComplete && paso === 3} hecho={teamsComplete && canSaveMatch(form)}
+          bloqueado={!teamsComplete} onAbrir={() => setPaso(3)}
+        >
           <SetsScoring
             setsFormat={form.sets_format} sets={form.sets ?? []}
             score1={form.score1} score2={form.score2}
@@ -652,17 +838,25 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
             row1={<>{teamAvatars(form.team1, 24)}<span className="truncate">{teamNames(form.team1)}</span></>}
             row2={<>{teamAvatars(form.team2, 24)}<span className="truncate">{teamNames(form.team2)}</span></>}
           />
-        )}
+        </Step>
       </div>
-      {teamsComplete && (
-        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} onSave={onSave} onCancel={requestCancel} />
-      )}
+      {/* Fuera de los pasos: guardar tiene que poder hacerse sin abrir ninguno. */}
+      <div className="px-5 pb-5">
+        <AtajosDelPartido
+          visible={teamsComplete && !isEditing && !fixedTeams && timerState?.startedAt == null && !form.scheduledId}
+          onEmpezar={onEmpezar}
+          onProgramar={onProgramar}
+        />
+        <FormActions isEditing={isEditing} canSave={canSaveMatch(form)} saving={saving} onSave={onSave} onCancel={requestCancel} />
+      </div>
     </div>
   );
 }
 
 export default function MatchForm(props) {
-  return props.tournament.mode === "pairs"
+  // Un cruce del cuadro siempre enfrenta parejas, tenga el torneo el modo que
+  // tenga: si los equipos vienen fijos, el formulario es el de parejas.
+  return props.fixedTeams || props.tournament.mode === "pairs"
     ? <PairsForm {...props} />
     : <FreeForm  {...props} />;
 }
