@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, UserCheck, Crown, Layers, Trophy, Swords, UserPlus, Image, ArrowRight, Megaphone, Building2, Inbox } from 'lucide-react'
+import { Users, UserCheck, Crown, Layers, Trophy, Swords, UserPlus, Image, Megaphone, Building2, Inbox, ClipboardList } from 'lucide-react'
 import { api } from '../../utils/api'
 import Loader from '../Loader/Loader'
 import TimeseriesChart from './TimeseriesChart'
@@ -11,11 +11,22 @@ const RANGE_OPTIONS = [
   { days: 90, label: '90d' },
 ]
 
-function StatCard({ icon, label, value, sub }) {
+// Accesos directos del panel. `badge` es opcional: cuando devuelve un número > 0
+// se dibuja como pastilla en la esquina, igual que el contador de notificaciones
+// del Header (mismo bg-brand/text-base/animate-pulse).
+const ACTIONS = [
+  { to: '/admin/users',           icon: Users,     label: 'GESTIONAR USUARIOS' },
+  { to: '/admin/tournaments',     icon: Trophy,    label: 'VER TORNEOS' },
+  { to: '/admin/clubs',           icon: Building2, label: 'GESTIONAR CLUBES' },
+  { to: '/admin/clubs/requests',  icon: Inbox,     label: 'SOLICITUDES DE CLUB', badge: (s) => s.pending_club_requests },
+  { to: '/admin/notifications',   icon: Megaphone, label: 'ENVIAR NOTIFICACIÓN' },
+]
+
+function StatCard({ icon, label, value, sub, highlight }) {
   const Icon = icon
   return (
-    <div className="bg-surface border border-border rounded-lg p-4 flex flex-col gap-2">
-      <div className="flex items-center gap-2 text-muted">
+    <div className={`bg-surface border rounded-lg p-4 flex flex-col gap-2 ${highlight ? 'border-brand/50' : 'border-border'}`}>
+      <div className={`flex items-center gap-2 ${highlight ? 'text-brand' : 'text-muted'}`}>
         <Icon size={14} />
         <span className="font-condensed font-bold text-[11px] tracking-[2px] uppercase">{label}</span>
       </div>
@@ -50,27 +61,24 @@ export default function AdminDashboard() {
       </h1>
       <p className="text-muted text-xs font-mono mb-6">Métricas agregadas de la plataforma</p>
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        <Link to="/admin/users"
-          className="inline-flex items-center gap-2 bg-surface border border-border hover:border-brand text-white text-xs font-condensed font-bold tracking-widest px-4 py-2 rounded transition-colors">
-          GESTIONAR USUARIOS <ArrowRight size={12} />
-        </Link>
-        <Link to="/admin/tournaments"
-          className="inline-flex items-center gap-2 bg-surface border border-border hover:border-brand text-white text-xs font-condensed font-bold tracking-widest px-4 py-2 rounded transition-colors">
-          VER TORNEOS <ArrowRight size={12} />
-        </Link>
-        <Link to="/admin/notifications"
-          className="inline-flex items-center gap-2 bg-surface border border-border hover:border-brand text-white text-xs font-condensed font-bold tracking-widest px-4 py-2 rounded transition-colors">
-          <Megaphone size={12} /> ENVIAR NOTIFICACIÓN
-        </Link>
-        <Link to="/admin/clubs"
-          className="inline-flex items-center gap-2 bg-surface border border-border hover:border-brand text-white text-xs font-condensed font-bold tracking-widest px-4 py-2 rounded transition-colors">
-          <Building2 size={12} /> GESTIONAR CLUBES
-        </Link>
-        <Link to="/admin/clubs/requests"
-          className="inline-flex items-center gap-2 bg-surface border border-border hover:border-brand text-white text-xs font-condensed font-bold tracking-widest px-4 py-2 rounded transition-colors">
-          <Inbox size={12} /> SOLICITUDES DE CLUB
-        </Link>
+      <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 mb-6">
+        {ACTIONS.map((a, i) => {
+          const Icon    = a.icon
+          const badge   = a.badge?.(stats) ?? 0
+          const lastOdd = i === ACTIONS.length - 1 && ACTIONS.length % 2 === 1
+          return (
+            <Link key={a.to} to={a.to}
+              className={`relative flex flex-col sm:flex-row items-center justify-center gap-1.5 sm:gap-2 text-center bg-surface border border-border hover:border-brand text-white text-[10px] sm:text-xs font-condensed font-bold tracking-wide sm:tracking-widest px-3 py-3 sm:py-2 rounded transition-colors ${lastOdd ? 'col-span-2 sm:col-span-1' : ''}`}>
+              <Icon size={15} className="shrink-0" />
+              {a.label}
+              {badge > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-brand text-base text-[9px] font-mono font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none animate-pulse">
+                  {badge > 9 ? '9+' : badge}
+                </span>
+              )}
+            </Link>
+          )
+        })}
       </div>
 
       <section className="mb-8">
@@ -109,6 +117,16 @@ export default function AdminDashboard() {
           <StatCard icon={Trophy} label="Torneos totales"  value={stats.total_tournaments} sub={`+${stats.tournaments_30d} en 30d`} />
           <StatCard icon={Trophy} label="Torneos activos"  value={stats.active_tournaments} />
           <StatCard icon={Trophy} label="Torneos 7d"       value={stats.tournaments_7d} />
+        </div>
+      </section>
+
+      <section className="mb-8">
+        <div className="font-condensed font-bold text-[12px] tracking-[3px] text-muted mb-3">CLUBES</div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatCard icon={Building2}      label="Clubes totales"        value={stats.total_clubs} />
+          <StatCard icon={ClipboardList}  label="Solicitudes pendientes" value={stats.pending_club_requests}
+            highlight={stats.pending_club_requests > 0}
+            sub={stats.pending_club_requests > 0 ? 'esperando revisión' : undefined} />
         </div>
       </section>
 
