@@ -185,10 +185,10 @@ export default function AdminClubRequests() {
       </h1>
       <p className="text-muted text-xs font-mono mb-5">Revisá y aprobá los clubes propuestos por usuarios</p>
 
-      <div className="flex gap-1 mb-5">
+      <div className="grid grid-cols-3 gap-1 mb-5">
         {TABS.map((t) => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`text-[11px] font-condensed font-bold tracking-widest px-3 py-1.5 rounded transition-colors ${tab === t.key ? 'bg-brand text-base' : 'bg-surface border border-border text-muted hover:text-white'}`}>
+            className={`text-[10px] sm:text-[11px] font-condensed font-bold tracking-wide sm:tracking-widest px-2 py-1.5 rounded transition-colors ${tab === t.key ? 'bg-brand text-base' : 'bg-surface border border-border text-muted hover:text-white'}`}>
             {t.label}
           </button>
         ))}
