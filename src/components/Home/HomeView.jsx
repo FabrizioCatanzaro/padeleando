@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
 import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft } from 'lucide-react';
 import logoUrl from '../../assets/padeleando-logo.webp'
@@ -124,6 +124,19 @@ export default function HomeView() {
   const searchInputRef = useRef(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { hash, key: navKey } = useLocation();
+
+  // `#categorias` entra por el menú de la cabecera. `useScrollToTop` ya se
+  // aparta cuando hay hash, pero nadie lleva al ancla: el router no hace ese
+  // scroll solo. Espera a `loading` porque durante la carga la lista todavía no
+  // está en el DOM, y depende de `navKey` para que volver a tocar el mismo ítem
+  // estando ya en la portada vuelva a bajar.
+  useEffect(() => {
+    if (hash !== '#categorias' || loading) return;
+    requestAnimationFrame(() => {
+      document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [hash, navKey, loading]);
 
   const valsPrivacy = [
     { val: true, label: 'Público', icon: Globe },
@@ -855,16 +868,18 @@ export default function HomeView() {
                 : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
             )}
 
-            <CategoryList
-              merged={merged}
-              counts={roleCounts}
-              liveGroupIds={liveGroupIds}
-              nextMap={nextMap}
-              filter={roleFilter}
-              onFilter={setRoleFilter}
-              onOpen={(id) => navigate(`/cat/${id}`)}
-              onNew={openNewModal}
-            />
+            <div id="categorias" className="scroll-mt-20">
+              <CategoryList
+                merged={merged}
+                counts={roleCounts}
+                liveGroupIds={liveGroupIds}
+                nextMap={nextMap}
+                filter={roleFilter}
+                onFilter={setRoleFilter}
+                onOpen={(id) => navigate(`/cat/${id}`)}
+                onNew={openNewModal}
+              />
+            </div>
 
             <Discover
               tab={discoverTab}

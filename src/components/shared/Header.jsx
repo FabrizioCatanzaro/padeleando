@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, LayoutGrid, CreditCard, Shield, LogOut } from 'lucide-react'
+import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, House, LayoutGrid, CreditCard, Shield, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -405,6 +405,14 @@ export default function Header() {
 
                   <div className="py-1">
                     <button onClick={() => go('/')}
+                      className={`${MENU_ITEM} text-content hover:text-white`}>
+                      <House size={MENU_ITEM_ICON} className="shrink-0" />
+                      Panel
+                    </button>
+                    {/* El listado completo vive en la portada, debajo del saludo
+                        y las bandas. Sin el ancla, "Mis categorías" te dejaba
+                        arriba de todo y había que buscarlas scrolleando. */}
+                    <button onClick={() => go('/#categorias')}
                       className={`${MENU_ITEM} text-content hover:text-white`}>
                       <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
                       Mis categorías
