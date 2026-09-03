@@ -7,7 +7,7 @@ import ScheduledCard from "../Matches/ScheduledCard";
 import ScheduleForm from "../Matches/ScheduleForm";
 import Modal from "../shared/Modal";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
-import { Share2, Trash2, Dices, CalendarPlus } from "lucide-react";
+import { Share2, Trash2, Dices, CalendarPlus, Check } from "lucide-react";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -720,8 +720,9 @@ export default function Previa({
       {isOwner && !isDraft && !tournament.bracket && !previaComplete && (allSchedulePlayed || !schedule) && tournament.matches.length > 0 &&
         bracketButton('mt-6 w-full py-3.5 font-black text-[16px] tracking-[2px]')}
       {tournament.bracket && (
-        <div className="bg-surface-alt border border-border-strong rounded-md px-3.5 py-2.5 text-[12px] text-brand font-mono mt-4 text-center">
-          ✓ Cuadro de eliminación generado — miralo en la pestaña CUADRO
+        <div className="bg-surface-alt border border-border-strong rounded-md px-3.5 py-2.5 text-[12px] text-brand font-mono mt-4 flex items-center justify-center gap-1.5">
+          <Check size={13} strokeWidth={3} className="shrink-0" />
+          Cuadro de eliminación generado — miralo en la pestaña CUADRO
         </div>
       )}
     </div>

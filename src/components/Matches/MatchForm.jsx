@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
-import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, CalendarPlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, CalendarPlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Check } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Modal from "../shared/Modal";
 
@@ -492,7 +492,7 @@ function Step({ n, titulo, resumen, abierto, hecho, bloqueado = false, fijo = fa
           abierto ? 'bg-brand border-brand text-base'
             : hecho ? 'bg-green border-green text-base' : 'border-border-strong text-muted'
         }`}>
-          {hecho && !abierto ? '✓' : n}
+          {hecho && !abierto ? <Check size={12} strokeWidth={3.5} /> : n}
         </span>
         <span className={`font-condensed font-bold text-[11.5px] tracking-[0.1em] uppercase shrink-0 ${
           abierto ? 'text-white' : 'text-muted'

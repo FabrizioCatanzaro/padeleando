@@ -5,7 +5,7 @@ import { mergeGroups } from '../../utils/homePanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Circle, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 // Recharts sólo lo necesita este bloque, que además casi nunca se muestra.
 const AdvancedStats = lazy(() => import('./AdvancedStats'));
 import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons';
@@ -271,9 +271,11 @@ function PasswordStrength({ password }) {
   return (
     <div className="flex gap-1.5 flex-wrap mt-2">
       {checks.map(({ ok, label }) => (
-        <span key={label} className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors
+        <span key={label} className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors
           ${ok ? 'text-green bg-[#1a2e1a] border-[#4af07a44]' : 'text-[#555] bg-[#111] border-border-strong'}`}>
-          {ok ? '✓' : '○'} {label}
+          {ok ? <Check size={11} strokeWidth={3} className="shrink-0" />
+              : <Circle size={11} strokeWidth={2.5} className="shrink-0" />}
+          {label}
         </span>
       ))}
     </div>
@@ -857,8 +859,9 @@ export default function ProfileView() {
                   </div>
                 )}
                 {saveOk && (
-                  <div style={{ fontSize: 12, color: '#4af07a', fontFamily: "'Albert Sans',monospace", marginTop: 12 }}>
-                    ✓ Guardado
+                  <div style={{ fontSize: 12, color: '#4af07a', fontFamily: "'Albert Sans',monospace", marginTop: 12,
+                                display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Check size={13} strokeWidth={3} /> Guardado
                   </div>
                 )}
 

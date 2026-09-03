@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, House, LayoutGrid, CreditCard, Shield, LogOut } from 'lucide-react'
+import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, House, LayoutGrid, CreditCard, Shield, LogOut } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -555,7 +555,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
         {n.type === 'invitation' && (
           n.invitation_status === 'accepted' ? (
-            <div className="mt-1.5 text-[10px] font-mono text-green">✓ Aceptada</div>
+            <div className="mt-1.5 text-[10px] font-mono text-green flex items-center gap-1"><Check size={11} strokeWidth={3} /> Aceptada</div>
           ) : n.invitation_status === 'rejected' ? (
             <div className="mt-1.5 text-[10px] font-mono text-dim">Rechazada</div>
           ) : n.invitation_status === 'pending' ? (
@@ -574,7 +574,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
         {n.type === 'join_request' && (
           n.request_status === 'accepted' ? (
-            <div className="mt-1.5 text-[10px] font-mono text-green">✓ Aceptada</div>
+            <div className="mt-1.5 text-[10px] font-mono text-green flex items-center gap-1"><Check size={11} strokeWidth={3} /> Aceptada</div>
           ) : n.request_status === 'rejected' ? (
             <div className="mt-1.5 text-[10px] font-mono text-dim">Rechazada</div>
           ) : n.request_status === 'pending' ? (
@@ -621,7 +621,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
         {n.type === 'collab_invite' && (
           n.collab_status === 'accepted' ? (
-            <div className="mt-1.5 text-[10px] font-mono text-green">✓ Aceptada</div>
+            <div className="mt-1.5 text-[10px] font-mono text-green flex items-center gap-1"><Check size={11} strokeWidth={3} /> Aceptada</div>
           ) : n.collab_status === 'rejected' ? (
             <div className="mt-1.5 text-[10px] font-mono text-dim">Rechazada</div>
           ) : n.collab_status === 'pending' ? (
@@ -640,7 +640,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
         {n.type === 'ownership_transfer' && (
           n.transfer_status === 'accepted' ? (
-            <div className="mt-1.5 text-[10px] font-mono text-green">✓ Aceptada</div>
+            <div className="mt-1.5 text-[10px] font-mono text-green flex items-center gap-1"><Check size={11} strokeWidth={3} /> Aceptada</div>
           ) : n.transfer_status === 'rejected' ? (
             <div className="mt-1.5 text-[10px] font-mono text-dim">Rechazada</div>
           ) : n.transfer_status === 'pending' ? (

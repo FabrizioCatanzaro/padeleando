@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { MapPin, Instagram, Facebook, Globe, Phone, MessageCircle } from 'lucide-react'
+import { MapPin, Instagram, Facebook, Globe, Phone, MessageCircle, Check } from 'lucide-react'
 import MapPicker from '../shared/MapPicker'
 
 const labelCls = 'block text-[10px] font-mono tracking-widest text-muted mb-1.5'
@@ -31,12 +31,12 @@ export default function ClubFormFields({ form, patch }) {
             onChange={(e) => patch({ location_name: e.target.value })} placeholder="Calle, ciudad..." />
           <button type="button" onClick={() => setShowMap(true)}
             className={`absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 px-2 py-1 rounded text-[10px] font-mono border transition-colors cursor-pointer bg-transparent ${form.lat ? 'border-brand text-brand' : 'border-danger text-danger hover:brightness-125'}`}>
-            <MapPin size={10} />{form.lat ? 'PIN ✓' : 'MARCAR'}
+            <MapPin size={10} />{form.lat ? <>PIN <Check size={10} strokeWidth={3} /></> : 'MARCAR'}
           </button>
         </div>
-        <p className={`text-[10px] font-mono mt-1.5 ${form.lat ? 'text-muted' : 'text-danger'}`}>
+        <p className={`text-[10px] font-mono mt-1.5 flex items-start gap-1 ${form.lat ? 'text-muted' : 'text-danger'}`}>
           {form.lat
-            ? 'Ubicación marcada en el mapa ✓'
+            ? <><Check size={11} strokeWidth={3} className="shrink-0 mt-px" />Ubicación marcada en el mapa</>
             : 'Marcá la ubicación en el mapa (obligatorio para que aparezca en clubes cercanos).'}
         </p>
       </div>

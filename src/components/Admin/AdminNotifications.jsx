@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Send, Megaphone, Bold, Italic, Link2, X, User } from 'lucide-react'
+import { ArrowLeft, Send, Megaphone, Bold, Italic, Link2, X, User, Check } from 'lucide-react'
 import { api } from '../../utils/api'
 import { renderRichText } from '../../utils/richText'
 import Loader from '../Loader/Loader'
@@ -233,7 +233,7 @@ export default function AdminNotifications() {
                       {u.name}
                       {u.username && <span className="text-muted ml-1">@{u.username}</span>}
                       <span className="text-dim ml-1">— {u.email}</span>
-                      {already && <span className="text-brand ml-1">✓</span>}
+                      {already && <Check size={12} strokeWidth={3} className="inline text-brand ml-1 align-[-1px]" />}
                     </button>
                   )
                 })}

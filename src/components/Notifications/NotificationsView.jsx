@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { api } from '../../utils/api';
 import { renderRichText } from '../../utils/richText';
 import { notifSummary } from '../../utils/notifText';
@@ -441,7 +442,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
 
   if (n.type === 'invitation') {
     if (n.invitation_status === 'accepted') {
-      return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+      return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     }
     if (n.invitation_status === 'rejected') {
       return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
@@ -470,7 +471,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
 
   if (n.type === 'join_request') {
     if (n.request_status === 'accepted') {
-      return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+      return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     }
     if (n.request_status === 'rejected') {
       return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
@@ -535,7 +536,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
   }
 
   if (n.type === 'collab_invite') {
-    if (n.collab_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+    if (n.collab_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     if (n.collab_status === 'rejected') return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
     if (n.collab_status === 'pending') {
       return (
@@ -554,7 +555,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
   }
 
   if (n.type === 'ownership_transfer') {
-    if (n.transfer_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+    if (n.transfer_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     if (n.transfer_status === 'rejected') return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
     if (n.transfer_status === 'pending') {
       return (
