@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcStandings, adaptTournament, getTournamentWinnerLabel, getTournamentWinners, tournamentDate, normalize, fmt,
-  getAllMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS } from "../../utils/helpers";
+  getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS } from "../../utils/helpers";
 import { Bomb, CalendarDays, Clock, Crown, Flame, Gem, Handshake, Hourglass, Scale, Swords, Target, Timer, Trophy } from "lucide-react";
 import { api } from "../../utils/api";
 import {
@@ -80,7 +80,7 @@ function CurrentStats({ tournament }) {
   const isPairs = mode === "pairs";
 
   const matches   = useMemo(() => getAllMatches(tournament), [tournament]);
-  const played    = useMemo(() => matches.filter((m) => m.score1 !== "" && m.score2 !== ""), [matches]);
+  const played    = useMemo(() => playedMatches(matches), [matches]);
   const standings = useMemo(() => calcStandings(players, matches), [players, matches]);
   const isAmericano = tournament.format === 'americano';
 
@@ -429,8 +429,10 @@ function topBy(rows, sortBy, labelOf = (r) => r.name, maxNames = TIED_NAMES_PLAY
 function accumulatePlayers(tournaments) {
   const playerMap = {};
   tournaments.forEach((t) => {
-    const matches  = getAllMatches(t);
-    const keyById  = Object.fromEntries(t.players.map((p) => [p.id, playerKey(p)]));
+    const matches = getAllMatches(t);
+    // sf/sc salen de calcStandings, que ya aplicó las mismas reglas que pj/pg
+    // (descarta partidos sin cargar y empates inválidos). Antes se recalculaban
+    // acá con un filtro propio más débil: dos fuentes de verdad para el mismo dato.
     calcStandings(t.players, matches).forEach((s) => {
       const key = playerKey(s);
       const row = (playerMap[key] ??= {
@@ -441,19 +443,9 @@ function accumulatePlayers(tournaments) {
       row.pj += s.pj;
       row.pg += s.pg;
       row.pp += s.pp;
+      row.sf += s.sf;
+      row.sc += s.sc;
       if (s.pj > 0) row.torneos++;
-    });
-    matches.forEach((m) => {
-      const s1 = +m.score1 || 0, s2 = +m.score2 || 0;
-      // Mismo criterio que calcStandings, que ya descartó este partido: sin el
-      // filtro sumaría games de un partido que no cuenta como jugado.
-      if (s1 === s2) return;
-      [[m.team1, s1, s2], [m.team2, s2, s1]].forEach(([team, sf, sc]) => {
-        team.forEach((id) => {
-          const row = playerMap[keyById[id]];
-          if (row) { row.sf += sf; row.sc += sc; }
-        });
-      });
     });
   });
   return Object.values(playerMap).filter((r) => r.pj > 0);
@@ -628,23 +620,14 @@ function buildRankHistory(sortedByDate, sortBy, topKeys) {
 
   sortedByDate.forEach((t) => {
     const matches = getAllMatches(t);
-    const keyById = Object.fromEntries(t.players.map((p) => [p.id, playerKey(p)]));
     calcStandings(t.players, matches).forEach((s) => {
       const key = playerKey(s);
       const row = acc.get(key) ?? { key, pj: 0, pg: 0, sf: 0, sc: 0 };
       row.pj += s.pj;
       row.pg += s.pg;
+      row.sf += s.sf;
+      row.sc += s.sc;
       acc.set(key, row);
-    });
-    matches.forEach((m) => {
-      const s1 = +m.score1 || 0, s2 = +m.score2 || 0;
-      if (s1 === s2) return;
-      [[m.team1, s1, s2], [m.team2, s2, s1]].forEach(([team, sf, sc]) => {
-        team.forEach((id) => {
-          const row = acc.get(keyById[id]);
-          if (row) { row.sf += sf; row.sc += sc; }
-        });
-      });
     });
 
     const rows = sortRows([...acc.values()].filter((r) => r.pj > 0), sortBy)
@@ -703,9 +686,17 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   // recorre el histórico completo. Se invocaba hasta cuatro veces por render, y
   // los tres useState de arriba (modal premium, orden del ranking, historia)
   // rehacían todo el cálculo con cada clic.
-  const sortedByDate = useMemo(
-    () => [...tournaments].sort((a, b) => tournamentDate(a).localeCompare(tournamentDate(b))),
+  // Sólo cuentan las jornadas con al menos un partido cargado: una próxima o un
+  // borrador sin arrancar no es un torneo "jugado" y no debe inflar los conteos
+  // ni las series de los gráficos. La lista de TORNEOS y de CANCHAS más abajo
+  // sigue mostrando todas las jornadas, jugadas o no: son un listado, no un dato.
+  const playedTournaments = useMemo(
+    () => tournaments.filter((t) => playedMatches(getAllMatches(t)).length > 0),
     [tournaments]
+  );
+  const sortedByDate = useMemo(
+    () => [...playedTournaments].sort((a, b) => tournamentDate(a).localeCompare(tournamentDate(b))),
+    [playedTournaments]
   );
   // Base por rendimiento (%): se usa para las tarjetas y gráficos (mejor jugador, etc.).
   const playerBase = useMemo(() => accumulatePlayers(sortedByDate), [sortedByDate]);
@@ -739,11 +730,11 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
     );
   }, [sortedByDate, rankMode, rankedRows]);
 
-  if (tournaments.length === 0)
+  if (playedTournaments.length === 0)
     return <div className="text-center text-dim py-10 px-5 font-sans leading-loose">No hay torneos anteriores registrados.</div>;
 
-  const hasPairMode = tournaments.some((t) => t.mode === "pairs");
-  const allPairMode = tournaments.every((t) => t.mode === "pairs");
+  const hasPairMode = playedTournaments.some((t) => t.mode === "pairs");
+  const allPairMode = playedTournaments.every((t) => t.mode === "pairs");
 
   // ── Standings por pareja ────────────────────────────────────────────────
   // La clave es la identidad de los dos jugadores, no sus players.id: al ser
@@ -752,8 +743,8 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   const pairMap = {};
   if (hasPairMode) {
     const infoById = {};
-    tournaments.forEach((t) => t.players.forEach((p) => { infoById[p.id] = { key: playerKey(p), name: p.name }; }));
-    tournaments.filter((t) => t.mode === "pairs").forEach((t) => {
+    playedTournaments.forEach((t) => t.players.forEach((p) => { infoById[p.id] = { key: playerKey(p), name: p.name }; }));
+    playedTournaments.filter((t) => t.mode === "pairs").forEach((t) => {
       // Una pareja suma la jornada una sola vez, jugue los partidos que juegue.
       const seen = new Set();
       getAllMatches(t).forEach((m) => {
@@ -787,7 +778,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   // (split por " / " y " & "), así que cualquier nombre con un "&" adentro
   // generaba campeones fantasma.
   const champCount = {};
-  tournaments.forEach((t) => {
+  playedTournaments.forEach((t) => {
     const playerById = Object.fromEntries(t.players.map((p) => [p.id, p]));
     getTournamentWinners(t).forEach((w) => {
       w.ids.forEach((id) => {
@@ -813,11 +804,11 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
             ...(t.bracket.semis   ?? []), ...(t.bracket.final ? [t.bracket.final] : [])]
       .filter(m => m.winner_id != null).length;
   }
-  const totalMatches = tournaments.reduce((acc, t) => acc + t.matches.length + bracketPlayedCount(t), 0);
+  const totalMatches = playedTournaments.reduce((acc, t) => acc + t.matches.length + bracketPlayedCount(t), 0);
   const canShowPairs  = hasPairMode && pairRows.length > 0;
   const showPairTable = canShowPairs && (rankScope ?? (allPairMode ? 'pairs' : 'players')) === 'pairs';
 
-  const allHistMatches = tournaments.flatMap(getAllMatches);
+  const allHistMatches = playedTournaments.flatMap(getAllMatches);
   const histTimed      = allHistMatches.filter((m) => (m.duration_seconds ?? 0) > 0);
   const histSeconds    = histTimed.reduce((acc, m) => acc + m.duration_seconds, 0);
 
@@ -828,8 +819,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   // ── Datos para gráficos avanzados ──────────────────────────────────────
   const champChartData = champRows.slice(0, 5).map((c) => ({ key: c.key, name: c.name.split(' ')[0], torneos: c.count }));
 
-  const activityChartData = [...tournaments]
-    .sort((a, b) => tournamentDate(a).localeCompare(tournamentDate(b)))
+  const activityChartData = sortedByDate
     .map((t) => {
       // Las dos series salen del mismo universo de partidos: la barra contaba
       // los del cuadro final y la línea de games no, así que medían distinto.
@@ -897,7 +887,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
 
       {/* ── BÁSICAS (siempre visibles) ── */}
       <StatSlabs className="mb-6">
-        <StatSlab label="Torneos jugados" value={tournaments.length} tone="cyan" icon={CalendarDays} />
+        <StatSlab label="Torneos jugados" value={playedTournaments.length} tone="cyan" icon={CalendarDays} />
         <StatSlab label="Partidos en total" value={totalMatches} tone="secondary" icon={Swords} />
         {histTimed.length > 0 && (
           <StatSlab
@@ -918,8 +908,8 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
             kind="name"
             tone="gold"
             icon={Trophy}
-            sub={`${topChampCount} de ${tournaments.length} ${tournaments.length === 1 ? "torneo" : "torneos"}`}
-            meter={Math.round((topChampCount / tournaments.length) * 100)}
+            sub={`${topChampCount} de ${playedTournaments.length} ${playedTournaments.length === 1 ? "torneo" : "torneos"}`}
+            meter={Math.round((topChampCount / playedTournaments.length) * 100)}
           />
         )}
       </StatSlabs>
@@ -1001,7 +991,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
             }
             {showPairTable && !allPairMode && (
               <div className="mt-2 text-[10px] font-mono text-dim">
-                Sólo cuenta los torneos de parejas fijas ({tournaments.filter((t) => t.mode === 'pairs').length} de {tournaments.length}).
+                Sólo cuenta los torneos de parejas fijas ({playedTournaments.filter((t) => t.mode === 'pairs').length} de {playedTournaments.length}).
               </div>
             )}
           </div>
@@ -1198,10 +1188,10 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
               rows={rankStoryRows}
               mode={rankMode}
               scope={showPairTable ? 'pairs' : 'players'}
-              tournamentsCount={tournaments.length}
+              tournamentsCount={playedTournaments.length}
               hiddenCount={rankStoryAll.length - rankStoryRows.length}
               note={showPairTable && !allPairMode
-                ? `Sólo torneos de parejas fijas (${tournaments.filter((t) => t.mode === 'pairs').length} de ${tournaments.length})`
+                ? `Sólo torneos de parejas fijas (${playedTournaments.filter((t) => t.mode === 'pairs').length} de ${playedTournaments.length})`
                 : null}
             />
           }
@@ -1215,7 +1205,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
           story={
             <CategoryStory
               groupName={groupName}
-              tournamentsCount={tournaments.length}
+              tournamentsCount={playedTournaments.length}
               totalMatches={totalMatches}
               isPremium={ownerIsPremium}
               champion={storyChampion}
