@@ -1,13 +1,15 @@
 import { useState } from 'react'
 import { MapPin, Instagram, Facebook, Globe, Phone, MessageCircle, Check } from 'lucide-react'
 import MapPicker from '../shared/MapPicker'
+import ClubScheduleFields from './ClubScheduleFields'
 
 const labelCls = 'block text-[10px] font-mono tracking-widest text-muted mb-1.5'
 const inputCls = 'w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans'
 
-// Campos editables de un club, compartidos por el modal de solicitud y el panel de admin.
-// `form` es el estado (ver clubToForm) y `patch` aplica un cambio parcial.
-export default function ClubFormFields({ form, patch }) {
+// Campos editables de un club, compartidos por el modal de solicitud, el panel
+// de admin y el del dueño verificado -- los tres editan lo mismo. `form` es
+// el estado (ver clubToForm) y `patch` aplica un cambio parcial.
+export default function ClubFormFields({ form, patch, realCourtsCount = 0 }) {
   const [showMap, setShowMap] = useState(false)
 
   function onMapConfirm(lat, lon, displayName) {
@@ -61,9 +63,25 @@ export default function ClubFormFields({ form, patch }) {
       </div>
 
       <div>
-        <label className={labelCls}>CANTIDAD DE CANCHAS (opcional)</label>
-        <input className={inputCls} type="number" min="0" max="50" value={form.courts}
-          onChange={(e) => patch({ courts: e.target.value })} placeholder="ej: 4" />
+        <label className={labelCls}>CANTIDAD DE CANCHAS {realCourtsCount === 0 && '(opcional)'}</label>
+        {realCourtsCount > 0 ? (
+          <>
+            <div className={`${inputCls} opacity-70 cursor-not-allowed select-none`}>
+              {realCourtsCount} {realCourtsCount === 1 ? 'cancha cargada' : 'canchas cargadas'}
+            </div>
+            <p className="text-[10px] font-mono text-dim mt-1.5 leading-relaxed">
+              Se calcula solo a partir de las canchas que cargaste en "Gestionar canchas" (ficha del club). Para cambiarlo, agregá, sacá o deshabilitá canchas ahí.
+            </p>
+          </>
+        ) : (
+          <>
+            <input className={inputCls} type="number" min="0" max="50" value={form.courts}
+              onChange={(e) => patch({ courts: e.target.value })} placeholder="ej: 4" />
+            <p className="text-[10px] font-mono text-dim mt-1.5 leading-relaxed">
+              Sólo un número de referencia, hasta que cargues canchas individuales desde "Gestionar canchas" en la ficha del club.
+            </p>
+          </>
+        )}
       </div>
 
       <div>
@@ -88,10 +106,23 @@ export default function ClubFormFields({ form, patch }) {
       </div>
 
       <div>
-        <label className={labelCls}>HORARIOS</label>
-        <textarea className={`${inputCls} resize-none`} rows={3} value={form.scheduleText}
-          onChange={(e) => patch({ scheduleText: e.target.value })}
-          placeholder={'Una línea por horario, ej:\nLun a Vie: 9 a 23\nSáb y Dom: 10 a 22'} />
+        <div className="flex items-center justify-between mb-1.5">
+          <label className={labelCls}>HORARIOS</label>
+          <button
+            type="button"
+            onClick={() => patch({ scheduleMode: form.scheduleMode === 'text' ? 'grid' : 'text' })}
+            className="text-[10px] font-mono text-muted hover:text-brand bg-transparent border-none cursor-pointer p-0"
+          >
+            {form.scheduleMode === 'text' ? 'Usar grilla de días' : 'Escribirlo a mano'}
+          </button>
+        </div>
+        {form.scheduleMode === 'text' ? (
+          <textarea className={`${inputCls} resize-none`} rows={3} value={form.scheduleText}
+            onChange={(e) => patch({ scheduleText: e.target.value })}
+            placeholder={'Una línea por horario, ej:\nLun a Vie: 9 a 23\nSáb y Dom: 10 a 22'} />
+        ) : (
+          <ClubScheduleFields grid={form.scheduleGrid} onChange={(scheduleGrid) => patch({ scheduleGrid })} />
+        )}
       </div>
 
       {showMap && (

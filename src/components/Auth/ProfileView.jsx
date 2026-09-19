@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { api } from '../../utils/api';
 import { fmt, calcNivel } from '../../utils/helpers';
 import { mergeGroups } from '../../utils/homePanel';
@@ -22,6 +22,7 @@ import ProfileHero, { PlanBand } from './ProfileHero';
 import SectionRule from '../shared/SectionRule';
 import ProfileStats from './ProfileStats';
 import ProfileCategories from './ProfileCategories';
+import MyBookingsView from '../Club/MyBookingsView';
 import PremiumChip from '../shared/PremiumChip';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import AvatarCropper from '../shared/AvatarCropper';
@@ -54,11 +55,15 @@ const NETWORKS = [
 
 const EMPTY_LINK = { network: '', url: '' };
 
-const PROFILE_TABS = [
+const BASE_TABS = [
   { id: 'resumen',  label: 'RESUMEN' },
   { id: 'partidos', label: 'PARTIDOS' },
   { id: 'stats',    label: 'ESTADÍSTICAS' },
 ];
+// "Mis reservas" es privado -- nadie visitando el perfil de otra persona
+// tiene por qué ver qué turnos reservó. Se agrega sólo para isOwnProfile,
+// mismo patrón que la solapa RESERVAS del dueño en ClubProfileView.jsx.
+const BOOKINGS_TAB = { id: 'reservas', label: 'RESERVAS' };
 
 // El avatar se guarda a 512 px: pedirlo transformado sólo cambia el formato y la compresión.
 function avatarZoomUrl(src) {
@@ -398,6 +403,19 @@ export default function ProfileView() {
     return () => window.removeEventListener('keydown', onKey);
   }, [avatarZoom]);
 
+  // "Mis reservas" sólo la ve el dueño del perfil: isOwnProfile hace falta
+  // YA para armar `tabs` con useMemo, y useMemo no puede ir después de un
+  // return condicional (los "if (loading) return" de abajo) -- si loading
+  // es true la primera vez, ese useMemo no llegaría a ejecutarse, y al pasar
+  // a loading=false sí, dando un hook de más entre renders ("Rendered more
+  // hooks than during the previous render"). Por eso isOwnProfile y tabs se
+  // calculan acá arriba, con `data` optional porque todavía puede ser null.
+  const isOwnProfile = !!data && user?.username === data.owner.username;
+  const tabs = useMemo(
+    () => (isOwnProfile ? [...BASE_TABS, BOOKINGS_TAB] : BASE_TABS),
+    [isOwnProfile],
+  );
+
   // El perfil siempre rinde más alto que la pantalla, así que el hueco de carga
   // debe empujar el pie fuera del viewport en vez de dejarlo asomar.
   if (loading) return <Loader minHeight="100vh" />;
@@ -405,7 +423,6 @@ export default function ProfileView() {
   if (error)   return <div className="text-danger p-10">{error}</div>;
 
   const { owner, groups, played_groups, coorg_groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
-  const isOwnProfile  = user?.username === owner.username;
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
 
   const avatarSize  = isDesktop ? 128 : 104;
@@ -905,7 +922,7 @@ export default function ProfileView() {
         {/* Pestañas. Antes eran diez bloques apilados en una sola columna: con
             cuatro partidos era scroll vacío y con doscientos, un muro. */}
         <div className="flex border-b border-border -mx-4 sm:-mx-6 px-2 mb-5 overflow-x-auto">
-          {PROFILE_TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -1055,6 +1072,28 @@ export default function ProfileView() {
         </>)}
 
         {tab === 'resumen' && (<>
+        {/* Dueño verificado de un club, si eligió mostrarlo públicamente
+            (clubs.owner_visible) -- mismo dato que la ficha del club expone
+            al revés (ahí se ve el dueño; acá, en el perfil del dueño, se ve
+            el club). Arriba de todo el Resumen, antes de cualquier otra
+            sección. */}
+        {owner.owned_clubs?.length > 0 && (
+          <div className="flex flex-col gap-2 mb-4">
+            {owner.owned_clubs.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/club/${c.id}`)}
+                className="flex items-center gap-2.5 border border-brand/30 bg-brand/5 rounded-lg px-3.5 py-2.5 cursor-pointer hover:bg-brand/10 transition-colors"
+              >
+                <BadgeCheck size={16} className="text-brand shrink-0" />
+                <span className="text-[12.5px] text-white font-sans">
+                  Dueño verificado de <span className="font-semibold">{c.name}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Últimos partidos */}
         {recent_matches?.length > 0 && (
           <>
@@ -1168,6 +1207,13 @@ export default function ProfileView() {
 
 
         {tab === 'partidos' && <ProfileMatches matches={recent_matches ?? []} stats={stats} />}
+
+        {/* isOwnProfile de nuevo acá, no sólo en `tabs` de arriba: la solapa
+            no se renderiza para un visitante, pero si por lo que sea `tab`
+            quedara en 'reservas' (por ejemplo, cambiando de perfil sin que
+            se resetee el estado), este componente jamás debe montarse para
+            ver las reservas de otra persona. */}
+        {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
       </div>
 
       {cropFile && (

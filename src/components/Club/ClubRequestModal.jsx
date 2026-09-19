@@ -59,7 +59,7 @@ export default function ClubRequestModal({ initialName = '', club = null, onClos
               ? 'Editá los datos que cambiaron (teléfono, canchas, horarios, etc.). Un administrador revisará y aplicará los cambios.'
               : 'Completá los datos del club que no encontrás. Un administrador lo revisará y lo agregará.'}
           </p>
-          <ClubFormFields form={form} patch={patch} />
+          <ClubFormFields form={form} patch={patch} realCourtsCount={club?.courts_list?.length ?? 0} />
           {error && <p className="text-danger text-xs font-mono mt-3">{error}</p>}
           <div className="flex gap-2 mt-5">
             <Btn variant="primary" full size="md" onClick={handleSubmit} loading={saving}>ENVIAR SOLICITUD</Btn>

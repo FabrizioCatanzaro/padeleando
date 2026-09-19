@@ -27,6 +27,7 @@ const AdminTournaments    = lazy(() => import('./components/Admin/AdminTournamen
 const AdminNotifications  = lazy(() => import('./components/Admin/AdminNotifications'))
 const AdminClubs          = lazy(() => import('./components/Admin/AdminClubs'))
 const AdminClubRequests   = lazy(() => import('./components/Admin/AdminClubRequests'))
+const AdminClubClaims     = lazy(() => import('./components/Admin/AdminClubClaims'))
 const ClubProfileView     = lazy(() => import('./components/Club/ClubProfileView'))
 const Setup        = lazy(() => import('./components/Setup/Setup'))
 const MainView     = lazy(() => import('./components/Main/Main'))
@@ -153,6 +154,7 @@ export default function App() {
         <Route path="/admin/notifications"                       element={<AdminRoute><Titled title="Notificaciones · Admin"><AdminNotifications /></Titled></AdminRoute>} />
         <Route path="/admin/clubs"                               element={<AdminRoute><Titled title="Clubes · Admin"><AdminClubs /></Titled></AdminRoute>} />
         <Route path="/admin/clubs/requests"                      element={<AdminRoute><Titled title="Solicitudes de clubes · Admin"><AdminClubRequests /></Titled></AdminRoute>} />
+        <Route path="/admin/clubs/claims"                        element={<AdminRoute><Titled title="Reclamos de clubes · Admin"><AdminClubClaims /></Titled></AdminRoute>} />
         <Route path="/subscription/success"                      element={<PrivateRoute><Titled title="Suscripción"><SubscriptionSuccess /></Titled></PrivateRoute>} />
         <Route path="/subscription/failure"                      element={<PrivateRoute><Titled title="Suscripción"><SubscriptionFailure /></Titled></PrivateRoute>} />
         <Route path="/subscription/pending"                      element={<PrivateRoute><Titled title="Suscripción"><SubscriptionPending /></Titled></PrivateRoute>} />

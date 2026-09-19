@@ -13,8 +13,12 @@ const BY_TYPE = {
   player_unlinked:    (n) => `${actor(n)} te desvinculó de ${grupo(n)}`,
   new_tournament:     (n) => `${actor(n)} creó ${n.tournament_name ?? 'un torneo'} en ${grupo(n)}`,
   club_request:       ()  => 'Novedades sobre tu solicitud de club',
+  club_claim:         (n) => n.body ?? 'Novedades sobre tu reclamo de club',
   premium_claim:      ()  => 'Tenés un código premium para reclamar',
   admin_message:      (n) => n.body ?? 'Mensaje del equipo',
+  booking_decided:    (n) => n.body ?? 'Novedades sobre tu turno',
+  booking_requested:  (n) => n.body ?? 'Nueva solicitud de turno',
+  booking_cancelled:  (n) => n.body ?? 'Se canceló una reserva',
 };
 
 const MAX = 120;

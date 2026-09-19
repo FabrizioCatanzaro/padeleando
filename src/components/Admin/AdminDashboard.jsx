@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Users, UserCheck, Crown, Layers, Trophy, Swords, UserPlus, Image, Megaphone, Building2, Inbox, ClipboardList } from 'lucide-react'
+import { Users, UserCheck, Crown, Layers, Trophy, Swords, UserPlus, Image, Megaphone, Building2, Inbox, ClipboardList, ShieldCheck } from 'lucide-react'
 import { api } from '../../utils/api'
 import Loader from '../Loader/Loader'
 import TimeseriesChart from './TimeseriesChart'
@@ -19,6 +19,7 @@ const ACTIONS = [
   { to: '/admin/tournaments',     icon: Trophy,    label: 'VER TORNEOS' },
   { to: '/admin/clubs',           icon: Building2, label: 'GESTIONAR CLUBES' },
   { to: '/admin/clubs/requests',  icon: Inbox,     label: 'SOLICITUDES DE CLUB', badge: (s) => s.pending_club_requests },
+  { to: '/admin/clubs/claims',    icon: ShieldCheck, label: 'RECLAMOS DE CLUB',  badge: (s) => s.pending_club_claims },
   { to: '/admin/notifications',   icon: Megaphone, label: 'ENVIAR NOTIFICACIÓN' },
 ]
 
@@ -43,12 +44,36 @@ export default function AdminDashboard() {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
 
-  useEffect(() => {
-    Promise.all([api.admin.stats(), api.admin.timeseries(days)])
-      .then(([s, ts]) => { setStats(s); setSeries(ts.points) })
+  // El loader de pantalla completa sólo se muestra en la carga inicial
+  // (loading arranca en `true`, ver useState abajo) -- ni al cambiar el
+  // rango de ACTIVIDAD ni al refrescar en silencio se vuelve a prender.
+  const fetchStats = useCallback((opts) => {
+    const silent = opts?.silent
+    return Promise.all([api.admin.stats(), api.admin.timeseries(days)])
+      .then(([s, ts]) => { setStats(s); setSeries(ts.points); setError(null) })
       .catch(e => setError(e.message))
-      .finally(() => setLoading(false))
+      .finally(() => { if (!silent) setLoading(false) })
   }, [days])
+
+  useEffect(() => { fetchStats() }, [fetchStats])
+
+  // Los contadores de "pendientes" (solicitudes/reclamos) se pisan sólo al
+  // montar -- si el admin deja esta pestaña abierta, aprueba/rechaza algo
+  // desde otra pestaña o vuelve acá después de un rato, el número quedaba
+  // viejo hasta refrescar la página a mano. Se refresca (en silencio, sin
+  // el loader de pantalla completa) cada vez que la pestaña vuelve a estar
+  // visible/en foco.
+  useEffect(() => {
+    function onVisible() {
+      if (document.visibilityState === 'visible') fetchStats({ silent: true })
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
+    }
+  }, [fetchStats])
 
   if (loading) return <Loader />
   if (error)   return <p className="text-danger text-sm font-mono p-6">{error}</p>
@@ -127,6 +152,9 @@ export default function AdminDashboard() {
           <StatCard icon={ClipboardList}  label="Solicitudes pendientes" value={stats.pending_club_requests}
             highlight={stats.pending_club_requests > 0}
             sub={stats.pending_club_requests > 0 ? 'esperando revisión' : undefined} />
+          <StatCard icon={ShieldCheck}    label="Reclamos pendientes"    value={stats.pending_club_claims}
+            highlight={stats.pending_club_claims > 0}
+            sub={stats.pending_club_claims > 0 ? 'esperando revisión' : undefined} />
         </div>
       </section>
 
