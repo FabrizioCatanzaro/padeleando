@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { uid, clubCourts, entityClub, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS } from "../../utils/helpers";
+import { uid, clubCourts, entityClub, isSaneEventDate, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS } from "../../utils/helpers";
 import { api } from "../../utils/api";
 import { useTournament } from "../../hooks/useTournament";
 import PlayerInput from "./PlayerInput";
@@ -34,7 +34,9 @@ function EventMeta({ club, setClub, eventDate, setEventDate, eventTime, setEvent
           <input
             type="date"
             value={eventDate}
-            onChange={(e) => setEventDate(e.target.value)}
+            min="1900-01-01"
+            max="2100-12-31"
+            onChange={(e) => { if (isSaneEventDate(e.target.value)) setEventDate(e.target.value); }}
             className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none"
           />
         </div>

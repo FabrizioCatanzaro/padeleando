@@ -7,7 +7,7 @@ import ClubSelector from "../shared/ClubSelector";
 import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import Btn from "../shared/Btn";
-import { clubCourts, entityClub, fmtHora } from "../../utils/helpers";
+import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check } from "lucide-react";
 
 function ClubEventEditor({ tournament, onSave }) {
@@ -50,7 +50,9 @@ function ClubEventEditor({ tournament, onSave }) {
             <input
               type="date"
               value={date}
-              onChange={(e) => setDate(e.target.value)}
+              min="1900-01-01"
+              max="2100-12-31"
+              onChange={(e) => { if (isSaneEventDate(e.target.value)) setDate(e.target.value); }}
               className="w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
             />
           </div>

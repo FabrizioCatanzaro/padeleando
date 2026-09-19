@@ -625,6 +625,10 @@ export const localDateStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// input[type=date] acepta cualquier año representable (hasta 275760): sin este freno,
+// escribir un año de más dígitos guarda fechas como "52026" tal cual.
+export const isSaneEventDate = (v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0, 4)) >= 1900 && Number(v.slice(0, 4)) <= 2100;
+
 // Límites de parejas del formato americano.
 export const AMERICANO_MIN_PAIRS = 8;
 export const AMERICANO_MAX_PAIRS = 16;
