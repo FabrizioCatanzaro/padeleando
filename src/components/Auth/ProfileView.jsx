@@ -1,11 +1,11 @@
-import { useState, useEffect, useRef, useCallback, lazy, Suspense } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { api } from '../../utils/api';
 import { fmt, calcNivel } from '../../utils/helpers';
 import { mergeGroups } from '../../utils/homePanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Circle, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
 // Recharts sólo lo necesita este bloque, que además casi nunca se muestra.
 const AdvancedStats = lazy(() => import('./AdvancedStats'));
 import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons';
@@ -22,6 +22,7 @@ import ProfileHero, { PlanBand } from './ProfileHero';
 import SectionRule from '../shared/SectionRule';
 import ProfileStats from './ProfileStats';
 import ProfileCategories from './ProfileCategories';
+import MyBookingsView from '../Club/MyBookingsView';
 import PremiumChip from '../shared/PremiumChip';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import AvatarCropper from '../shared/AvatarCropper';
@@ -54,11 +55,13 @@ const NETWORKS = [
 
 const EMPTY_LINK = { network: '', url: '' };
 
-const PROFILE_TABS = [
+const BASE_TABS = [
   { id: 'resumen',  label: 'RESUMEN' },
   { id: 'partidos', label: 'PARTIDOS' },
   { id: 'stats',    label: 'ESTADÍSTICAS' },
 ];
+// "Mis reservas" es privado: solo se agrega en el perfil propio
+const BOOKINGS_TAB = { id: 'reservas', label: 'RESERVAS' };
 
 // El avatar se guarda a 512 px: pedirlo transformado sólo cambia el formato y la compresión.
 function avatarZoomUrl(src) {
@@ -271,9 +274,11 @@ function PasswordStrength({ password }) {
   return (
     <div className="flex gap-1.5 flex-wrap mt-2">
       {checks.map(({ ok, label }) => (
-        <span key={label} className={`text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors
+        <span key={label} className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors
           ${ok ? 'text-green bg-[#1a2e1a] border-[#4af07a44]' : 'text-[#555] bg-[#111] border-border-strong'}`}>
-          {ok ? '✓' : '○'} {label}
+          {ok ? <Check size={11} strokeWidth={3} className="shrink-0" />
+              : <Circle size={11} strokeWidth={2.5} className="shrink-0" />}
+          {label}
         </span>
       ))}
     </div>
@@ -396,6 +401,13 @@ export default function ProfileView() {
     return () => window.removeEventListener('keydown', onKey);
   }, [avatarZoom]);
 
+  // tabs va antes de los return condicionales para no romper el orden de hooks
+  const isOwnProfile = !!data && user?.username === data.owner.username;
+  const tabs = useMemo(
+    () => (isOwnProfile ? [...BASE_TABS, BOOKINGS_TAB] : BASE_TABS),
+    [isOwnProfile],
+  );
+
   // El perfil siempre rinde más alto que la pantalla, así que el hueco de carga
   // debe empujar el pie fuera del viewport en vez de dejarlo asomar.
   if (loading) return <Loader minHeight="100vh" />;
@@ -403,7 +415,6 @@ export default function ProfileView() {
   if (error)   return <div className="text-danger p-10">{error}</div>;
 
   const { owner, groups, played_groups, coorg_groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
-  const isOwnProfile  = user?.username === owner.username;
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
 
   const avatarSize  = isDesktop ? 128 : 104;
@@ -857,8 +868,9 @@ export default function ProfileView() {
                   </div>
                 )}
                 {saveOk && (
-                  <div style={{ fontSize: 12, color: '#4af07a', fontFamily: "'Albert Sans',monospace", marginTop: 12 }}>
-                    ✓ Guardado
+                  <div style={{ fontSize: 12, color: '#4af07a', fontFamily: "'Albert Sans',monospace", marginTop: 12,
+                                display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <Check size={13} strokeWidth={3} /> Guardado
                   </div>
                 )}
 
@@ -902,7 +914,7 @@ export default function ProfileView() {
         {/* Pestañas. Antes eran diez bloques apilados en una sola columna: con
             cuatro partidos era scroll vacío y con doscientos, un muro. */}
         <div className="flex border-b border-border -mx-4 sm:-mx-6 px-2 mb-5 overflow-x-auto">
-          {PROFILE_TABS.map((t) => (
+          {tabs.map((t) => (
             <button
               key={t.id}
               type="button"
@@ -1052,6 +1064,24 @@ export default function ProfileView() {
         </>)}
 
         {tab === 'resumen' && (<>
+        {/* Dueño verificado de un club, si eligió mostrarlo (owner_visible) */}
+        {owner.owned_clubs?.length > 0 && (
+          <div className="flex flex-col gap-2 mb-4">
+            {owner.owned_clubs.map((c) => (
+              <div
+                key={c.id}
+                onClick={() => navigate(`/club/${c.id}`)}
+                className="flex items-center gap-2.5 border border-brand/30 bg-brand/5 rounded-lg px-3.5 py-2.5 cursor-pointer hover:bg-brand/10 transition-colors"
+              >
+                <BadgeCheck size={16} className="text-brand shrink-0" />
+                <span className="text-[12.5px] text-white font-sans">
+                  Dueño verificado de <span className="font-semibold">{c.name}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Últimos partidos */}
         {recent_matches?.length > 0 && (
           <>
@@ -1165,6 +1195,9 @@ export default function ProfileView() {
 
 
         {tab === 'partidos' && <ProfileMatches matches={recent_matches ?? []} stats={stats} />}
+
+        {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
+        {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
       </div>
 
       {cropFile && (

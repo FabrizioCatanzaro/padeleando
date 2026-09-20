@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   MapPin, MessageCircle, Instagram, Facebook, Globe, Building2,
@@ -13,8 +13,12 @@ import courtBg from '../../assets/padelcourt.webp'
 import Loader from '../Loader/Loader'
 import LazyNotFound from '../NotFound/LazyNotFound'
 import ClubRequestModal from './ClubRequestModal'
+import ClubClaimModal from './ClubClaimModal'
 import ClubEditModal from './ClubEditModal'
+import ClubCourtsModal from './ClubCourtsModal'
 import ClubAgenda from './ClubAgenda'
+import ClubBooking from './ClubBooking'
+import ClubBookingManage from './ClubBookingManage'
 import ClubCategories from './ClubCategories'
 import ClubInfo from './ClubInfo'
 
@@ -38,11 +42,14 @@ function mapsUrl(club) {
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(club.location_name)}`
 }
 
-const TABS = [
-  { id: 'agenda', label: 'AGENDA' },
-  { id: 'cats',   label: 'CATEGORÍAS' },
-  { id: 'info',   label: 'INFO' },
+const BASE_TABS = [
+  { id: 'agenda',   label: 'AGENDA' },
+  { id: 'reservar', label: 'RESERVAR' },
+  { id: 'cats',     label: 'CATEGORÍAS' },
+  { id: 'info',     label: 'INFO' },
 ]
+// Solo dueño o admin ve la solapa de gestión, después de RESERVAR
+const MANAGE_TAB = { id: 'gestion', label: 'RESERVAS' }
 
 export default function ClubProfileView() {
   const { id } = useParams()
@@ -56,26 +63,59 @@ export default function ClubProfileView() {
   const [error, setError]   = useState(null)
   const [showEditRequest, setShowEditRequest] = useState(false)
   const [showEditClub, setShowEditClub] = useState(false)
+  const [showClaim, setShowClaim] = useState(false)
+  const [showCourtsManager, setShowCourtsManager] = useState(false)
 
+  // Referencia estable: una arrow inline volvería a disparar el fetch de ClubCourtsManager
+  const handleCourtsChange = useCallback((courts_list) => {
+    setClub((c) => (c ? { ...c, courts_list } : c))
+  }, [])
+  const handlePendingBookingsChange = useCallback((pending_bookings_count) => {
+    setClub((c) => (c && c.pending_bookings_count !== pending_bookings_count ? { ...c, pending_bookings_count } : c))
+  }, [])
+
+  // El dueño verificado edita directo como un admin; el resto solo sugiere cambios
+  const canManage = isAdmin || !!club?.is_owner
+  // Lo calcula el back (can_manage_bookings): el admin solo gestiona clubes sin dueño
+  const canManageBookings = !!club?.can_manage_bookings
+  const tabs = useMemo(() => {
+    if (!canManageBookings) return BASE_TABS
+    const i = BASE_TABS.findIndex((t) => t.id === 'reservar')
+    return [...BASE_TABS.slice(0, i + 1), MANAGE_TAB, ...BASE_TABS.slice(i + 1)]
+  }, [canManageBookings])
   function handlePedir() {
-    if (isAdmin) { setShowEditClub(true); return }
+    if (canManage) { setShowEditClub(true); return }
     if (!isLoggedIn) { navigate('/login'); return }
     setShowEditRequest(true)
   }
 
-  const fetchData = useCallback(async (clubId) => {
-    setLoading(true)
+  function handleReclamar() {
+    if (!isLoggedIn) { navigate('/login'); return }
+    setShowClaim(true)
+  }
+
+  const fetchData = useCallback(async (clubId, { silent = false } = {}) => {
+    if (!silent) setLoading(true)
     try {
       const [c, e] = await Promise.all([api.clubs.get(clubId), api.clubs.events(clubId)])
       setClub(c); setEvents(e); setError(null)
     } catch (err) {
       setError(err.status === 404 ? 'notfound' : err.message)
     } finally {
-      setLoading(false)
+      if (!silent) setLoading(false)
     }
   }, [])
 
   useEffect(() => { fetchData(id) }, [id, fetchData])
+
+  // Vuelve a pedir el club, sin loader, al cambiar de sesión: is_owner y has_owner dependen de la cookie
+  const viewerKey  = user?.id ?? null
+  const prevViewer = useRef(viewerKey)
+  useEffect(() => {
+    if (prevViewer.current === viewerKey) return
+    prevViewer.current = viewerKey
+    fetchData(id, { silent: true })
+  }, [viewerKey, id, fetchData])
 
   useDocumentTitle(error === 'notfound' ? 'Club no encontrado' : club?.name)
 
@@ -103,12 +143,14 @@ export default function ClubProfileView() {
   const enVivo  = (events.ongoing?.length ?? 0) > 0
   const pd      = proximo ? eventDate(proximo) : null
 
+  // Con canchas reales cargadas el riel cuenta esas; si no, el número suelto
+  const canchasCount = (club.courts_list?.length) || club.courts;
   const rail = [
     { v: stats.torneos ?? 0,    k: 'Torneos' },
     { v: stats.partidos ?? 0,   k: 'Partidos' },
     { v: stats.jugadores ?? 0,  k: 'Jugadores' },
     { v: stats.categorias ?? 0, k: 'Categorías' },
-    { v: club.courts ?? '—',    k: 'Canchas', off: club.courts == null },
+    { v: canchasCount ?? '—',   k: 'Canchas', off: canchasCount == null },
     { v: desde ?? '—',          k: 'Desde',   off: !desde },
   ]
 
@@ -119,7 +161,7 @@ export default function ClubProfileView() {
           el tema claro y sobre una foto oscura quedaría tinta sobre tinta. */}
       <div className="relative overflow-hidden border-b border-border">
         <img
-          src={courtBg}
+          src={club.header_url || courtBg}
           alt=""
           aria-hidden="true"
           className="absolute inset-0 w-full h-full object-cover opacity-90"
@@ -276,7 +318,7 @@ export default function ClubProfileView() {
       )}
 
       <div className="flex border-b border-border px-2 mt-4 overflow-x-auto">
-        {TABS.map((t) => (
+        {tabs.map((t) => (
           <button
             key={t.id}
             type="button"
@@ -296,6 +338,11 @@ export default function ClubProfileView() {
                 {categorias.length}
               </span>
             )}
+            {t.id === 'gestion' && club.pending_bookings_count > 0 && (
+              <span className={`text-[9.5px] rounded px-1.5 py-0.5 ${tab === t.id ? 'bg-brand text-base' : 'bg-border-mid text-secondary'}`}>
+                {club.pending_bookings_count}
+              </span>
+            )}
             {/* Un punto en vez de un número: no es una cantidad que valga la
                 pena leer, es un aviso de que ahí adentro hay algo por completar. */}
             {t.id === 'info' && faltan > 0 && (
@@ -310,10 +357,12 @@ export default function ClubProfileView() {
       </div>
 
       <div className="px-5 sm:px-6 py-5">
-        {tab === 'agenda' && <ClubAgenda events={events} todos={todos} />}
-        {tab === 'cats'   && <ClubCategories categorias={categorias} organizadores={organizadores} />}
+        {tab === 'agenda'   && <ClubAgenda events={events} todos={todos} />}
+        {tab === 'reservar' && <ClubBooking club={club} canManage={canManageBookings} />}
+        {tab === 'gestion'  && canManageBookings && <ClubBookingManage club={club} onPendingCountChange={handlePendingBookingsChange} />}
+        {tab === 'cats'     && <ClubCategories categorias={categorias} organizadores={organizadores} />}
         {tab === 'info'   && (
-          <ClubInfo club={club} mapsUrl={maps} desde={desde} admin={isAdmin} onPedir={handlePedir} />
+          <ClubInfo club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage} onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)} />
         )}
       </div>
 
@@ -326,6 +375,18 @@ export default function ClubProfileView() {
           club={club}
           onClose={() => setShowEditClub(false)}
           onSaved={() => fetchData(id)}
+        />
+      )}
+
+      {showCourtsManager && (
+        <ClubCourtsModal clubId={club.id} onClose={() => setShowCourtsManager(false)} onCourtsChange={handleCourtsChange} />
+      )}
+
+      {showClaim && (
+        <ClubClaimModal
+          club={club}
+          onClose={() => setShowClaim(false)}
+          onSubmitted={() => fetchData(id)}
         />
       )}
     </div>

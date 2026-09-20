@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { Check } from 'lucide-react';
 import { normalize } from '../../utils/helpers';
 import { api } from '../../utils/api';
 
@@ -123,13 +124,17 @@ export default function PlayerInput({ value, onChange, placeholder, className, g
   const matchedUser = isAt ? suggestions.find((u) => ('@' + u.username) === value.toLowerCase()) : null;
   const isExisting  = !isAt && suggestions.some((p) => normalize(p.name) === normalize(value));
 
+  // `check` es una bandera aparte del texto: antes la tilde vivía dentro del
+  // string y no había forma de dibujarla como ícono.
   const badge = (() => {
     if (!value.trim()) return null;
     if (isAt) {
       if (!value.slice(1)) return null;
-      return matchedUser ? { text: '✓ @USUARIO', color: 'text-green' } : null;
+      return matchedUser ? { text: '@USUARIO', check: true, color: 'text-green' } : null;
     }
-    return { text: isExisting ? '✓ EXISTE' : 'NUEVO', color: isExisting ? 'text-green' : 'text-brand' };
+    return isExisting
+      ? { text: 'EXISTE', check: true,  color: 'text-green' }
+      : { text: 'NUEVO',  check: false, color: 'text-brand' };
   })();
 
   // Group items by section for rendering
@@ -165,7 +170,8 @@ export default function PlayerInput({ value, onChange, placeholder, className, g
           autoComplete="off"
         />
         {badge && (
-          <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono tracking-wide pointer-events-none ${badge.color}`}>
+          <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono tracking-wide pointer-events-none flex items-center gap-1 ${badge.color}`}>
+            {badge.check && <Check size={11} strokeWidth={3} className="shrink-0" />}
             {badge.text}
           </span>
         )}

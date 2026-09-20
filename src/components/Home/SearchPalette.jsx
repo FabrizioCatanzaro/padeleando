@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Search, Loader2, Building2, UserRound, Trophy, X } from 'lucide-react';
+import { Search, Loader2, Building2, UserRound, Trophy, X, History } from 'lucide-react';
 import ClubTile from '../shared/ClubTile';
+import PlayerAvatar from '../shared/PlayerAvatar';
 import { fmt } from '../../utils/helpers';
+import { getRecentSearches, addRecentSearch, removeRecentSearch, clearRecentSearches } from '../../utils/recentSearches';
 
 const GROUPS = [
   { key: 'users',  label: 'PERFILES',   icon: UserRound },
@@ -35,6 +37,10 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
   const inputRef = useRef(null);
   const listRef  = useRef(null);
   const [selRaw, setSel] = useState(0);
+  const [recentVersion, setRecentVersion] = useState(0);
+  // recentVersion no se lee: sólo fuerza a releer localStorage tras borrar un término.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const recent = useMemo(() => (open ? getRecentSearches() : []), [open, recentVersion]);
 
   const flat = useMemo(() => {
     const rows = [];
@@ -61,9 +67,29 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
   if (!open) return null;
 
   function activate(row) {
-    if (!row || row.key === 'all') { commit(); onClose(); return; }
+    if (!row) return;
+    addRecentSearch(q);
+    if (row.key === 'all') { commit(); onClose(); return; }
     onNavigate(href(row.key, row.item));
     onClose();
+  }
+
+  function pickRecent(term) {
+    setQ(term);
+    setSel(0);
+    inputRef.current?.focus();
+  }
+
+  function removeRecent(term, e) {
+    e.stopPropagation();
+    removeRecentSearch(term);
+    setRecentVersion((v) => v + 1);
+  }
+
+  function clearRecent(e) {
+    e.stopPropagation();
+    clearRecentSearches();
+    setRecentVersion((v) => v + 1);
   }
 
   function onKeyDown(e) {
@@ -72,7 +98,7 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
     if (e.key === 'ArrowUp')   { e.preventDefault(); setSel((s) => Math.max(s - 1, 0)); return; }
     if (e.key === 'Enter') {
       e.preventDefault();
-      if (e.shiftKey || flat.length === 0) { commit(); onClose(); return; }
+      if (e.shiftKey || flat.length === 0) { addRecentSearch(q); commit(); onClose(); return; }
       activate(flat[sel]);
     }
   }
@@ -111,9 +137,41 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
         </div>
 
         <div ref={listRef} className="flex-1 sm:max-h-[52vh] overflow-y-auto">
-          {short && (
+          {short && recent.length === 0 && (
             <div className="px-4 py-8 text-center text-sm text-muted font-sans">
               Escribí al menos 2 letras para buscar.
+            </div>
+          )}
+          {short && recent.length > 0 && (
+            <div className="pt-1">
+              <div className="flex items-center justify-between px-4 pt-2 pb-1.5">
+                <span className="font-condensed font-bold text-[10px] tracking-widest text-dim">RECIENTES</span>
+                <button
+                  onClick={clearRecent}
+                  className="font-mono text-[10px] text-dim hover:text-soft cursor-pointer bg-transparent border-0"
+                >
+                  Borrar todo
+                </button>
+              </div>
+              {recent.map((term) => (
+                <div
+                  key={term}
+                  onClick={() => pickRecent(term)}
+                  className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-surface-alt"
+                >
+                  <span className="shrink-0 w-8 h-8 rounded-lg bg-surface-alt border border-border-mid flex items-center justify-center text-muted">
+                    <History size={15} />
+                  </span>
+                  <div className="flex-1 min-w-0 font-sans text-sm text-white truncate">{term}</div>
+                  <button
+                    onClick={(e) => removeRecent(term, e)}
+                    aria-label={`Quitar "${term}" de recientes`}
+                    className="shrink-0 text-dim hover:text-soft cursor-pointer bg-transparent border-0"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           {!short && searching && liveCount === 0 && (
@@ -130,7 +188,7 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
                   key="all"
                   data-idx={i}
                   onMouseEnter={() => setSel(i)}
-                  onClick={() => { commit(); onClose(); }}
+                  onClick={() => activate(row)}
                   className={`flex items-center gap-3 px-4 py-3 mt-1.5 cursor-pointer border-t border-border-mid border-l-2 ${
                     sel === i ? 'bg-surface-alt border-l-brand' : 'border-l-transparent'
                   }`}
@@ -165,7 +223,9 @@ export default function SearchPalette({ open, onClose, search, onNavigate }) {
                     sel === i ? 'bg-surface-alt border-brand' : 'border-transparent'
                   }`}
                 >
-                  {key === 'clubs' || key === 'groups' ? (
+                  {key === 'users' ? (
+                    <PlayerAvatar name={item.name} src={item.avatar_url} size={32} />
+                  ) : key === 'clubs' || key === 'groups' ? (
                     <ClubTile
                       photo={key === 'clubs' ? item.photo_url : item.club_photo_url}
                       emojis={key === 'groups' ? item.emojis : []}

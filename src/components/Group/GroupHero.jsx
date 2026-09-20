@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Building2, MapPin, Globe, Lock } from 'lucide-react';
 import ClubTile from '../shared/ClubTile';
 import SignupPricePill from '../shared/SignupPricePill';
@@ -49,13 +50,25 @@ export default function GroupHero({ group, stats = [], isOwner, actions, back })
         </div>
 
         <div className="flex items-end gap-3.5">
-          <ClubTile
-            photo={group.club_photo_url}
-            emojis={group.emojis}
-            name={group.club_name ?? group.name}
-            size={64}
-            eager
-          />
+          {group.club_id ? (
+            <Link to={`/club/${group.club_id}`} className="shrink-0" title={group.club_name}>
+              <ClubTile
+                photo={group.club_photo_url}
+                emojis={group.emojis}
+                name={group.club_name ?? group.name}
+                size={64}
+                eager
+              />
+            </Link>
+          ) : (
+            <ClubTile
+              photo={group.club_photo_url}
+              emojis={group.emojis}
+              name={group.club_name ?? group.name}
+              size={64}
+              eager
+            />
+          )}
           <div className="min-w-0">
             <h1 className="font-condensed font-bold text-[23px] sm:text-[29px] text-white leading-[1.05] m-0 wrap-break-word">
               {group.name}
@@ -68,7 +81,10 @@ export default function GroupHero({ group, stats = [], isOwner, actions, back })
 
             <div className="flex flex-wrap items-center gap-2 mt-2.5">
               {group.club_id ? (
-                <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border text-brand border-brand/40 bg-brand/8 max-w-full">
+                <Link
+                  to={`/club/${group.club_id}`}
+                  className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border text-brand border-brand/40 bg-brand/8 max-w-full hover:border-brand/70 hover:bg-brand/14 transition-colors"
+                >
                   <Building2 size={12} className="shrink-0" />
                   <span className="truncate">{group.club_name}</span>
                   {group.club_location_name && (
@@ -77,7 +93,7 @@ export default function GroupHero({ group, stats = [], isOwner, actions, back })
                   {group.club_courts != null && (
                     <span className="text-secondary shrink-0">· {group.club_courts} {group.club_courts === 1 ? 'cancha' : 'canchas'}</span>
                   )}
-                </span>
+                </Link>
               ) : isOwner && group.pending_club_request_id && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded-full border text-yellow-400 border-yellow-400/40 max-w-full">
                   <MapPin size={12} className="shrink-0" />

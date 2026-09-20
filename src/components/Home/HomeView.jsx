@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
 import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft } from 'lucide-react';
 import logoUrl from '../../assets/padeleando-logo.webp'
@@ -11,6 +11,8 @@ import VisitorShowcase from './VisitorShowcase';
 import AppPreview from './AppPreview';
 import { Skeleton, CardSkeleton } from '../shared/Skeleton';
 import ClubSelector from '../shared/ClubSelector';
+import PlayerAvatar from '../shared/PlayerAvatar';
+import { addRecentSearch } from '../../utils/recentSearches';
 import { fmt } from '../../utils/helpers';
 import SignupEditor from '../shared/SignupEditor';
 import StepBar from '../shared/StepBar';
@@ -124,6 +126,19 @@ export default function HomeView() {
   const searchInputRef = useRef(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
+  const { hash, key: navKey } = useLocation();
+
+  // `#categorias` entra por el menú de la cabecera. `useScrollToTop` ya se
+  // aparta cuando hay hash, pero nadie lleva al ancla: el router no hace ese
+  // scroll solo. Espera a `loading` porque durante la carga la lista todavía no
+  // está en el DOM, y depende de `navKey` para que volver a tocar el mismo ítem
+  // estando ya en la portada vuelva a bajar.
+  useEffect(() => {
+    if (hash !== '#categorias' || loading) return;
+    requestAnimationFrame(() => {
+      document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }, [hash, navKey, loading]);
 
   const valsPrivacy = [
     { val: true, label: 'Público', icon: Globe },
@@ -460,7 +475,7 @@ export default function HomeView() {
                   value={search.q}
                   onChange={(e) => search.setQ(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter')  search.commit();
+                    if (e.key === 'Enter')  { addRecentSearch(search.q); search.commit(); }
                     if (e.key === 'Escape') search.clear();
                   }}
                 />
@@ -475,7 +490,7 @@ export default function HomeView() {
                 )}
               </div>
               <button
-                onClick={search.commit}
+                onClick={() => { addRecentSearch(search.q); search.commit(); }}
                 disabled={search.q.trim().length < 2 || search.committing}
                 aria-label="Buscar"
                 className="bg-surface border border-border-mid text-white px-4 py-3 rounded-lg cursor-pointer hover:border-border-strong transition-colors disabled:opacity-30"
@@ -495,7 +510,7 @@ export default function HomeView() {
                     <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">PERFILES</div>
                     {search.live.users.map((u) => (
                       <div key={u.id}
-                        onClick={() => { navigate(`/u/${u.username}`); search.clear(); }}
+                        onClick={() => { addRecentSearch(search.q); navigate(`/u/${u.username}`); search.clear(); }}
                         className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                       >
                         <span className="font-condensed font-bold text-base text-white">{u.name}</span>
@@ -509,7 +524,7 @@ export default function HomeView() {
                     <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CATEGORÍAS</div>
                     {search.live.groups.map((g) => (
                       <div key={g.id}
-                        onClick={() => { navigate(`/cat/${g.id}`); search.clear(); }}
+                        onClick={() => { addRecentSearch(search.q); navigate(`/cat/${g.id}`); search.clear(); }}
                         className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                       >
                         <span className="font-condensed font-bold text-base text-white">
@@ -525,7 +540,7 @@ export default function HomeView() {
                     <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">TORNEOS</div>
                     {search.live.tours.map((t) => (
                       <div key={t.id}
-                        onClick={() => { navigate(`/view/${t.id}`); search.clear(); }}
+                        onClick={() => { addRecentSearch(search.q); navigate(`/view/${t.id}`); search.clear(); }}
                         className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                       >
                         <span className="font-condensed font-bold text-base text-white truncate">{t.name}</span>
@@ -542,7 +557,7 @@ export default function HomeView() {
                     <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CLUBES</div>
                     {search.live.clubs.map((c) => (
                       <div key={c.id}
-                        onClick={() => { navigate(`/club/${c.id}`); search.clear(); }}
+                        onClick={() => { addRecentSearch(search.q); navigate(`/club/${c.id}`); search.clear(); }}
                         className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
                       >
                         {c.photo_url
@@ -718,11 +733,14 @@ export default function HomeView() {
                 <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
                   {committedUsers.map((u) => (
                     <FadeInCard key={u.id}
-                      className="border border-border-mid rounded-lg cursor-pointer overflow-hidden p-4 card-link"
+                      className="border border-border-mid rounded-lg cursor-pointer overflow-hidden p-4 card-link flex items-center gap-3"
                       style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border-mid) 100%)' }}
                       onClick={() => navigate(`/u/${u.username}`)}>
-                      <div className="font-condensed font-bold text-xl text-white">{u.name}</div>
-                      <div className="font-mono text-xs text-dim mt-1">@{u.username}</div>
+                      <PlayerAvatar name={u.name} src={u.avatar_url} size={44} />
+                      <div className="min-w-0">
+                        <div className="font-condensed font-bold text-xl text-white truncate">{u.name}</div>
+                        <div className="font-mono text-xs text-dim mt-1 truncate">@{u.username}</div>
+                      </div>
                     </FadeInCard>
                   ))}
                 </div>
@@ -855,16 +873,45 @@ export default function HomeView() {
                 : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
             )}
 
-            <CategoryList
-              merged={merged}
-              counts={roleCounts}
-              liveGroupIds={liveGroupIds}
-              nextMap={nextMap}
-              filter={roleFilter}
-              onFilter={setRoleFilter}
-              onOpen={(id) => navigate(`/cat/${id}`)}
-              onNew={openNewModal}
-            />
+            {/* Acceso rápido al club que administra (owned_clubs viaja siempre en el usuario logueado) */}
+            {user?.owned_clubs?.length > 0 && (
+              <div className="mb-6">
+                <div className="font-mono text-[10px] text-dim tracking-widest mb-3">
+                  {user.owned_clubs.length > 1 ? 'CLUBES QUE ADMINISTRÁS' : 'CLUB QUE ADMINISTRÁS'}
+                </div>
+                <div className="flex flex-col gap-2">
+                  {user.owned_clubs.map((c) => (
+                    <div key={c.id} onClick={() => navigate(`/club/${c.id}`)}
+                      className="flex items-center gap-3 border border-border-mid rounded-lg px-3.5 py-3 cursor-pointer hover:border-border-strong transition-colors">
+                      {c.photo_url ? (
+                        <img src={c.photo_url} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
+                      ) : (
+                        <div className="w-9 h-9 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
+                          <Building2 size={16} />
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <div className="text-[13px] text-white font-sans font-semibold truncate">{c.name}</div>
+                        <div className="text-[11px] font-mono text-dim">Gestionar club →</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div id="categorias" className="scroll-mt-20">
+              <CategoryList
+                merged={merged}
+                counts={roleCounts}
+                liveGroupIds={liveGroupIds}
+                nextMap={nextMap}
+                filter={roleFilter}
+                onFilter={setRoleFilter}
+                onOpen={(id) => navigate(`/cat/${id}`)}
+                onNew={openNewModal}
+              />
+            </div>
 
             <Discover
               tab={discoverTab}

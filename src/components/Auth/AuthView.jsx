@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff } from 'lucide-react'
+import { Eye, EyeOff, Check, Circle } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import logoUrl from '../../assets/padeleando.svg'
@@ -55,12 +55,14 @@ function PasswordStrength({ password }) {
   return (
     <div className="flex gap-1.5 flex-wrap mt-2">
       {checks.map(({ ok, label }) => (
-        <span key={label} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors
+        <span key={label} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-colors
           ${ok
             ? 'text-green bg-green/10 border-green/30'
             : 'text-muted bg-surface-alt border-border-strong'
           }`}>
-          {ok ? '✓' : '○'} {label}
+          {ok ? <Check size={11} strokeWidth={3} className="shrink-0" />
+              : <Circle size={11} strokeWidth={2.5} className="shrink-0" />}
+          {label}
         </span>
       ))}
     </div>
@@ -341,7 +343,7 @@ export default function AuthView({ mode: initialMode }) {
       <div className="bg-base flex items-start justify-center pt-12 px-4">
         <div className="w-full max-w-md">
           <div className={`${CARD} text-center`}>
-            <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green text-3xl">✓</div>
+            <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green"><Check size={30} strokeWidth={2.5} /></div>
             <p className="text-content font-semibold mb-2">Revisá tu email</p>
             <p className="text-secondary text-sm">
               Te enviamos un enlace de confirmación a <span className="text-content">{verificationSent}</span>.
@@ -376,7 +378,7 @@ export default function AuthView({ mode: initialMode }) {
           <div className={CARD}>
             {forgotSent ? (
               <div className="text-center">
-                <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green text-3xl">✓</div>
+                <div className="mx-auto mb-4 w-14 h-14 rounded-full bg-green/10 border border-green/30 flex items-center justify-center text-green"><Check size={30} strokeWidth={2.5} /></div>
                 <p className="text-content font-semibold mb-2">Mail enviado</p>
                 <p className="text-secondary text-sm">Revisá tu casilla. El enlace expira en 1 hora.</p>
                 <button onClick={() => switchMode('login')}
@@ -478,7 +480,7 @@ export default function AuthView({ mode: initialMode }) {
                     <p className="text-muted text-xs mt-1">Verificando disponibilidad...</p>
                   )}
                   {usernameStatus === 'available' && username.trim() && (
-                    <p className="text-green text-xs mt-1">✓ Disponible</p>
+                    <p className="text-green text-xs mt-1 flex items-center gap-1"><Check size={12} strokeWidth={3} /> Disponible</p>
                   )}
                   {usernameStatus === 'taken' && (
                     <p className="text-danger text-xs mt-1">Ese nombre de usuario ya está en uso</p>

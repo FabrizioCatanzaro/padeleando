@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Check } from 'lucide-react'
+import { Eye, EyeOff, Check, Circle } from 'lucide-react'
 import { api } from '../../utils/api'
 import logoUrl from '../../assets/padeleando.svg'
 
@@ -36,12 +36,14 @@ function PasswordStrength({ password }) {
   return (
     <div className="flex gap-1.5 flex-wrap mt-2">
       {checks.map(({ ok, label }) => (
-        <span key={label} className={`text-[10px] px-1.5 py-0.5 rounded-full border transition-colors
+        <span key={label} className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full border transition-colors
           ${ok
             ? 'text-green bg-green/10 border-green/30'
             : 'text-muted bg-surface-alt border-border-strong'
           }`}>
-          {ok ? '✓' : '○'} {label}
+          {ok ? <Check size={11} strokeWidth={3} className="shrink-0" />
+              : <Circle size={11} strokeWidth={2.5} className="shrink-0" />}
+          {label}
         </span>
       ))}
     </div>

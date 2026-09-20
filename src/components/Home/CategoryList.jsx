@@ -4,6 +4,18 @@ import Btn from '../shared/Btn';
 import CategoryRow from '../shared/CategoryRow';
 import { ROLES, ROLE_META } from '../../utils/homePanel';
 
+// Mismo encabezado que DESCUBRIR: la lista arranca directamente en filas y
+// nada dice que son categorías. El riel de arriba las cuenta, pero el número
+// solo no nombra lo que sigue.
+function SectionHead() {
+  return (
+    <div className="flex items-center gap-3.5 mb-3.5">
+      <h2 className="font-condensed font-bold text-[13px] tracking-widest text-content">CATEGORÍAS</h2>
+      <span className="flex-1 h-px bg-border-mid" />
+    </div>
+  );
+}
+
 // Las cuatro secciones de antes son ahora una sola lista con chips: con diez
 // categorías, cuatro grillas idénticas separadas sólo por un pill no dejaban
 // ver dónde tocar.
@@ -12,18 +24,21 @@ export default function CategoryList({
 }) {
   if (merged.length === 0) {
     return (
-      <div className="border border-dashed border-border-strong rounded-lg p-8 text-center">
-        <p className="text-muted text-sm font-sans mb-1">Todavía no tenés categorías.</p>
-        <p className="text-dim text-[12px] font-mono mb-4">
-          Una categoría agrupa a la gente que juega junta; los torneos van adentro.
-        </p>
-        <Btn variant="primary" icon={Plus} onClick={onNew}>CREAR PRIMERA CATEGORÍA</Btn>
-        <div className="mt-3">
-          <Link to="/tutorial#crear-categoria" className="text-[12px] font-mono text-muted hover:text-brand transition-colors">
-            Ver cómo funciona
-          </Link>
+      <>
+        <SectionHead />
+        <div className="border border-dashed border-border-strong rounded-lg p-8 text-center">
+          <p className="text-muted text-sm font-sans mb-1">Todavía no tenés categorías.</p>
+          <p className="text-dim text-[12px] font-mono mb-4">
+            Una categoría agrupa a la gente que juega junta; los torneos van adentro.
+          </p>
+          <Btn variant="primary" icon={Plus} onClick={onNew}>CREAR PRIMERA CATEGORÍA</Btn>
+          <div className="mt-3">
+            <Link to="/tutorial#crear-categoria" className="text-[12px] font-mono text-muted hover:text-brand transition-colors">
+              Ver cómo funciona
+            </Link>
+          </div>
         </div>
-      </div>
+      </>
     );
   }
 
@@ -37,6 +52,7 @@ export default function CategoryList({
 
   return (
     <>
+      <SectionHead />
       {chips.length > 2 && (
         <div className="flex flex-wrap gap-2 mb-3.5">
           {chips.map(({ key, label, n, Icon }) => (

@@ -1,12 +1,19 @@
 // Helpers puros para convertir entre el shape del form y el de la API (clubs).
+import { parseScheduleToGrid, emptyGrid, gridToLines } from './scheduleGrid'
 
 const SOCIAL_PLATFORMS = ['instagram', 'facebook', 'website']
 
 // Estado inicial del form a partir de un club/solicitud existente (o vacío).
+// El horario vive en dos formas a la vez: `scheduleGrid` (la grilla día ×
+// horario, lo que se edita) y `scheduleText` (el textarea de respaldo, para
+// el horario que no entra en la grilla). `scheduleMode` arranca en 'grid' si
+// se pudo interpretar al menos un día del texto guardado; si no se reconoció
+// nada pero había texto, arranca en 'text' para no perder ese dato.
 export function clubToForm(club = {}) {
   const social = Array.isArray(club.social_links) ? club.social_links : []
   const get = (platform) => social.find((s) => s.platform === platform)?.url ?? ''
   const schedule = Array.isArray(club.schedule) ? club.schedule : []
+  const parsedGrid = parseScheduleToGrid(schedule)
   return {
     name:             club.name ?? '',
     location_name:    club.location_name ?? '',
@@ -16,9 +23,12 @@ export function clubToForm(club = {}) {
     instagram:        get('instagram'),
     facebook:         get('facebook'),
     website:          get('website'),
+    scheduleMode:     parsedGrid ? 'grid' : (schedule.length ? 'text' : 'grid'),
+    scheduleGrid:     parsedGrid ?? emptyGrid(),
     scheduleText:     schedule.map((s) => (typeof s === 'string' ? s : s.text ?? '')).filter(Boolean).join('\n'),
     lat:              club.lat ?? null,
     lon:              club.lon ?? null,
+    owner_visible:    club.owner_visible ?? false,
   }
 }
 
@@ -68,11 +78,10 @@ export function formToClub(f) {
   const social_links = SOCIAL_PLATFORMS
     .map((platform) => ({ platform, url: (f[platform] ?? '').trim() }))
     .filter((s) => s.url)
-  const schedule = (f.scheduleText ?? '')
-    .split('\n')
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((text) => ({ text }))
+  // 'grid' es el modo normal; 'text' es la salida para horarios que no entran en la grilla
+  const schedule = f.scheduleMode === 'text'
+    ? (f.scheduleText ?? '').split('\n').map((line) => line.trim()).filter(Boolean).map((text) => ({ text }))
+    : gridToLines(f.scheduleGrid ?? []).map((text) => ({ text }))
   return {
     name:             f.name?.trim() ?? '',
     location_name:    f.location_name?.trim() || null,
@@ -83,6 +92,7 @@ export function formToClub(f) {
     schedule,
     lat:              f.lat ?? null,
     lon:              f.lon ?? null,
+    owner_visible:    !!f.owner_visible,
   }
 }
 

@@ -126,11 +126,40 @@ export const api = {
     delete:      (id)          => req('DELETE', `/clubs/${id}`),
     uploadPhoto: (id, file)    => reqMultipart('POST', `/clubs/${id}/photo`, imageForm(file)),
     deletePhoto: (id)          => req('DELETE', `/clubs/${id}/photo`),
+    uploadHeader: (id, file)   => reqMultipart('POST', `/clubs/${id}/header`, imageForm(file)),
+    deleteHeader: (id)         => req('DELETE', `/clubs/${id}/header`),
     requests: {
       create:  (body)          => req('POST',  '/clubs/requests', body),
       list:    (status = 'pending') => req('GET', `/clubs/requests?status=${status}`),
       respond: (id, action, override) => req('PATCH', `/clubs/requests/${id}`, { action, ...(override ?? {}) }),
     },
+    // Reclamo de propiedad de un club (identidad, no un cambio de dato -- ver requests arriba).
+    claim: (id, formData) => reqMultipart('POST', `/clubs/${id}/claim`, formData),
+    claims: {
+      list:    (status = 'pending') => req('GET', `/clubs/claims?status=${status}`),
+      respond: (id, action, rejectionReason) =>
+        req('PATCH', `/clubs/claims/${id}`, { action, ...(rejectionReason ? { rejection_reason: rejectionReason } : {}) }),
+    },
+    // Canchas del club: las mutaciones devuelven la fila o la lista, sin refetch (GET /courts tiene caché de 10s)
+    courts: {
+      list:   (clubId)              => req('GET',    `/clubs/${clubId}/courts`),
+      create: (clubId, body)        => req('POST',   `/clubs/${clubId}/courts`, body),
+      update: (clubId, courtId, b)  => req('PUT',    `/clubs/${clubId}/courts/${courtId}`, b),
+      remove: (clubId, courtId)     => req('DELETE', `/clubs/${clubId}/courts/${courtId}`),
+      move:   (clubId, courtId, direction) => req('PATCH', `/clubs/${clubId}/courts/${courtId}/move`, { direction }),
+    },
+    bookings: {
+      list:         (clubId, from, to) => req('GET',  `/clubs/${clubId}/bookings?from=${from}&to=${to}`),
+      create:       (clubId, body)     => req('POST', `/clubs/${clubId}/bookings`, body),
+      createManual: (clubId, body)     => req('POST', `/clubs/${clubId}/bookings/manual`, body),
+      manage:       (clubId)           => req('GET',   `/clubs/${clubId}/bookings/manage`),
+      decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
+    },
+  },
+  // "Mis reservas" cruza todos los clubes: no vive bajo /clubs/:id
+  bookings: {
+    mine:       ()               => req('GET',   '/bookings/mine'),
+    cancelMine: (groupId, body)  => req('PATCH', `/bookings/mine/${groupId}`, body),
   },
   players: {
     search:               (q, groupId, mine) => req('GET', `/players?q=${encodeURIComponent(q)}${groupId ? `&groupId=${groupId}` : ''}${mine ? '&mine=true' : ''}`),

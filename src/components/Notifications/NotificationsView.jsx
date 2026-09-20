@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Check } from 'lucide-react';
 import { api } from '../../utils/api';
 import { renderRichText } from '../../utils/richText';
 import { notifSummary } from '../../utils/notifText';
+import { useAuth } from '../../context/useAuth';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Loader from '../Loader/Loader';
 
@@ -190,15 +192,20 @@ export default function NotificationsView() {
 
 function NotifRow({ n, navigate, onFollow, onInvitation, onJoinRequest, onCollabInvite, onTransfer }) {
   const unread = !n.read;
-  const isAdmin = n.type === 'admin_message';
+  const isAdminMsg  = n.type === 'admin_message';
   const isOwnership = n.type === 'ownership_received';
-  const isSystem = isAdmin || isOwnership;
+  // Ícono fijo solo si el actor es el admin que revisó; si es el reclamante se ve su avatar
+  const isClubClaimByAdmin   = n.type === 'club_claim'   && n.actor_is_admin;
+  const isClubRequestByAdmin = n.type === 'club_request' && n.actor_is_admin;
+  const isSystem = isAdminMsg || isOwnership || isClubClaimByAdmin || isClubRequestByAdmin;
   return (
     <div className={`flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors ${unread ? 'bg-surface border-brand/20' : 'bg-surface border-border-mid'}`}>
       {unread && <div className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-brand" />}
       <div className={`shrink-0 ${unread ? '' : 'ml-[18px]'}`}>
         {isSystem ? (
-          <div className="w-[38px] h-[38px] rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-brand text-[16px]">{isOwnership ? '👑' : '📢'}</div>
+          <div className="w-[38px] h-[38px] rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-brand text-[16px]">
+            {isOwnership ? '👑' : isClubClaimByAdmin ? '🛡️' : isClubRequestByAdmin ? '📋' : '📢'}
+          </div>
         ) : (
           <div
             className="cursor-pointer"
@@ -223,6 +230,8 @@ function NotifRow({ n, navigate, onFollow, onInvitation, onJoinRequest, onCollab
 }
 
 function NotifText({ n, navigate }) {
+  const { user: viewer } = useAuth();
+  const isAdminViewer = viewer?.role === 'admin';
   const actorEl = (
     <span
       className="font-semibold text-white cursor-pointer hover:text-brand transition-colors"
@@ -357,11 +366,31 @@ function NotifText({ n, navigate }) {
     );
   }
   if (n.type === 'club_request') {
+    // Si el actor es el admin que resolvió, no se expone; el "Ver →" es solo para admins
+    const lead = n.actor_is_admin ? n.body : <>{actorEl} {n.body}</>;
+    if (!isAdminViewer) return <div className="text-[13px] text-secondary">{lead}</div>;
     return (
       <div className="text-[13px] text-secondary">
-        {actorEl} {n.body}{' '}
+        {lead}{' '}
         <button
           onClick={() => navigate('/admin/clubs/requests')}
+          className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
+        >
+          Ver →
+        </button>
+      </div>
+    );
+  }
+  if (n.type === 'club_claim') {
+    // Prefijo de actor solo si no es el admin que revisó
+    const lead = n.actor_is_admin ? n.body : <>{actorEl} {n.body}</>;
+    // "Ver →" solo para quien mira como admin
+    if (!isAdminViewer) return <div className="text-[13px] text-secondary">{lead}</div>;
+    return (
+      <div className="text-[13px] text-secondary">
+        {lead}{' '}
+        <button
+          onClick={() => navigate('/admin/clubs/claims')}
           className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
         >
           Ver →
@@ -378,6 +407,20 @@ function NotifText({ n, navigate }) {
           className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
         >
           Ir a usuarios →
+        </button>
+      </div>
+    );
+  }
+  if (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') {
+    // El body ya viene armado del back: sin esta rama notifSummary lo recortaba a 120 caracteres
+    return (
+      <div className="text-[13px] text-secondary">
+        {n.body}{' '}
+        <button
+          onClick={() => navigate(`/club/${n.entity_id}`)}
+          className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
+        >
+          Ver club →
         </button>
       </div>
     );
@@ -441,7 +484,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
 
   if (n.type === 'invitation') {
     if (n.invitation_status === 'accepted') {
-      return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+      return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     }
     if (n.invitation_status === 'rejected') {
       return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
@@ -470,7 +513,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
 
   if (n.type === 'join_request') {
     if (n.request_status === 'accepted') {
-      return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+      return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     }
     if (n.request_status === 'rejected') {
       return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
@@ -535,7 +578,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
   }
 
   if (n.type === 'collab_invite') {
-    if (n.collab_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+    if (n.collab_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     if (n.collab_status === 'rejected') return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
     if (n.collab_status === 'pending') {
       return (
@@ -554,7 +597,7 @@ function NotifActions({ n, onFollow, onInvitation, onJoinRequest, onCollabInvite
   }
 
   if (n.type === 'ownership_transfer') {
-    if (n.transfer_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green">✓ Aceptada</div>;
+    if (n.transfer_status === 'accepted') return <div className="mt-2 text-[11px] font-mono text-green flex items-center gap-1"><Check size={12} strokeWidth={3} /> Aceptada</div>;
     if (n.transfer_status === 'rejected') return <div className="mt-2 text-[11px] font-mono text-dim">Rechazada</div>;
     if (n.transfer_status === 'pending') {
       return (
