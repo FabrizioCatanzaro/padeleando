@@ -115,17 +115,11 @@ function NotifItemText({ n, onNavigate }) {
         >Ver categoría →</span>
       )}</>
   );
-  // Mismo criterio de privacidad que club_claim: si el actor es el admin que
-  // resolvió la solicitud (aprobó/rechazó), no se expone su identidad ante
-  // quien la pidió -- sólo se antepone {actor} cuando quien disparó el aviso
-  // es el solicitante (la solicitud nueva, que el admin sí necesita ver).
+  // Si el actor es el admin que resolvió, no se expone su identidad
   if (n.type === 'club_request') return n.actor_is_admin ? <>{n.body}</> : <>{actor} {n.body}</>;
   if (n.type === 'club_claim')   return n.actor_is_admin ? <>{n.body}</> : <>{actor} {n.body}</>;
   if (n.type === 'premium_claim') return <>{actor} {n.body}</>;
-  // El body ya viene armado del todo en el back (club, cancha, fecha, rango
-  // horario y motivo si corresponde) -- sin rama propia caía en el fallback
-  // de notifSummary(), que recorta a 120 caracteres (pensado para el toast
-  // flotante) y el aviso se leía cortado a la mitad ("Mot…").
+  // El body viene armado del back: sin rama propia notifSummary lo recortaba a 120 caracteres
   if (n.type === 'booking_requested') return <>{n.body}</>;
   if (n.type === 'booking_decided')   return <>{n.body}</>;
   if (n.type === 'booking_cancelled') return <>{n.body}</>;
@@ -434,9 +428,7 @@ export default function Header() {
                       <CreditCard size={MENU_ITEM_ICON} className="shrink-0" />
                       Mi plan
                     </button>
-                    {/* Casi siempre 0 o 1 club, pero un usuario puede llegar a
-                        ser dueño verificado de más de uno (ver getOwnedClubs
-                        en auth.js) -- se listan todos, no sólo el primero. */}
+                    {/* Un usuario puede ser dueño verificado de varios clubes: se listan todos */}
                     {(user?.owned_clubs ?? []).map((c) => (
                       <button key={c.id} onClick={() => go(`/club/${c.id}`)}
                         className={`${MENU_ITEM} text-content hover:text-white`}>
@@ -509,9 +501,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
   const [busy, setBusy] = useState(false);
   const [acceptModal, setAcceptModal] = useState(null); // { players: [], selectedId: '' } | null
   const unread = !n.read;
-  // El reclamo de club sólo lleva "Ver →" para un admin (a quien la
-  // notificación de reclamo nuevo le sirve de verdad); un reclamante viendo
-  // el resultado de su propio reclamo no tiene nada que gestionar ahí.
+  // El reclamo lleva "Ver →" solo para admins
   const { user: viewer } = useAuth();
   const isAdminViewer = viewer?.role === 'admin';
 
@@ -543,8 +533,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
         n.type === 'admin_message' ? () => onNavigate('/notifications')
           : n.type === 'club_request' && isAdminViewer ? () => onNavigate('/admin/clubs/requests')
           : n.type === 'club_claim' && isAdminViewer ? () => onNavigate('/admin/clubs/claims')
-          // entity_id es el id del club (ver routes/clubs.js) -- llevar
-          // directo a su ficha, así el dueño no tiene que buscarlo a mano.
+          // entity_id es el club: lleva directo a su ficha
           : (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') ? () => onNavigate(`/club/${n.entity_id}`)
           : n.type === 'premium_claim' ? () => onNavigate('/admin/users')
           : undefined
@@ -554,10 +543,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
       <div className={`shrink-0 ${unread ? '' : 'ml-[18px]'}`}>
         {(n.type === 'admin_message' || n.type === 'ownership_received'
           || (n.type === 'club_claim' && n.actor_is_admin) || (n.type === 'club_request' && n.actor_is_admin)) ? (
-          // Ícono fijo sólo cuando el actor es el admin que revisó (no hay que
-          // exponer quién fue). Cuando el actor es el solicitante -- el aviso
-          // de reclamo/solicitud nueva -- sí se muestra su avatar real, es lo
-          // que el admin necesita para identificarlo.
+          // Ícono fijo solo si el actor es el admin que revisó; si es el solicitante se ve su avatar
           <div className="w-8 h-8 rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-[14px]">
             {n.type === 'ownership_received' ? '👑' : n.type === 'club_claim' ? '🛡️' : n.type === 'club_request' ? '📋' : '📢'}
           </div>

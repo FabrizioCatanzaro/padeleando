@@ -26,8 +26,7 @@ function emptyDraft() {
   return { name: '', floor_type: '', wall_type: '', covered: false, lit: false, external_play: false, price_30: '', price_60: '' }
 }
 
-// Resumen corto de los atributos de una cancha, reutilizado en la lista de acá
-// y (con sus propias etiquetas) en la ficha pública -- ver ClubInfo.jsx.
+// Resumen de atributos de una cancha (mismo criterio que ClubInfo)
 function courtSummary(c) {
   return [
     c.floor_type ? FLOOR_LABEL[c.floor_type] : null,
@@ -105,15 +104,7 @@ function CourtForm({ draft, onChange, onSubmit, onCancel, submitLabel, busy }) {
   )
 }
 
-// ABM de las canchas de un club (Fase 2 de "reservas de cancha"). Vive en su
-// propio modal (ClubCourtsModal), separado de "Editar club": gestionar canchas
-// no es editar información del club. Cada acción pega directo a la API y
-// actualiza la lista con la respuesta del propio endpoint (la fila creada/
-// editada, o -- en el caso de mover -- la lista entera ya reordenada) en vez
-// de volver a pedir GET /:id/courts: esa ruta tiene caché pública de 10s
-// (igual que el resto de /api/clubs, ver index.js), así que un refetch
-// inmediato después de escribir podría traer una respuesta vieja sin la
-// cancha recién creada/editada.
+// ABM de canchas: usa la respuesta de cada endpoint, sin refetch (GET /courts tiene caché de 10s)
 export default function ClubCourtsManager({ clubId, onCourtsChange }) {
   const { showToast } = useToast()
   const [courts, setCourts]   = useState([])

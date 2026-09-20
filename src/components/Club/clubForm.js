@@ -78,8 +78,7 @@ export function formToClub(f) {
   const social_links = SOCIAL_PLATFORMS
     .map((platform) => ({ platform, url: (f[platform] ?? '').trim() }))
     .filter((s) => s.url)
-  // 'grid' es el modo normal (la grilla día × horario); 'text' es la válvula
-  // de escape para un horario que no entra en esa forma.
+  // 'grid' es el modo normal; 'text' es la salida para horarios que no entran en la grilla
   const schedule = f.scheduleMode === 'text'
     ? (f.scheduleText ?? '').split('\n').map((line) => line.trim()).filter(Boolean).map((text) => ({ text }))
     : gridToLines(f.scheduleGrid ?? []).map((text) => ({ text }))

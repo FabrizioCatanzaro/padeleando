@@ -14,9 +14,7 @@ const FILTERS = [
   { id: 'rejected',  label: 'RECHAZADAS' },
 ]
 
-// Gestión de reservas del dueño: aprobar/rechazar pendientes y liberar
-// (cancelar) confirmadas. No refetchea después de decidir -- cada decisión
-// se aplica sobre el estado local (mismo criterio de caché de siempre).
+// Gestión del dueño: aprobar, rechazar y liberar; cada decisión se aplica al estado local
 export default function ClubBookingManage({ club, onPendingCountChange }) {
   const { showToast } = useToast()
   const [rows, setRows]       = useState([])
@@ -24,8 +22,7 @@ export default function ClubBookingManage({ club, onPendingCountChange }) {
   const [error, setError]     = useState(null)
   const [filter, setFilter]   = useState('pending')
 
-  // `loading` arranca en `true` (ver useState de arriba) -- no hace falta
-  // volver a ponerlo acá, esta pantalla se monta de nuevo por cada club.
+  // loading arranca en true: no hace falta reiniciarlo
   useEffect(() => {
     let cancelled = false
     api.clubs.bookings.manage(club.id)
@@ -45,10 +42,7 @@ export default function ClubBookingManage({ club, onPendingCountChange }) {
     }
   }, [rows])
 
-  // El badge de la solapa RESERVAS vive en ClubProfileView (junto al resto
-  // del club) -- se le avisa cada vez que cambia el conteo de pendientes acá
-  // adentro (fetch inicial o después de decidir una), para que se actualice
-  // al instante y no sólo la próxima vez que se recargue el club entero.
+  // Avisa a ClubProfileView el conteo de pendientes para actualizar el badge
   const pendingCount = byStatus.pending.length
   useEffect(() => {
     onPendingCountChange?.(pendingCount)
@@ -128,10 +122,7 @@ function BookingCard({ g, onDecide, showToast }) {
     finally { setBusy(false) }
   }
 
-  // Si la hizo un usuario logueado (no un invitado), el dueño tiene que poder
-  // ir a su perfil -- el nombre que llegó en la reserva puede no coincidir
-  // con el de su cuenta (lo escribe a mano cada vez), así que el link usa el
-  // @username real, no el guest_name.
+  // Si reservó un usuario logueado, el link usa su @username y no el guest_name
   const waHref  = g.guest_contact ? whatsappLink(g.guest_contact) : ''
   const telHref = g.guest_contact ? `tel:${g.guest_contact.replace(/[^\d+]/g, '')}` : null
 

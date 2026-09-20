@@ -1,15 +1,6 @@
-// Helpers puros de disponibilidad para las vistas de reserva (BookingGridDesktop
-// y BookingFlowMobile) -- separados de scheduleGrid.js a propósito, porque ese
-// archivo es sobre EDITAR el horario semanal del club, y esto es sobre LEER
-// qué turnos ya están ocupados/pedidos para un día puntual. Toman `bookings`
-// (las filas que ya trajo ClubBooking.jsx desde GET /:id/bookings) y nunca
-// pegan a la red -- son las mismas cuentas que antes vivían como funciones
-// locales dentro de ClubBooking.jsx, sólo que ahora reciben `courtId` como
-// parámetro en vez de cerrar sobre un único "selectedCourtId", porque las dos
-// vistas nuevas pueden mostrar más de una cancha a la vez.
+// Helpers puros de disponibilidad para las vistas de reserva; no tocan la red
 
-// Sólo "confirmed" bloquea un horario (decisión de Fabri, 2026-09-06): dejar
-// "pending" en pie evita que el dueño pierda clientes por tardar en decidir.
+// Solo "confirmed" bloquea un horario
 export function isSlotTaken(bookings, date, courtId, startTime) {
   return bookings.some((b) => (
     b.status === 'confirmed' &&
@@ -19,10 +10,7 @@ export function isSlotTaken(bookings, date, courtId, startTime) {
   ))
 }
 
-// Group_id de las solicitudes pendientes (de otras personas) que ya apuntan a
-// alguno de estos horarios -- para el aviso de "muy solicitado" (no bloquea,
-// sólo informa). Cuenta grupos, no filas: una misma reserva de varios turnos
-// seguidos no debe contarse dos veces.
+// Group_id de pendientes ajenas en estos horarios, para el aviso "muy solicitado" (no bloquea)
 export function pendingGroupIdsFor(bookings, date, courtId, startTimes) {
   const ids = new Set()
   for (const b of bookings) {
@@ -36,9 +24,7 @@ export function pendingGroupIdsFor(bookings, date, courtId, startTimes) {
   return ids
 }
 
-// Cuántos turnos seguidos y libres hay a partir de `startIndex` en `slots` --
-// corta en el primer turno ya tomado o en el tope `cap` (MAX_SLOTS_PER_BOOKING,
-// ver ClubBooking.jsx).
+// Turnos libres seguidos desde startIndex, hasta el primer ocupado o el tope cap
 export function maxConsecutiveFree(bookings, date, courtId, slots, startIndex, cap) {
   let n = 0
   for (let i = startIndex; i < slots.length && n < cap; i++) {

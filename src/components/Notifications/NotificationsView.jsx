@@ -194,10 +194,7 @@ function NotifRow({ n, navigate, onFollow, onInvitation, onJoinRequest, onCollab
   const unread = !n.read;
   const isAdminMsg  = n.type === 'admin_message';
   const isOwnership = n.type === 'ownership_received';
-  // Ícono fijo sólo cuando el actor de la notificación es el admin que
-  // revisó el reclamo -- no hay que exponer quién fue. Cuando el actor es el
-  // reclamante (aviso de reclamo nuevo) se muestra su avatar real: es lo que
-  // el admin necesita para identificarlo.
+  // Ícono fijo solo si el actor es el admin que revisó; si es el reclamante se ve su avatar
   const isClubClaimByAdmin   = n.type === 'club_claim'   && n.actor_is_admin;
   const isClubRequestByAdmin = n.type === 'club_request' && n.actor_is_admin;
   const isSystem = isAdminMsg || isOwnership || isClubClaimByAdmin || isClubRequestByAdmin;
@@ -369,10 +366,7 @@ function NotifText({ n, navigate }) {
     );
   }
   if (n.type === 'club_request') {
-    // Mismo criterio de privacidad que club_claim: si el actor es el admin
-    // que aprobó/rechazó, no se expone su identidad ante quien pidió el
-    // cambio; y el "Ver →" a la bandeja de admin sólo tiene sentido para
-    // quien mira como admin.
+    // Si el actor es el admin que resolvió, no se expone; el "Ver →" es solo para admins
     const lead = n.actor_is_admin ? n.body : <>{actorEl} {n.body}</>;
     if (!isAdminViewer) return <div className="text-[13px] text-secondary">{lead}</div>;
     return (
@@ -388,11 +382,9 @@ function NotifText({ n, navigate }) {
     );
   }
   if (n.type === 'club_claim') {
-    // Prefijo de actor sólo cuando el actor no es el admin que revisó (o sea,
-    // en el aviso de reclamo nuevo) -- ahí el admin necesita saber quién es.
+    // Prefijo de actor solo si no es el admin que revisó
     const lead = n.actor_is_admin ? n.body : <>{actorEl} {n.body}</>;
-    // "Ver →" sólo tiene sentido para quien mira como admin: el reclamante
-    // viendo el resultado de su propio reclamo no tiene esa bandeja a la que ir.
+    // "Ver →" solo para quien mira como admin
     if (!isAdminViewer) return <div className="text-[13px] text-secondary">{lead}</div>;
     return (
       <div className="text-[13px] text-secondary">
@@ -420,12 +412,7 @@ function NotifText({ n, navigate }) {
     );
   }
   if (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') {
-    // El body ya viene armado del todo en el back -- mismo motivo que en
-    // Header.jsx: sin esta rama caía en notifSummary(), que recorta a 120
-    // caracteres (pensado para el toast, no para esta lista completa) y el
-    // aviso se leía cortado a la mitad. entity_id acá es el id del CLUB (no
-    // el group_id de la reserva) -- no hay pantalla de "ver esta reserva
-    // puntual", así que el link lleva directo a la ficha del club.
+    // El body ya viene armado del back: sin esta rama notifSummary lo recortaba a 120 caracteres
     return (
       <div className="text-[13px] text-secondary">
         {n.body}{' '}

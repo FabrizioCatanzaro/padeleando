@@ -2,11 +2,7 @@ import { X } from 'lucide-react'
 import ClubCourtsManager from './ClubCourtsManager'
 import Btn from '../shared/Btn'
 
-// Modal separado de "Editar club" (pedido explícito de Fabri: gestionar
-// canchas no es editar información del club, así que no comparten pantalla).
-// No tiene un botón "Guardar" porque cada acción de ClubCourtsManager ya
-// persiste sola contra la API (alta/edición/borrado/orden) -- acá sólo se
-// puede cerrar.
+// Sin botón Guardar: cada acción de ClubCourtsManager ya persiste sola
 export default function ClubCourtsModal({ clubId, onClose, onCourtsChange }) {
   return (
     <div className="fixed inset-0 z-1000 flex items-end sm:items-center justify-center"

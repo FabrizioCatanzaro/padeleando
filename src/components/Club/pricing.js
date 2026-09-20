@@ -1,12 +1,4 @@
-// Precio de turnos (Fase 4): el dueño carga DOS precios por cancha -- uno
-// para un turno de 30 min (`price_30`) y otro para uno de 60 (`price_60`) --
-// porque en la práctica el de 60 no siempre es el doble del de 30 (puede
-// tener un combo). Como el turno base ahora SIEMPRE es de 30 min (ver
-// clubForm.js/ClubFormFields.jsx -- el dueño ya no elige la duración), una
-// reserva de varios turnos seguidos se arma de a bloques de 60 min y, si
-// sobra un turno de 30 suelto (cantidad impar de turnos), se suma aparte con
-// el precio de 30. Misma lógica que `computeTotalPrice()` en
-// padeliando-api/src/routes/clubs.js -- si se cambia acá, cambiar allá.
+// Precio de turnos: bloques de 60 más un 30 suelto; igual a computeTotalPrice() de la API
 export function computeTotalPrice(court, slotCount) {
   const p30 = court?.price_30 != null ? Number(court.price_30) : null
   const p60 = court?.price_60 != null ? Number(court.price_60) : null

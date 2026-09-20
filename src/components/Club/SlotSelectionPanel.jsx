@@ -4,12 +4,7 @@ import { maxConsecutiveFree } from './bookingAvailability'
 import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 
-// Panel de "elegí cuántos turnos seguidos" + confirmar -- compartido por
-// BookingGridDesktop (aparece como una fila que se expande debajo de la
-// cancha tocada) y BookingFlowMobile (aparece dentro de la tarjeta de la
-// cancha tocada). Misma mecánica de siempre (antes vivía inline en
-// ClubBooking.jsx): se parte de 1 turno y se suma/resta de a uno, hasta el
-// tope de turnos libres seguidos o MAX_SLOTS_PER_BOOKING, lo que sea menor.
+// Panel de cantidad de turnos seguidos, compartido por la grilla y el flujo mobile
 export default function SlotSelectionPanel({
   court, club, slots, selectedDate, bookings, selection,
   onChangeCount, onCancel, onConfirm, canManage, maxSlotsPerBooking,

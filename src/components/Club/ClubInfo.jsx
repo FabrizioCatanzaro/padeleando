@@ -8,8 +8,7 @@ import PlayerAvatar from '../shared/PlayerAvatar';
 const SOCIAL_ICON = { instagram: Instagram, facebook: Facebook, website: Globe };
 const FLOOR_LABEL = { cesped_sintetico: 'Césped sintético', cesped_natural: 'Césped natural', cemento: 'Cemento' };
 const WALL_LABEL  = { cemento: 'Paredes de cemento', cristal: 'Paredes de cristal' };
-// Mismo criterio de resumen que ClubCourtsManager.jsx (duplicado a propósito:
-// son etiquetas de UI, no lógica de negocio).
+// Resumen de cancha duplicado de ClubCourtsManager (son etiquetas de UI)
 function courtSummary(c) {
   return [
     c.floor_type ? FLOOR_LABEL[c.floor_type] : null,
@@ -50,14 +49,12 @@ export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManag
   const horarios = scheduleLines(club.schedule);
   const social   = (club.social_links ?? []).filter((s) => s.url);
   const faltan   = missingFields(club);
-  // Canchas reales (Fase 2): si el dueño ya cargó al menos una, reemplazan el
-  // número suelto de "cuántas canchas" que se muestra en DÓNDE.
+  // Con canchas reales cargadas reemplazan el número suelto de DÓNDE
   const canchas  = club.courts_list ?? [];
 
   return (
     <>
-      {/* Sólo se ofrece mientras el club no tenga dueño verificado -- una vez
-          reclamado y aprobado, esto deja de tener sentido para cualquiera. */}
+      {/* Solo se ofrece mientras el club no tiene dueño verificado */}
       {!admin && !club.has_owner && (
         <div
           className="flex items-center justify-between gap-3.5 flex-wrap rounded-xl px-4 py-3.5 mb-3.5"
@@ -153,9 +150,7 @@ export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManag
         </Bloque>
       )}
 
-      {/* Solapa aparte, no una línea más adentro de DÓNDE: es la única que
-          lleva a otro perfil, no a un dato del club. Sólo sale si el dueño
-          eligió mostrarse (owner_visible) -- ver checkbox en ClubEditModal. */}
+      {/* Solapa aparte: lleva a otro perfil; solo sale si el dueño eligió mostrarse (owner_visible) */}
       {club.owner_visible && club.owner_display_name && (
         <Bloque titulo="DUEÑO">
           <Link

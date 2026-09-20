@@ -13,8 +13,7 @@ const RELATIONSHIP_OPTIONS = [
   { value: 'otro',      label: 'Otra relación' },
 ]
 
-// Cada foto pide algo distinto a propósito: tres fotos genéricas no le dan al
-// admin ninguna pista de qué está mirando.
+// Cada foto pide algo distinto para darle contexto al admin
 const PHOTO_SLOTS = [
   { key: 'photo_front',  title: 'Frente del club', hint: 'El cartel o la entrada, que se vea el nombre' },
   { key: 'photo_proof',  title: 'Algo que te vincule al club', hint: 'Una factura, un cartel interno, vos en el mostrador...' },
@@ -23,8 +22,7 @@ const PHOTO_SLOTS = [
 
 function PhotoPicker({ slot, file, onChange }) {
   const inputId = `claim-${slot.key}`
-  // useMemo (no useEffect+setState) para no disparar un render en cascada:
-  // el preview se deriva del file en el mismo render, y sólo se limpia aparte.
+  // useMemo en vez de useEffect+setState: el preview se deriva en el mismo render
   const preview = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
   useEffect(() => () => { if (preview) URL.revokeObjectURL(preview) }, [preview])
 
@@ -55,10 +53,7 @@ function PhotoPicker({ slot, file, onChange }) {
   )
 }
 
-// Modal para reclamar ser dueño de un club sin dueño verificado. A diferencia
-// de ClubRequestModal (que propone un cambio de dato), esto es un reclamo de
-// identidad: un admin lo revisa a mano y, si lo aprueba, este usuario pasa a
-// poder editar el club directamente.
+// Reclamo de identidad: un admin lo revisa y, si aprueba, el usuario edita el club
 export default function ClubClaimModal({ club, onClose, onSubmitted }) {
   const { showToast } = useToast()
   const [fullName, setFullName]         = useState('')

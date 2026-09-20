@@ -2,9 +2,7 @@ import { DAYS } from './scheduleGrid'
 
 const timeCls = 'bg-surface border border-border-mid text-white text-[12px] font-sans rounded-sm px-1.5 py-1 outline-none'
 
-// Grilla día × horario, para no depender de que alguien escriba a mano
-// "Lun a Vie: 9 a 23" en un textarea. `grid` viene de scheduleGrid.js:
-// 7 entradas fijas (una por día) con { open, from, to }.
+// Grilla día × horario; grid viene de scheduleGrid.js (7 entradas con open, from, to)
 export default function ClubScheduleFields({ grid, onChange }) {
   const anyOpen = grid.some((d) => d.open)
 

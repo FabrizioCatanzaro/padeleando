@@ -1,6 +1,4 @@
-// Búsquedas recientes del buscador (paleta + portada). Sólo términos, no
-// resultados: si el dato cambió (perfil borrado, categoría renombrada) el
-// término sigue siendo válido para volver a buscarlo.
+// Búsquedas recientes (solo términos, no resultados)
 
 const KEY = 'padeliando_recent_searches';
 const MAX = 8;

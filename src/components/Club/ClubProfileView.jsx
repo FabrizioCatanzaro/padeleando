@@ -48,8 +48,7 @@ const BASE_TABS = [
   { id: 'cats',     label: 'CATEGORÍAS' },
   { id: 'info',     label: 'INFO' },
 ]
-// Sólo el dueño/admin ve la solapa de gestión de reservas -- se inserta
-// después de RESERVAR (donde el visitante reserva, acá el dueño decide).
+// Solo dueño o admin ve la solapa de gestión, después de RESERVAR
 const MANAGE_TAB = { id: 'gestion', label: 'RESERVAS' }
 
 export default function ClubProfileView() {
@@ -67,10 +66,7 @@ export default function ClubProfileView() {
   const [showClaim, setShowClaim] = useState(false)
   const [showCourtsManager, setShowCourtsManager] = useState(false)
 
-  // Referencia estable: si fuera una arrow function inline en el JSX de más
-  // abajo, cambiaría en cada render y dispararía de nuevo el useEffect de
-  // ClubCourtsManager (su fetch inicial de canchas) en cada re-render de esta
-  // pantalla mientras el modal está abierto.
+  // Referencia estable: una arrow inline volvería a disparar el fetch de ClubCourtsManager
   const handleCourtsChange = useCallback((courts_list) => {
     setClub((c) => (c ? { ...c, courts_list } : c))
   }, [])
@@ -78,14 +74,9 @@ export default function ClubProfileView() {
     setClub((c) => (c && c.pending_bookings_count !== pending_bookings_count ? { ...c, pending_bookings_count } : c))
   }, [])
 
-  // El dueño verificado edita directo igual que un admin (ver requireClubManage
-  // en el back); cualquier otro usuario sólo puede pedir un cambio.
+  // El dueño verificado edita directo como un admin; el resto solo sugiere cambios
   const canManage = isAdmin || !!club?.is_owner
-  // Distinto (y más estricto) que canManage a propósito: un admin sólo puede
-  // gestionar las reservas de un club que TODAVÍA no tiene dueño verificado
-  // -- si ya lo tiene, el admin no tiene que poder actuar como si fuera el
-  // dueño de un club ajeno. Lo calcula el back (`can_manage_bookings`) porque
-  // necesita saber `has_owner`, que no viaja tal cual al front.
+  // Lo calcula el back (can_manage_bookings): el admin solo gestiona clubes sin dueño
   const canManageBookings = !!club?.can_manage_bookings
   const tabs = useMemo(() => {
     if (!canManageBookings) return BASE_TABS
@@ -117,12 +108,7 @@ export default function ClubProfileView() {
 
   useEffect(() => { fetchData(id) }, [id, fetchData])
 
-  // has_owner/is_owner (y el rol que ve el back) se calculan con el viewerId
-  // de la cookie en cada GET -- si el usuario inicia o cierra sesión sin
-  // navegar a otra página, el club que ya está en memoria queda respondido
-  // con la sesión anterior ("Sugerir cambios" en vez de "Editar club", o al
-  // revés) hasta que alguien fuerza un refresh. Se vuelve a pedir el club,
-  // sin loader de pantalla completa, cada vez que cambia quién está logueado.
+  // Vuelve a pedir el club, sin loader, al cambiar de sesión: is_owner y has_owner dependen de la cookie
   const viewerKey  = user?.id ?? null
   const prevViewer = useRef(viewerKey)
   useEffect(() => {
@@ -157,8 +143,7 @@ export default function ClubProfileView() {
   const enVivo  = (events.ongoing?.length ?? 0) > 0
   const pd      = proximo ? eventDate(proximo) : null
 
-  // Fase 2: si el dueño ya cargó canchas reales, el riel cuenta esas -- son
-  // el dato verdadero. Si no, sigue mostrando el número suelto de siempre.
+  // Con canchas reales cargadas el riel cuenta esas; si no, el número suelto
   const canchasCount = (club.courts_list?.length) || club.courts;
   const rail = [
     { v: stats.torneos ?? 0,    k: 'Torneos' },

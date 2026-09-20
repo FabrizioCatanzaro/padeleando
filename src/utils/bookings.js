@@ -1,9 +1,6 @@
 import { addMinutes } from '../components/Club/scheduleGrid'
 
-// Compartido entre ClubBookingManage.jsx (reservas de un club, para el
-// dueño) y MyBookingsView.jsx (reservas propias, para el jugador) -- las dos
-// pantallas agrupan las mismas filas planas de `bookings` por group_id y
-// necesitan la misma fecha/hora formateada, así que vive acá una sola vez.
+// Helpers compartidos por ClubBookingManage y MyBookingsView
 
 export function fmtDate(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -11,21 +8,14 @@ export function fmtDate(dateStr) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Fecha Y HORA a la que se hizo/decidió la solicitud -- distinto de `date`
-// (el día del turno en sí, que se muestra por separado).
+// Fecha y hora en que se hizo o decidió la solicitud (no el día del turno)
 export function fmtDateTime(iso) {
   if (!iso) return null
   const label = new Date(iso).toLocaleString('es-AR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Agrupa las filas planas que devuelven GET /:id/bookings/manage o
-// GET /bookings/mine (una fila por turno base) en una reserva lógica por
-// group_id -- mismo criterio que usa el backend para insertarlas (ver
-// insertBookingGroup en routes/clubs.js). club_id/club_name/club_photo_url
-// sólo vienen en /bookings/mine (una reserva propia puede ser de cualquier
-// club); en /:id/bookings/manage quedan undefined y no se usan -- el club ya
-// se sabe por contexto en esa pantalla.
+// Agrupa las filas por group_id; club_id, club_name y club_photo_url solo vienen en /bookings/mine
 export function groupBookings(rows) {
   const map = new Map()
   for (const r of rows) {

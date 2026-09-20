@@ -4,20 +4,7 @@ import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 import SlotSelectionPanel from './SlotSelectionPanel'
 
-// Vista mobile: una grilla como la de escritorio no entra en una pantalla
-// angosta (hay clubes con 10+ horas de horario), así que acá se arma en dos
-// pasos, como la referencia que trajo Fabri -- primero se elige la HORA
-// (chips con los horarios que tienen algún turno libre en CUALQUIER cancha
-// ese día) y recién ahí se ve, para esa hora puntual, qué canchas están
-// libres. A propósito NO se copia el detalle de la referencia de mostrar dos
-// botones de precio fijos (60/120 min): acá tocar una cancha despliega el
-// mismo selector +/- de siempre, porque el usuario puede querer armar
-// cualquier duración de a turnos de 30 min (Fase 4) -- el botón sólo muestra
-// el precio de arrancar con UN turno (30 min).
-// Los chips de hora van en flex-wrap (no scroll horizontal, pedido de Fabri
-// 2026-09-13): a diferencia de la tira de 7 días de ClubBooking.jsx, acá
-// puede haber muchos más horarios en un mismo día y todos tienen que
-// quedar a la vista sin scrollear.
+// Mobile en dos pasos: primero la hora (flex-wrap, sin scroll) y luego las canchas libres
 export default function BookingFlowMobile({
   club, courts, slots, selectedDate, bookings,
   selection, onSelect, onChangeCount, onCancelSelection, onConfirm,
@@ -28,15 +15,12 @@ export default function BookingFlowMobile({
     [slots, courts, selectedDate, bookings],
   )
 
-  // Si ya hay una selección en curso (por ejemplo, se venía de la vista de
-  // escritorio y la pantalla se achicó a mitad de flujo), arranca mostrando
-  // la hora de esa selección en vez de la primera disponible.
+  // Arranca en la hora de la selección en curso, si la hay
   const [selectedHour, setSelectedHour] = useState(() => (
     (selection ? slots[selection.startIndex] : null) ?? availableHours[0] ?? null
   ))
 
-  // Si cambia el día (o la hora elegida ya no queda libre en ninguna cancha),
-  // se vuelve a elegir la primera disponible.
+  // Si cambia el día o la hora ya no está libre, elige la primera disponible
   useEffect(() => {
     if (!availableHours.includes(selectedHour)) setSelectedHour(availableHours[0] ?? null)
     // eslint-disable-next-line react-hooks/exhaustive-deps

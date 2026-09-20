@@ -140,11 +140,7 @@ export const api = {
       respond: (id, action, rejectionReason) =>
         req('PATCH', `/clubs/claims/${id}`, { action, ...(rejectionReason ? { rejection_reason: rejectionReason } : {}) }),
     },
-    // Canchas del club como entidades reales (Fase 2). Las mutaciones devuelven
-    // la fila (o la lista completa, en el caso de `move`) para no tener que
-    // volver a pedir la lista después de cada cambio -- GET /:id/courts es
-    // caché pública (10s) como el resto de /api/clubs, así que un refetch
-    // inmediato después de escribir podría traer una respuesta vieja.
+    // Canchas del club: las mutaciones devuelven la fila o la lista, sin refetch (GET /courts tiene caché de 10s)
     courts: {
       list:   (clubId)              => req('GET',    `/clubs/${clubId}/courts`),
       create: (clubId, body)        => req('POST',   `/clubs/${clubId}/courts`, body),
@@ -160,8 +156,7 @@ export const api = {
       decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
     },
   },
-  // "Mis reservas" del jugador logueado -- cruza todos los clubes, por eso no
-  // vive anidado bajo /clubs/:id como el resto de arriba (ver routes/bookings.js).
+  // "Mis reservas" cruza todos los clubes: no vive bajo /clubs/:id
   bookings: {
     mine:       ()               => req('GET',   '/bookings/mine'),
     cancelMine: (groupId, body)  => req('PATCH', `/bookings/mine/${groupId}`, body),

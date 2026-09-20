@@ -60,9 +60,7 @@ const BASE_TABS = [
   { id: 'partidos', label: 'PARTIDOS' },
   { id: 'stats',    label: 'ESTADÍSTICAS' },
 ];
-// "Mis reservas" es privado -- nadie visitando el perfil de otra persona
-// tiene por qué ver qué turnos reservó. Se agrega sólo para isOwnProfile,
-// mismo patrón que la solapa RESERVAS del dueño en ClubProfileView.jsx.
+// "Mis reservas" es privado: solo se agrega en el perfil propio
 const BOOKINGS_TAB = { id: 'reservas', label: 'RESERVAS' };
 
 // El avatar se guarda a 512 px: pedirlo transformado sólo cambia el formato y la compresión.
@@ -403,13 +401,7 @@ export default function ProfileView() {
     return () => window.removeEventListener('keydown', onKey);
   }, [avatarZoom]);
 
-  // "Mis reservas" sólo la ve el dueño del perfil: isOwnProfile hace falta
-  // YA para armar `tabs` con useMemo, y useMemo no puede ir después de un
-  // return condicional (los "if (loading) return" de abajo) -- si loading
-  // es true la primera vez, ese useMemo no llegaría a ejecutarse, y al pasar
-  // a loading=false sí, dando un hook de más entre renders ("Rendered more
-  // hooks than during the previous render"). Por eso isOwnProfile y tabs se
-  // calculan acá arriba, con `data` optional porque todavía puede ser null.
+  // tabs va antes de los return condicionales para no romper el orden de hooks
   const isOwnProfile = !!data && user?.username === data.owner.username;
   const tabs = useMemo(
     () => (isOwnProfile ? [...BASE_TABS, BOOKINGS_TAB] : BASE_TABS),
@@ -1072,11 +1064,7 @@ export default function ProfileView() {
         </>)}
 
         {tab === 'resumen' && (<>
-        {/* Dueño verificado de un club, si eligió mostrarlo públicamente
-            (clubs.owner_visible) -- mismo dato que la ficha del club expone
-            al revés (ahí se ve el dueño; acá, en el perfil del dueño, se ve
-            el club). Arriba de todo el Resumen, antes de cualquier otra
-            sección. */}
+        {/* Dueño verificado de un club, si eligió mostrarlo (owner_visible) */}
         {owner.owned_clubs?.length > 0 && (
           <div className="flex flex-col gap-2 mb-4">
             {owner.owned_clubs.map((c) => (
@@ -1208,11 +1196,7 @@ export default function ProfileView() {
 
         {tab === 'partidos' && <ProfileMatches matches={recent_matches ?? []} stats={stats} />}
 
-        {/* isOwnProfile de nuevo acá, no sólo en `tabs` de arriba: la solapa
-            no se renderiza para un visitante, pero si por lo que sea `tab`
-            quedara en 'reservas' (por ejemplo, cambiando de perfil sin que
-            se resetee el estado), este componente jamás debe montarse para
-            ver las reservas de otra persona. */}
+        {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
         {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
       </div>
 

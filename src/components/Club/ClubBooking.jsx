@@ -10,10 +10,7 @@ import BookingManualBlockModal from './BookingManualBlockModal'
 const HORIZON_DAYS = 7
 const MAX_SLOTS_PER_BOOKING = 8 // igual al tope del backend (routes/clubs.js)
 
-// Mismas etiquetas y mismo criterio de resumen que ClubInfo.jsx y
-// ClubCourtsManager.jsx (duplicado a propósito -- son etiquetas de UI, no
-// lógica de negocio) -- acá se usa para armar el resumen de cada cancha que
-// muestran BookingGridDesktop/BookingFlowMobile.
+// Etiquetas duplicadas de ClubInfo y ClubCourtsManager (son de UI)
 const FLOOR_LABEL = { cesped_sintetico: 'Césped sintético', cesped_natural: 'Césped natural', cemento: 'Cemento' };
 const WALL_LABEL  = { cemento: 'Paredes de cemento', cristal: 'Paredes de cristal' };
 function courtSummary(c) {
@@ -36,8 +33,7 @@ function addDaysStr(dateStr, days) {
   date.setDate(date.getDate() + days)
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
-// Índice de DAYS (lun=0..dom=6) para una fecha "YYYY-MM-DD" -- Date.getDay()
-// devuelve 0=domingo..6=sábado, por eso el corrimiento (+6)%7.
+// Índice de DAYS (lun=0) para una fecha YYYY-MM-DD
 function dayGridIndex(dateStr) {
   const [y, m, d] = dateStr.split('-').map(Number)
   return (new Date(y, m - 1, d).getDay() + 6) % 7
@@ -49,29 +45,7 @@ function dayLabel(dateStr, i) {
   return `${DAYS[dayGridIndex(dateStr)].abbr} ${d}`
 }
 
-// Reserva pública de un turno (Fase 3 de "reservas de cancha"). Sólo funciona
-// si el horario del club quedó en un formato parseable (ClubScheduleFields en
-// modo grilla) -- si el dueño lo dejó como texto libre no estructurado, no
-// hay forma confiable de calcular los turnos posibles, así que se muestra un
-// cartel invitando a contactar al club directo (ver solapa INFO) en vez de
-// arriesgarse a calcular mal la grilla.
-//
-// Se puede reservar más de un turno seguido (ej. dos turnos de 60 min para
-// juntar 2 horas): se toca el turno de inicio y un selector abajo deja subir
-// la cantidad, tope el primer turno ya ocupado que encuentre en la fila.
-//
-// Desde 2026-09-13: la elección de turno tiene dos formatos según el ancho de
-// pantalla (mismo patrón `matchMedia` que ya usa ProfileView.jsx para su
-// avatar) -- en escritorio, BookingGridDesktop muestra TODAS las canchas
-// juntas en una sola línea de tiempo (se compara disponibilidad de un
-// vistazo); en mobile, angosto para eso, BookingFlowMobile hace el mismo
-// trabajo en dos pasos (elegís la hora, después la cancha). Se armaron mirando
-// una referencia que trajo Fabri (atcsports.io), pero adaptadas a que acá la
-// duración del turno no es fija en 60 min y a que hay un aviso de "muy
-// solicitado" que esa referencia no tiene. Las dos vistas comparten la MISMA
-// lógica de disponibilidad (bookingAvailability.js) y el MISMO panel de
-// selección de duración (SlotSelectionPanel.jsx) -- lo único que cambia es
-// cómo se presentan las canchas y los horarios.
+// Reserva pública: requiere horario en grilla; escritorio usa grilla y mobile dos pasos
 export default function ClubBooking({ club, canManage = false }) {
   const grid = useMemo(() => parseScheduleToGrid(club.schedule), [club.schedule])
   const dates = useMemo(
@@ -80,11 +54,7 @@ export default function ClubBooking({ club, canManage = false }) {
   )
   const courts = useMemo(() => (club.courts_list ?? []).filter((c) => c.active), [club.courts_list])
 
-  // Forma común que consumen las dos vistas: id/nombre/precio + un resumen ya
-  // armado en texto. Clubes viejos sin canchas cargadas (Fase 2) muestran una
-  // sola fila/tarjeta genérica -- `name: null` (a diferencia de `displayName`)
-  // para que los modales de confirmación sigan mostrando el texto genérico
-  // ("reservé un turno") en vez de un nombre de cancha inventado.
+  // Forma común de las dos vistas; sin canchas cargadas hay una fila genérica con name null
   const effectiveCourts = useMemo(() => {
     if (courts.length > 0) {
       return courts.map((c) => ({
@@ -93,10 +63,7 @@ export default function ClubBooking({ club, canManage = false }) {
         displayName: c.name,
         price_30: c.price_30,
         price_60: c.price_60,
-        // El precio NO va acá (pedido de Fabri, 2026-09-13: quedaba muy
-        // cargado de info debajo del nombre de la cancha) -- se muestra en el
-        // botón/panel de selección, donde además se puede calcular bien para
-        // la cantidad de turnos que se estén por elegir.
+        // El precio no va acá: se muestra en el botón o panel de selección
         summary: courtSummary(c).join(' · '),
       }))
     }
@@ -110,10 +77,7 @@ export default function ClubBooking({ club, canManage = false }) {
     }]
   }, [courts])
 
-  // Mismo breakpoint y misma técnica que ProfileView.jsx (matchMedia, no sólo
-  // clases responsive) porque acá cambia el COMPONENTE que se renderiza, no
-  // sólo el estilo -- las dos vistas tienen estructuras de datos en pantalla
-  // distintas (una grilla vs. un flujo en dos pasos).
+  // matchMedia como en ProfileView: cambia el componente, no solo el estilo
   const [isDesktop, setIsDesktop] = useState(
     () => typeof window !== 'undefined' && window.matchMedia('(min-width: 768px)').matches
   )
@@ -142,15 +106,7 @@ export default function ClubBooking({ club, canManage = false }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [club.id])
 
-  // Un club sin dueño verificado no puede recibir reservas de visitantes:
-  // nadie con autoridad puede aprobar o rechazar el pedido de un desconocido
-  // (el admin sólo puede hacer bloqueos manuales de sus propios turnos
-  // conocidos ahí, no decidir sobre el de un tercero -- ver
-  // requireClubBookingManage). Se muestra igual la solapa, con un cartel en
-  // vez de la grilla, para invitar a que alguien lo reclame (decisión de
-  // Fabri, 2026-09-06). `canManage` acá ya viene como canManageBookings desde
-  // ClubProfileView, así que el dueño real (o el admin gestionando un club
-  // TODAVÍA sin dueño) sigue viendo el flujo normal.
+  // Sin dueño verificado nadie puede aprobar pedidos: se muestra un cartel para reclamar el club
   if (!club.has_owner && !canManage) {
     return (
       <div className="border border-border-mid rounded-lg px-4 py-6 text-center">
@@ -177,9 +133,7 @@ export default function ClubBooking({ club, canManage = false }) {
 
   function selectDate(dt) { setSelectedDate(dt); setSelection(null) }
 
-  // `anchorRect` (rect del botón tocado, sólo lo manda BookingGridDesktop) es
-  // lo que usa el popover flotante de la grilla de escritorio para saber
-  // dónde aparecer -- BookingFlowMobile no lo manda, ahí no hace falta.
+  // anchorRect solo lo manda la grilla de escritorio (ancla del popover)
   function handleSelect(courtId, startIndex, anchorRect) {
     setSelection({ courtId, startIndex, count: 1, anchorRect })
   }

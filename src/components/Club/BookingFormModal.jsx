@@ -17,17 +17,7 @@ function fmtDate(dateStr) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Formulario de reserva (Fase 3): invitado o logueado piden lo mismo --
-// nombre + contacto -- porque el perfil de usuario no guarda teléfono, sólo
-// se precarga el nombre si hay sesión iniciada. `slots` es uno o más
-// horarios de inicio CONSECUTIVOS (ver ClubBooking.jsx, que arma el rango) --
-// se manda tal cual al back, que guarda una fila por turno pero las inserta
-// todas juntas o ninguna. Al confirmar, la reserva queda "pending" -- eso NO
-// bloquea el turno para otras personas (decisión revertida el 2026-09-06:
-// bloquear al instante le hacía perder clientes al dueño si alguien
-// spameaba pedidos sin confirmar nunca), pero sí lo marca "muy solicitado"
-// si ya había otro pedido -- `contested` avisa de eso acá. Acá se ofrece
-// además avisar directo por WhatsApp al club, con el mensaje ya prellenado.
+// Reserva pending: no bloquea el turno pero marca "muy solicitado" (contested); pide nombre y contacto
 export default function BookingFormModal({ club, courtId, courtName, date, slots, court, contested = false, onClose, onBooked }) {
   const { user } = useAuth()
   const [name, setName]       = useState(user?.name ?? '')

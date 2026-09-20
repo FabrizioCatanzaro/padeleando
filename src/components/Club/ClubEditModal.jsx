@@ -6,12 +6,7 @@ import { clubToForm, formToClub } from './clubForm'
 import ClubFormFields from './ClubFormFields'
 import Btn from '../shared/Btn'
 
-// Modal de edición/alta directa de un club. Lo usan tanto un admin como el
-// dueño verificado (ver requireClubManage en el back) -- los dos editan
-// exactamente lo mismo, nombre y ubicación incluidos. La única diferencia
-// real es que la foto de cabecera y el toggle de "mostrar mi nombre" sólo
-// tienen sentido para un club que ya existe (no en el alta).
-// club = null → alta (siempre admin); club con id → edición.
+// Alta o edición directa (admin o dueño); club null es alta, siempre admin
 export default function ClubEditModal({ club, onClose, onSaved }) {
   const { showToast } = useToast()
   const isNew = !club?.id

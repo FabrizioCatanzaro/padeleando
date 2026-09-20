@@ -15,18 +15,7 @@ function fmtDate(dateStr) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
-// Bloqueo manual del dueño (no confundir con BookingFormModal, que es la
-// reserva pública de un visitante): esto es para cuando alguien reservó por
-// fuera de la app -- llamó, escribió o vino en persona -- y el dueño quiere
-// dejar el turno marcado como ocupado para que nadie más lo tome online.
-// Nombre y contacto son OPCIONALES a propósito (puede que el dueño no los
-// tenga a mano) y la reserva queda `confirmed` directo, sin paso de
-// "pendiente" ni link de WhatsApp -- eso es sólo para reservas de visitantes.
-// Como una reserva "pending" ya no bloquea el horario (2026-09-06), puede
-// haber pedidos públicos pendientes justo para este mismo turno -- al
-// marcarlo como reservado, el backend los rechaza solos y les avisa
-// (cancelOverlappingPending); `overlappingPendingCount` es sólo para que el
-// dueño lo sepa ANTES de confirmar.
+// Bloqueo manual del dueño: datos opcionales, queda confirmed y avisa cuántas pending rechazará
 export default function BookingManualBlockModal({ club, courtId, courtName, date, slots, court, overlappingPendingCount = 0, onClose, onBooked }) {
   const [name, setName]       = useState('')
   const [contact, setContact] = useState('')

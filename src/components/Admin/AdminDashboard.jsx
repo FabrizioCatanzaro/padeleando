@@ -44,9 +44,7 @@ export default function AdminDashboard() {
   const [loading,  setLoading]  = useState(true)
   const [error,    setError]    = useState(null)
 
-  // El loader de pantalla completa sólo se muestra en la carga inicial
-  // (loading arranca en `true`, ver useState abajo) -- ni al cambiar el
-  // rango de ACTIVIDAD ni al refrescar en silencio se vuelve a prender.
+  // El loader de pantalla completa solo aparece en la carga inicial
   const fetchStats = useCallback((opts) => {
     const silent = opts?.silent
     return Promise.all([api.admin.stats(), api.admin.timeseries(days)])
@@ -57,12 +55,7 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchStats() }, [fetchStats])
 
-  // Los contadores de "pendientes" (solicitudes/reclamos) se pisan sólo al
-  // montar -- si el admin deja esta pestaña abierta, aprueba/rechaza algo
-  // desde otra pestaña o vuelve acá después de un rato, el número quedaba
-  // viejo hasta refrescar la página a mano. Se refresca (en silencio, sin
-  // el loader de pantalla completa) cada vez que la pestaña vuelve a estar
-  // visible/en foco.
+  // Refresca los contadores en silencio al volver a la pestaña
   useEffect(() => {
     function onVisible() {
       if (document.visibilityState === 'visible') fetchStats({ silent: true })

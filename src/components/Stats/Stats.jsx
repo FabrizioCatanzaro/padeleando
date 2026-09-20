@@ -430,9 +430,7 @@ function accumulatePlayers(tournaments) {
   const playerMap = {};
   tournaments.forEach((t) => {
     const matches = getAllMatches(t);
-    // sf/sc salen de calcStandings, que ya aplicó las mismas reglas que pj/pg
-    // (descarta partidos sin cargar y empates inválidos). Antes se recalculaban
-    // acá con un filtro propio más débil: dos fuentes de verdad para el mismo dato.
+    // sf y sc salen de calcStandings, que ya descarta partidos sin cargar y empates
     calcStandings(t.players, matches).forEach((s) => {
       const key = playerKey(s);
       const row = (playerMap[key] ??= {

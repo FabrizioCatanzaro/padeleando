@@ -873,11 +873,7 @@ export default function HomeView() {
                 : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
             )}
 
-            {/* Acceso rápido al club que administra (dueño verificado) --
-                arriba de las categorías, debajo del riel de stats/torneos.
-                `owned_clubs` viaja siempre en el usuario logueado (no depende
-                de owner_visible: eso sólo rige qué ve el PÚBLICO, esto es su
-                propio panel). */}
+            {/* Acceso rápido al club que administra (owned_clubs viaja siempre en el usuario logueado) */}
             {user?.owned_clubs?.length > 0 && (
               <div className="mb-6">
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">

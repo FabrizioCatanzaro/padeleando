@@ -6,9 +6,7 @@ import ClubScheduleFields from './ClubScheduleFields'
 const labelCls = 'block text-[10px] font-mono tracking-widest text-muted mb-1.5'
 const inputCls = 'w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans'
 
-// Campos editables de un club, compartidos por el modal de solicitud, el panel
-// de admin y el del dueño verificado -- los tres editan lo mismo. `form` es
-// el estado (ver clubToForm) y `patch` aplica un cambio parcial.
+// Campos de un club compartidos por solicitud, admin y dueño; patch aplica un cambio parcial
 export default function ClubFormFields({ form, patch, realCourtsCount = 0 }) {
   const [showMap, setShowMap] = useState(false)
 

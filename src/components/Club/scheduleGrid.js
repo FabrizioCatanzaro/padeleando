@@ -1,9 +1,4 @@
-// Helpers para el editor de horarios en grilla (día × abierto/cerrado × desde-hasta).
-// Lo que persiste en la base sigue siendo lo de siempre -- un array de líneas
-// de texto en `clubs.schedule` (ver clubForm.js) -- esto sólo traduce entre esa
-// forma y una grilla editable, agrupando días consecutivos con el mismo
-// horario en una sola línea ("Lun a Vie: 09:00 a 23:00"), tal como ya se
-// venía escribiendo a mano.
+// Traduce entre las líneas de clubs.schedule y una grilla editable, agrupando días seguidos iguales
 
 export const DAYS = [
   { key: 'lun', label: 'Lunes',     abbr: 'Lun' },
@@ -59,9 +54,7 @@ export function emptyGrid() {
   return DAYS.map((d) => ({ key: d.key, open: false, from: '09:00', to: '23:00' }))
 }
 
-// Intenta interpretar las líneas de texto existentes como una grilla. Si no
-// reconoce ni un solo día devuelve null -- el caller decide si conservar el
-// texto original en vez de perderlo (ver scheduleMode en clubForm.js).
+// Interpreta líneas de texto como grilla; devuelve null si no reconoce ningún día
 export function parseScheduleToGrid(lines) {
   const byKey = Object.fromEntries(DAYS.map((d) => [d.key, { open: false, from: '09:00', to: '23:00' }]))
   let matched = 0
@@ -81,10 +74,7 @@ export function parseScheduleToGrid(lines) {
   return DAYS.map((d) => ({ key: d.key, ...byKey[d.key] }))
 }
 
-// Genera los horarios de INICIO de cada turno posible entre `from` y `to`
-// (ambos "HH:MM") según la duración fija del club (Fase 3, reserva pública).
-// Sólo entran turnos completos: si el último no entra entero antes de `to`,
-// se corta ahí (no se ofrece un turno recortado).
+// Horarios de inicio de turnos completos entre from y to; no ofrece un turno recortado
 export function slotsForRange(from, to, slotMinutes) {
   const toMinutes = (hhmm) => {
     const [h, m] = hhmm.split(':').map(Number);
@@ -98,8 +88,7 @@ export function slotsForRange(from, to, slotMinutes) {
   return slots;
 }
 
-// Suma minutos a un horario "HH:MM" (usado para mostrar el fin de un rango
-// de turnos consecutivos reservados juntos, ver ClubBooking.jsx).
+// Suma minutos a un horario HH:MM
 export function addMinutes(hhmm, minutes) {
   const [h, m] = hhmm.split(':').map(Number);
   const total = h * 60 + m + minutes;

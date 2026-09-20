@@ -4,36 +4,11 @@ import SlotSelectionPanel from './SlotSelectionPanel'
 
 const CELL_MIN_WIDTH = 26 // px por columna de MEDIO turno (30 min) -- dos por hora
 
-// Ancho/alto estimados del popover para clamparlo contra los bordes del
-// viewport antes de que React lo pinte (ver computePopoverStyle) -- no hace
-// falta que sean exactos, sólo lo bastante generosos como para que nunca se
-// corte contra un borde de la pantalla.
+// Tamaño estimado del popover para acotarlo al viewport antes del primer render
 const POPOVER_WIDTH = 300
 const POPOVER_HEIGHT_ESTIMATE = 150
 
-// Vista de escritorio: todas las canchas activas como filas de una misma
-// grilla, con un eje horario continuo -- se arma con CSS grid puro (sin medir
-// píxeles a mano). Cada MEDIO turno (30 min, ver clubs.slot_minutes fijo en
-// Fase 4) es su propia columna angosta -- así se puede arrancar un turno en
-// punto o en la mitad (ej. 10:30) -- pero el ENCABEZADO agrupa cada par de
-// columnas bajo una sola etiqueta de hora (buildHeaderGroups), para que se
-// vea una columna por hora como en la referencia de Fabri (atcsports.io) en
-// vez de una etiqueta "10:00"/"10:30" por separado. Un bloque ocupado de
-// varios turnos seguidos pide `gridColumn: span N` para fundirse en un solo
-// rectángulo, en vez de mostrar un botón gris por cada medio turno tomado.
-//
-// El popover de "elegí cuántos turnos" (SlotSelectionPanel) se renderiza UNA
-// sola vez acá arriba (no por fila) con `position: fixed`, anclado al botón
-// que se tocó (`selection.anchorRect`, capturado en el click con
-// `getBoundingClientRect()`) -- así funciona como un popover FLOTANTE de
-// verdad, igual que en la referencia, en vez de la fila que se expandía
-// dentro de la grilla (esa versión obligaba a scrollear para llegar al +/-
-// cuando la cancha tocada quedaba lejos del borde inferior visible, algo que
-// Fabri señaló que no era lo acordado). `position: fixed` no lo recorta el
-// `overflow-x-auto` de la grilla porque ese contenedor no tiene `transform`
-// ni propiedades parecidas -- si el día llega a agregarle una, hay que
-// revisar esto. Se cierra solo si se scrollea la grilla (la celda anclada ya
-// no está debajo del popover) y con un backdrop invisible clickeable.
+// Escritorio: canchas en filas, una columna por medio turno y encabezado agrupado por hora
 export default function BookingGridDesktop({
   club, courts, slots, selectedDate, bookings,
   selection, onSelect, onChangeCount, onCancelSelection, onConfirm,
@@ -125,10 +100,7 @@ export default function BookingGridDesktop({
   )
 }
 
-// Agrupa los slots de 30 min consecutivos que caen en la misma hora ("09:00"
-// y "09:30" → un solo grupo "09" de 2 columnas) para el encabezado -- no
-// asume que la grilla arranca en punto (un club puede abrir a las 09:30), así
-// que agrupa por el prefijo de hora real de cada slot en vez de asumir pares.
+// Agrupa los slots de 30 min por prefijo de hora real (un club puede abrir a las 09:30)
 function buildHeaderGroups(slots) {
   const groups = []
   let i = 0
@@ -142,10 +114,7 @@ function buildHeaderGroups(slots) {
   return groups
 }
 
-// Posición del popover a partir del rect (viewport) del botón tocado: por
-// default aparece debajo, pegado a la izquierda de la celda, pero se clampea
-// contra los cuatro bordes de la pantalla (y se voltea arriba de la celda si
-// no entra abajo) para que nunca quede cortado ni se vaya de la ventana.
+// Popover debajo de la celda, acotado a los bordes del viewport (o arriba si no entra)
 function computePopoverStyle(rect) {
   const margin = 8
   const width = Math.min(POPOVER_WIDTH, window.innerWidth - margin * 2)
@@ -161,9 +130,7 @@ function computePopoverStyle(rect) {
   return { left, top, width }
 }
 
-// Agrupa turnos ocupados consecutivos en un solo segmento (para el bloque
-// gris fundido); los libres quedan siempre de a uno, porque cada uno sigue
-// siendo un botón clickeable propio (turno de inicio posible, cada 30 min).
+// Agrupa turnos ocupados seguidos en un bloque; los libres quedan de a uno
 function buildSegments(court, slots, selectedDate, bookings) {
   const segments = []
   let i = 0
@@ -192,9 +159,7 @@ function CourtRow({ court, slots, selectedDate, bookings, selection, onSelect })
     <>
       <div className="sticky left-0 z-10 bg-surface border-b border-r border-border-mid px-3 py-2.5">
         <div className="text-[12.5px] text-white font-sans truncate">{court.displayName}</div>
-        {/* Sin truncate a propósito (pedido de Fabri, 2026-09-13): esta info
-            tiene que poder leerse siempre, aunque ocupe varias líneas -- la
-            fila entera de la grilla (CSS grid) crece sola para acompañarla. */}
+        {/* Sin truncate: esta info debe leerse completa */}
         {court.summary && <div className="text-[10px] font-mono text-dim mt-0.5">{court.summary}</div>}
       </div>
 
@@ -209,10 +174,7 @@ function CourtRow({ court, slots, selectedDate, bookings, selection, onSelect })
           )
         }
         const time = slots[seg.startIndex]
-        // Cada segmento libre es siempre de un solo turno (ver buildSegments),
-        // así que alcanza con chequear si su índice cae dentro del rango
-        // [startIndex, startIndex+count) actual -- así el highlight cubre
-        // TODOS los turnos sumados con el +/-, no sólo el primero tocado.
+        // Segmento libre de un turno: se resalta si su índice cae en el rango seleccionado
         const inSelection = isThisCourtSelected
           && seg.startIndex >= selection.startIndex
           && seg.startIndex < selection.startIndex + selection.count

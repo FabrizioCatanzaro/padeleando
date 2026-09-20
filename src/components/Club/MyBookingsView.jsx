@@ -13,13 +13,7 @@ const FILTERS = [
   { id: 'rejected',  label: 'RECHAZADAS' },
 ]
 
-// "Mis reservas": el reverso de ClubBookingManage.jsx -- mismo patrón visual
-// (tarjetas agrupadas por group_id, filtros por estado), pero del lado del
-// jugador: en vez de "quién reservó" muestra EN QUÉ CLUB, y en vez de
-// aprobar/rechazar deja cancelar la reserva propia (pendiente o confirmada).
-// Vive en la solapa "RESERVAS" del perfil propio (ver ProfileView.jsx) --
-// nunca se monta en el perfil de otra persona. No refetchea después de
-// cancelar -- misma disciplina de caché de siempre.
+// Reservas del jugador: agrupa por group_id y permite cancelar; solo en el perfil propio
 export default function MyBookingsView() {
   const { showToast } = useToast()
   const [rows, setRows]       = useState([])
