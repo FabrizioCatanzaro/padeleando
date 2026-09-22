@@ -5,9 +5,10 @@ import Modal from "../shared/Modal";
 import PlayerAvatar from "../shared/PlayerAvatar";
 import ActionMenu from "../shared/ActionMenu";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink, Link2, Copy } from "lucide-react";
+import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink, Link2, Copy, AlertTriangle } from "lucide-react";
 import { api } from "../../utils/api";
 import { useAuth } from "../../context/useAuth";
+import { managementWarnings, LIGA_MIN_PLAYERS } from "../../utils/helpers";
 
 export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDelete, onRefresh }) {
   const [newName, setNewName]           = useState("");
@@ -42,6 +43,11 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
 
   const hasMatches = (playerId) =>
     tournament.matches.some((m) => [...m.team1, ...m.team2].includes(playerId));
+
+  // Igual criterio que PairManager: el mismo helper que marca el "!" de la
+  // pestaña de gestión es el que arma el cartel, así no se pueden desincronizar.
+  const warnings       = managementWarnings(tournament);
+  const missingPlayers = warnings.find((w) => w.id === 'liga-min-players')?.missing ?? 0;
 
   function openInvite(playerId) {
     setInviteState(s => ({ ...s, [playerId]: { open: true, identifier: '', sending: false, error: null } }));
@@ -137,6 +143,9 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
       title="JUGADORES"
       count={tournament.players.filter((p) => !p.removed).length}
       className="mb-4"
+      badge={missingPlayers > 0 ? (
+        <AlertTriangle size={13} className="text-brand" aria-label="Hay avisos en esta sección" />
+      ) : null}
       actions={isOwner ? (expand) => (
         <button
           onClick={() => { expand(); setShowAdd(!showAdd); }}
@@ -146,6 +155,19 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
         </button>
       ) : null}
     >
+      {missingPlayers > 0 && (
+        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[12px] font-mono text-brand leading-relaxed">
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+          <span>
+            Borrador — falta{missingPlayers === 1 ? '' : 'n'} {missingPlayers} {missingPlayers === 1 ? 'jugador' : 'jugadores'} para
+            llegar al mínimo de {LIGA_MIN_PLAYERS}.
+            <span className="block text-soft mt-0.5">
+              Hasta entonces no se pueden cargar partidos.
+            </span>
+          </span>
+        </div>
+      )}
+
       {showAdd && (
         <div className="flex gap-2 mb-3">
           <PlayerInput

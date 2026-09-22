@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { uid, clubCourts, entityClub, isSaneEventDate, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS } from "../../utils/helpers";
+import { uid, clubCourts, entityClub, isSaneEventDate, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS, LIGA_MIN_PLAYERS } from "../../utils/helpers";
 import { api } from "../../utils/api";
 import { useTournament } from "../../hooks/useTournament";
 import PlayerInput from "./PlayerInput";
@@ -101,7 +101,11 @@ export default function Setup() {
   const filledNames = playerNames.filter((n) => n.trim());
   const isEven   = filledNames.length > 0 && filledNames.length % 2 === 0;
   const hasDupes = new Set(filledNames.map((n) => n.trim().toLowerCase())).size !== filledNames.length;
-  const playersValid = name.trim() && filledNames.length >= 4 && !hasDupes;
+  const playersValid = name.trim() && filledNames.length >= LIGA_MIN_PLAYERS && !hasDupes;
+  // Menos jugadores que el mínimo → se crea igual, pero como borrador (no se puede jugar).
+  // Mismo criterio que el americano con menos parejas que AMERICANO_MIN_PAIRS.
+  const ligaIsDraft   = filledNames.length < LIGA_MIN_PLAYERS;
+  const canCreateLiga = !!name.trim() && !hasDupes;
   const tituloValido = name?.length <= 30 && name?.length >= 2;
   const allPairsFilled = pairs.length === filledNames.length / 2 && pairs.every((p) => p.p1Name && p.p2Name);
 
@@ -189,8 +193,8 @@ export default function Setup() {
   }
 
   function handleNext() {
-    if (!playersValid) return;
-    if (isEven && ligaMode === 'pairs') {
+    if (!canCreateLiga) return;
+    if (playersValid && isEven && ligaMode === 'pairs') {
       setPairs(Array.from({ length: filledNames.length / 2 }, () => ({ id: uid(), p1Name: "", p2Name: "" })));
       setStep("pairs");
     } else {
@@ -211,7 +215,13 @@ export default function Setup() {
   }
 
   function infoBox() {
-    if (filledNames.length < 4) return null;
+    if (filledNames.length === 0) {
+      return `✦ Sin jugadores todavía — se crea como borrador. Vas a poder sumarlos después desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo de ${LIGA_MIN_PLAYERS}.`;
+    }
+    if (ligaIsDraft) {
+      const missing = LIGA_MIN_PLAYERS - filledNames.length;
+      return `✦ ${filledNames.length} ${filledNames.length === 1 ? 'jugador' : 'jugadores'} — falta${missing === 1 ? '' : 'n'} ${missing} para el mínimo de ${LIGA_MIN_PLAYERS}. Se crea como borrador: vas a poder sumar los que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.`;
+    }
     if (!isEven) return `✦ ${filledNames.length} jugadores — número impar, los equipos se armarán partido a partido.`;
     if (ligaMode === 'pairs') return `✦ ${filledNames.length} jugadores — en el siguiente paso armás las ${filledNames.length / 2} parejas fijas.`;
     return `✦ ${filledNames.length} jugadores — equipos libres, se armarán partido a partido.`;
@@ -302,9 +312,9 @@ export default function Setup() {
         {step === "players" && (
           <>
             <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-1">
-              JUGADORES <span className="text-muted">(mínimo 4)</span>
+              JUGADORES <span className="text-muted">(mínimo {LIGA_MIN_PLAYERS} para jugar)</span>
             </label>
-            <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado.</p>
+            <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado. Podés dejar menos y sumarlos después.</p>
             <div className="flex flex-col gap-2.5">
               {playerNames.map((p, i) => (
                 <div key={i} className="flex gap-2">
@@ -322,7 +332,7 @@ export default function Setup() {
               + Agregar jugador
             </button>
 
-            {filledNames.length >= 4 && (
+            {filledNames.length >= LIGA_MIN_PLAYERS && (
               <div className="mt-4">
                 <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">MODO DE JUEGO</label>
                 <div className="flex gap-2">
@@ -358,8 +368,8 @@ export default function Setup() {
               </div>
             )}
 
-            <Btn variant="primary" full size="lg" onClick={handleNext} disabled={!playersValid} loading={creating} className="mt-7">
-              {isEven && ligaMode === 'pairs' ? "SIGUIENTE → PAREJAS" : "CREAR TORNEO"}
+            <Btn variant="primary" full size="lg" onClick={handleNext} disabled={!canCreateLiga} loading={creating} className="mt-7">
+              {playersValid && isEven && ligaMode === 'pairs' ? "SIGUIENTE → PAREJAS" : ligaIsDraft ? "CREAR BORRADOR" : "CREAR TORNEO"}
             </Btn>
           </>
         )}

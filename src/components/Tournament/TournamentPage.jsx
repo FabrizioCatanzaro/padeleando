@@ -4,7 +4,7 @@ import {
   Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye,
 } from "lucide-react";
 import {
-  countPlayed, isAmericanoDraft, isLive, managementWarnings,
+  countPlayed, isDraftTournament, isLive, managementWarnings,
   tournamentDisplayStatus, TOURNAMENT_STATUS_META, winnerLabelOf,
 } from "../../utils/helpers";
 import Standings from "../Standings/Standings";
@@ -105,7 +105,11 @@ export default function TournamentPage({
   // Partidos programados sin resultado. Viven en su propia tabla para no
   // contaminar los quince criterios de "jugado" que ya recorren la app.
   const scheduled = tournament.scheduled_matches ?? [];
-  const isDraft = isAmericanoDraft({ format: tournament.format, pairCount: tournament.pairs.length });
+  const isDraft = isDraftTournament({
+    format: tournament.format,
+    pairCount: tournament.pairs.length,
+    playerCount: tournament.players.filter((p) => !p.removed).length,
+  });
   const warningCount = puedeGestionar ? managementWarnings(tournament).length : 0;
   const statusMeta = TOURNAMENT_STATUS_META[tournamentDisplayStatus({
     status: tournament.status, hasLiveMatch: isLive(tournament), hasPlayed: playedCount > 0, isDraft,

@@ -69,14 +69,6 @@ export const fmtHora = (t) => (t ? String(t).slice(0, 5) : '');
 
 export const normalize = (s) => s.trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 
-/**
- * Mejor mes de una serie `monthly_stats` ([{ month: 'YYYY-MM', partidos, victorias }]):
- * más victorias, y a igualdad el de más partidos. Lo usan el perfil y su
- * captura, que muestran el mismo dato y no deben poder separarse.
- * Devuelve `mes` y `anio` sueltos además del `label` ("Julio 2026", sin el "de"
- * que mete toLocaleDateString): con el mes como valor destacado, "Septiembre
- * 2026" no entra en media columna y cada superficie arma lo que le cabe.
- */
 export function bestMonthOf(monthlyStats) {
   const active = (monthlyStats ?? []).filter((m) => m.partidos > 0);
   if (!active.length) return null;
@@ -97,10 +89,6 @@ export function calcStandings(players, matches) {
     if (score1 === "" || score2 === "") return;
     const s1 = parseInt(score1), s2 = parseInt(score2);
     if (Number.isNaN(s1) || Number.isNaN(s2)) return;
-    // En padel no hay empate: un partido igualado es un dato inválido (sólo
-    // puede venir de un registro viejo) y se descarta. Antes se colaba con la
-    // condición `win1 = s1 > s2`, que en un 6-6 daba la victoria al equipo 2 y
-    // la derrota al equipo 1.
     if (s1 === s2) return;
     [[team1, s1, s2], [team2, s2, s1]].forEach(([team, gf, gc]) => {
       team.forEach((pid) => {
@@ -271,25 +259,7 @@ export function adaptPair(p) {
   return { ...p, p1: p.p1_id, p2: p.p2_id };
 }
  
-/**
- * Normaliza un torneo completo que viene de la API.
- * Convierte matches y pairs al formato interno.
- */
-/**
- * Ganadores de un torneo, con los ids de los jugadores que los componen.
- * - Americano: la pareja que ganó la final del cuadro (sin importar el status).
- * - Parejas / libre: la pareja o jugador con más victorias (desempate por
- *   diferencia de games), sólo si el torneo está finalizado. Si hay igualdad
- *   exacta en la cima, son campeones todos los empatados.
- * Devuelve `[{ ids, name }]` — los ids permiten contar títulos por jugador sin
- * volver a parsear nombres.
- */
-/**
- * Fecha en que se jugó un torneo, como YYYY-MM-DD. `created_at` es cuándo se
- * cargó la jornada, que en casi la mitad de los casos no es cuándo se jugó.
- * Prioridad: la fecha declarada del evento, el primer partido, y recién ahí la
- * de creación.
- */
+
 export function tournamentDate(t) {
   if (t.event_date) return String(t.event_date).slice(0, 10);
   const dates = (t.matches ?? []).map((m) => m.date || m.played_at).filter(Boolean).map((d) => String(d).slice(0, 10));
@@ -505,11 +475,6 @@ export function buildFixtureText(
   return `${header}\n\n${blocks.join('\n\n')}`;
 }
 
-/**
- * Un partido programado: mismos ids de jugador que un partido jugado, pero sin
- * resultado. Se le arman team1/team2 para que las mismas funciones que dibujan
- * un partido sirvan sin saber de dónde salió.
- */
 export function adaptScheduled(m) {
   return {
     ...m,
@@ -522,13 +487,6 @@ export function adaptScheduled(m) {
   };
 }
 
-/**
- * Quién ganó la jornada, o null si todavía no terminó. En un americano lo dice
- * la final; en una liga, la punta de la tabla, con empate en pg y en diferencia.
- *
- * Estaba escrito dos veces —una en la página del organizador y otra en la del
- * espectador— y las dos tenían que decir lo mismo. Ahora hay una sola.
- */
 export function winnerLabelOf(tournament) {
   if (!tournament || tournament.status !== 'finished') return null;
   if (tournament.format === 'americano') {
@@ -551,10 +509,6 @@ export function winnerLabelOf(tournament) {
   return top.length ? top.map((r) => r.name).join(' / ') : null;
 }
 
-/**
- * Partidos jugados de una jornada, contando el cuadro si es un americano. Lo
- * usan el encabezado, el estado del torneo y el sonido del espectador.
- */
 export function countPlayed(t) {
   if (!t) return 0;
   const bracketPlayed = t.format === 'americano'
@@ -565,11 +519,6 @@ export function countPlayed(t) {
   return playedMatches(t.matches ?? []).length + bracketPlayed;
 }
 
-/**
- * Cómo se nombra cada fase de un americano. Vivía duplicado en la vista de
- * espectador y en el cuadro, y el encabezado del organizador directamente no
- * decía la fase: un partido de semis se anunciaba igual que uno de la previa.
- */
 export const PHASE_LABEL = {
   previa: 'FASE PREVIA', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL',
 };
@@ -583,13 +532,7 @@ export const bracketPhaseLabel = (phase) =>
 export const pairKeyOf = (players) =>
   [...(players ?? [])].filter(Boolean).map(String).sort().join('|');
 
-/**
- * Cuántos partidos lleva cada pareja, contando los jugados Y los programados.
- * En la fase previa de un americano el tope es 2, y un partido programado ya
- * ocupa uno: si no contara, se podrían programar tres y romper la fase antes de
- * jugarla.
- * @returns {Map<string, number>} clave de pareja → cantidad
- */
+
 export function countPairMatches(rows = []) {
   const out = new Map();
   for (const m of rows) {
@@ -608,9 +551,6 @@ export function adaptTournament(t) {
   return {
     ...t,
     createdAt: t.created_at ?? t.createdAt,
-    // El americano siempre se juega por parejas. Si un dato viejo quedó con
-    // mode='free' (bug al agregar jugadores), lo normalizamos para que la
-    // sección de parejas, la tabla y el resto lo traten como corresponde.
     mode: t.format === 'americano' ? 'pairs' : t.mode,
     players,
     pairs,
@@ -638,26 +578,27 @@ export function isAmericanoDraft({ format, pairCount }) {
   return format === 'americano' && (pairCount ?? 0) < AMERICANO_MIN_PAIRS;
 }
 
-// Una jornada está en vivo sólo si NO terminó y live_match trae partidos.
-//
-// Las dos guardas hacen falta:
-//  - Terminar una jornada es un PATCH de status: nadie limpia live_match, así
-//    que la finalizada conserva el último payload y `!!t.live_match` la daba
-//    por jugándose.
-//  - PUT /tournaments/:id/live-match guarda `[]` tal cual cuando no hay
-//    partidos en curso, y en JS un array vacío es truthy.
-//
-// Es la misma condición que aplica la consulta `live` de GET /api/home
-// (status <> 'finished' + jsonb_array_length > 0).
+// Mínimo de jugadores de una Liga (un partido usa 4). Igual que el americano,
+// una Liga por debajo del mínimo es "borrador": se puede crear y seguir
+// cargando jugadores, pero no se pueden cargar partidos.
+export const LIGA_MIN_PLAYERS = 4;
+
+export function isLigaDraft({ format, playerCount }) {
+  return format === 'liga' && (playerCount ?? 0) < LIGA_MIN_PLAYERS;
+}
+
+// Borrador de cualquier formato. `playerCount` cuenta sólo jugadores activos
+// (sin los `removed: true` que arrastra un partido ya jugado).
+export function isDraftTournament({ format, pairCount, playerCount }) {
+  return isAmericanoDraft({ format, pairCount }) || isLigaDraft({ format, playerCount });
+}
+
+
 export function isLive(t) {
   return t?.status !== 'finished' && Array.isArray(t?.live_match) && t.live_match.length > 0;
 }
 
-// Estado a mostrar de un torneo. Solo hay 4 estados: finished / draft / active / upcoming.
-// - finished: el torneo está finalizado.
-// - draft ('borrador'): americano con menos parejas que el mínimo — todavía no se puede jugar.
-// - active ('en curso'): tiene un partido EN VIVO o ya tiene algún partido jugado.
-// - upcoming ('próximamente'): sin partidos jugados y sin partido en vivo (la fecha no importa).
+
 export function tournamentDisplayStatus({ status, hasLiveMatch, hasPlayed, isDraft = false }) {
   if (status === 'finished') return 'finished';
   if (isDraft) return 'draft';
@@ -674,11 +615,7 @@ export const TOURNAMENT_STATUS_META = {
   finished: { label: 'FINALIZADO',   color: 'default', icon: CircleCheckBig },
 };
 
-// Avisos que el organizador resuelve desde la pestaña de gestión. Es la fuente
-// única: la pestaña muestra el "!" cuando esto devuelve algo y los carteles de
-// gestión se renderizan a partir de las mismas entradas, así no se desincronizan.
-//   - americano-min-pairs: americano en borrador, faltan parejas para el mínimo.
-//   - players-without-pair: modo parejas con jugadores activos sin pareja armada.
+
 export function managementWarnings(tournament) {
   if (!tournament) return [];
   const { players = [], pairs = [], format, mode } = tournament;
@@ -688,6 +625,11 @@ export function managementWarnings(tournament) {
   if (format === 'americano') {
     const missing = AMERICANO_MIN_PAIRS - pairs.length;
     if (missing > 0) warnings.push({ id: 'americano-min-pairs', missing });
+  }
+
+  if (format === 'liga') {
+    const missing = LIGA_MIN_PLAYERS - activePlayers.length;
+    if (missing > 0) warnings.push({ id: 'liga-min-players', missing });
   }
 
   if (mode === 'pairs') {

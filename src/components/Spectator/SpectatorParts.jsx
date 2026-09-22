@@ -8,7 +8,7 @@
  */
 import { useState, useEffect, useRef, useSyncExternalStore, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { calcStandings, courtLabel, getPairLabel, isAmericanoDraft, fmtHora, tournamentDisplayStatus, TOURNAMENT_STATUS_META,
+import { calcStandings, courtLabel, getPairLabel, isDraftTournament, fmtHora, tournamentDisplayStatus, TOURNAMENT_STATUS_META,
   getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS,
   setWinner, visibleSetsCount, countPlayed, PHASE_LABEL, BRACKET_PHASES } from "../../utils/helpers";
 
@@ -366,7 +366,11 @@ function TvHeader({ tournament, club, groupName, groupEmojis, paused, onPrev, on
     status: tournament.status,
     hasLiveMatch: hasLive,
     hasPlayed: countPlayed(tournament) > 0,
-    isDraft: isAmericanoDraft({ format: tournament.format, pairCount: tournament.pairs?.length }),
+    isDraft: isDraftTournament({
+      format: tournament.format,
+      pairCount: tournament.pairs?.length,
+      playerCount: tournament.players?.filter((p) => !p.removed).length,
+    }),
   });
   const status = TOURNAMENT_STATUS_META[dispStatus === 'active' && hasLive ? 'live' : dispStatus];
   const StatusIcon = status.icon;
