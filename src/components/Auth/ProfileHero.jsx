@@ -2,6 +2,7 @@ import { Camera, Trash2, BadgeCheck, Badge } from 'lucide-react';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import ProfileBio from './ProfileBio';
 import coverMark from '../../assets/cover-mark.webp';
+import { categoryLabel } from '../../utils/category';
 
 const TONE = {
   brand: 'text-brand', gold: 'text-premium-hi', off: 'text-border-strong', default: 'text-white',
@@ -113,6 +114,12 @@ export default function ProfileHero({
           </h1>
           <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-2 gap-y-1 mt-1.5 font-mono text-[12px] text-muted">
             <span>@{owner.username}</span>
+            {owner.category && (
+              <>
+                <span className="opacity-40">·</span>
+                <span className="text-brand" title="Categoría declarada por el jugador">{categoryLabel(owner.category)}</span>
+              </>
+            )}
             {joinedAt && <><span className="opacity-40">·</span><span className="text-dim">desde {joinedAt}</span></>}
           </div>
 

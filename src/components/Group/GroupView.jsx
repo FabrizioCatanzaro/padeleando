@@ -211,6 +211,10 @@ export default function GroupView() {
       price:    group.signup_price ?? null,
       unit:     group.signup_price_unit ?? 'player',
       contacts: group.signup_contacts ?? [],
+      level:    group.level ?? null,
+      capacity: group.signup_capacity ?? null,
+      capacity_unit: group.signup_capacity_unit ?? null,
+      closes_at: group.signup_closes_at ?? null,
     });
     setEditingGroup(true);
   }
@@ -230,6 +234,10 @@ export default function GroupView() {
         signup_price_unit: editSignup.unit,
         // Los vacíos no viajan: el backend rechaza un contacto sin valor.
         signup_contacts:   editSignup.contacts.filter((c) => c.value.trim()),
+        level:             editSignup.level ?? null,
+        signup_capacity:      editSignup.capacity ?? null,
+        signup_capacity_unit: editSignup.capacity_unit ?? null,
+        signup_closes_at:     editSignup.closes_at ?? null,
       });
       // El PUT devuelve sólo las columnas de groups: los datos del club los
       // aporta el que ya está elegido, así se evita releer la categoría.

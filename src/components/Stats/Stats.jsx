@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcStandings, adaptTournament, getTournamentWinnerLabel, getTournamentWinners, tournamentDate, normalize, fmt,
-  getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS } from "../../utils/helpers";
+  getAllMatches, playedMatches, calcPartnerships, tiedLabel, topStandingRows, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS } from "../../utils/helpers";
 import { Bomb, CalendarDays, Clock, Crown, Flame, Gem, Handshake, Hourglass, Scale, Swords, Target, Timer, Trophy } from "lucide-react";
 import { api } from "../../utils/api";
 import {
@@ -122,11 +122,12 @@ function CurrentStats({ tournament }) {
   const getPlayerName = (id) => players.find((p) => p.id === id)?.name ?? "?";
 
   // Detectar empates en el TOP 1 (MVP)
-  const topPg   = standings[0]?.pg ?? 0;
-  const topDiff = standings[0] ? standings[0].sf - standings[0].sc : 0;
-  const leaders = standings.filter((p) => p.pg === topPg && (p.sf - p.sc) === topDiff);
+  // Mismo criterio que la tabla y el campeón (topStandingRows): calcStandings
+  // ordena por % de victorias y el MVP salía distinto del primero de la tabla.
+  const leaders = topStandingRows(standings);
+  const topPg   = leaders[0]?.pg ?? 0;
   const mvpLabel = tiedLabel(leaders.map((p) => p.name));
-  const mvpPct   = standings[0]?.pj > 0 ? Math.round((topPg / standings[0].pj) * 100) : null;
+  const mvpPct   = leaders[0]?.pj > 0 ? Math.round((topPg / leaders[0].pj) * 100) : null;
 
   // Detectar empates entre las mejores parejas
   const topWinRate   = partnerships[0]?.winRate ?? -1;

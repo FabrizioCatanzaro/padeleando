@@ -110,12 +110,52 @@ export function calcStandings(players, matches) {
 }
 
 /**
+ * Fila de tabla de una pareja: sólo los partidos donde el equipo son
+ * exactamente sus dos jugadores. Antes se tomaba la fila individual del
+ * jugador 1, que también contaba los partidos que jugó con otro compañero
+ * (por ejemplo, en la pareja que reemplazó a una retirada).
+ */
+export function calcPairStats(pair, matches) {
+  // (Americano. En Liga ver pairRowStats.)
+  const key = (ids) => [...ids].map(String).sort().join('|');
+  const k = key([pair.p1, pair.p2]);
+  const row = { pj: 0, pg: 0, pp: 0, sf: 0, sc: 0 };
+  for (const m of matches ?? []) {
+    const s1 = parseInt(m.score1), s2 = parseInt(m.score2);
+    if (Number.isNaN(s1) || Number.isNaN(s2) || s1 === s2) continue;
+    const side = key(m.team1) === k ? 1 : key(m.team2) === k ? 2 : 0;
+    if (!side) continue;
+    const gf = side === 1 ? s1 : s2, gc = side === 1 ? s2 : s1;
+    row.pj++; row.sf += gf; row.sc += gc;
+    if (gf > gc) row.pg++; else row.pp++;
+  }
+  return row;
+}
+
+/**
+ * Fila de tabla de una pareja según el formato. Americano: los partidos de esa
+ * dupla (calcPairStats). Liga: las parejas cambian en medio del torneo y la
+ * tabla sigue al jugador, así que se usa la fila individual del jugador 1.
+ * @param individualRows - salida de calcStandings
+ */
+export function pairRowStats(tournament, pair, individualRows) {
+  if (tournament.format === 'americano') return calcPairStats(pair, tournament.matches);
+  return individualRows.find((r) => r.id === pair.p1)
+      ?? individualRows.find((r) => r.id === pair.p2)
+      ?? { pj: 0, pg: 0, pp: 0, sf: 0, sc: 0 };
+}
+
+/**
  * Todos los partidos de un torneo, incluidos los del cuadro del americano, que
- * no son filas de `matches` sino nodos del bracket. Cualquier estadística que
- * cuente partidos tiene que pasar por acá.
+ * no son filas de `matches` sino nodos del bracket, sin los W.O. Cualquier
+ * estadística que cuente partidos tiene que pasar por acá; la tabla de
+ * posiciones no (ahí el W.O. sí suma, 6-0).
  */
 export function getAllMatches(tournament) {
-  const { matches: previaMatches, format, bracket, pairs: tournamentPairs } = tournament;
+  const { format, bracket, pairs: tournamentPairs } = tournament;
+  // Un W.O. no se jugó: cuenta en la tabla y en el cuadro, pero no en ninguna
+  // estadística (decisión de Fabri, 2026-11-08).
+  const previaMatches = (tournament.matches ?? []).filter((m) => !m.walkover);
   if (format !== 'americano' || !bracket || !tournamentPairs?.length) return previaMatches;
   const bracketMatches = [];
   [
@@ -124,7 +164,7 @@ export function getAllMatches(tournament) {
     ...(bracket.semis   ?? []),
     ...(bracket.final   ? [bracket.final] : []),
   ].forEach(m => {
-    if (m.winner_id == null) return;
+    if (m.winner_id == null || m.walkover) return;
     const pair1 = tournamentPairs.find(p => p.id === m.pair1_id);
     const pair2 = tournamentPairs.find(p => p.id === m.pair2_id);
     if (!pair1 || !pair2) return;
@@ -202,8 +242,9 @@ export function fmtDuracion(segundos) {
 }
 
 /**
- * Desempate de la tabla de posiciones: victorias, diferencia, games a favor y,
- * si todo empata, el id. Sin ese último criterio el orden quedaba a merced del
+ * Desempate de la tabla de posiciones, decidido por Fabri el 2026-11-08:
+ * victorias, diferencia de games, % de victorias, games a favor y, si todo
+ * empata, el id. Sin ese último criterio el orden quedaba a merced del
  * orden en que Postgres devolvía las filas, que difiere entre queries: dos
  * parejas empatadas en todo salían #8/#9 en la tabla y #9/#8 en el cuadro.
  * Debe coincidir con computeStandings del backend, que asigna los seeds.
@@ -211,8 +252,27 @@ export function fmtDuracion(segundos) {
 export function compareStandingRows(a, b) {
   return b.pg - a.pg
       || (b.sf - b.sc) - (a.sf - a.sc)
+      || winRate(b) - winRate(a)
       || b.sf - a.sf
       || String(a.id).localeCompare(String(b.id));
+}
+
+/** Proporción de partidos ganados de una fila de tabla; 0 si no jugó. */
+export function winRate(row) {
+  return row.pj > 0 ? row.pg / row.pj : 0;
+}
+
+/**
+ * Las filas que comparten el primer puesto: empatadas en victorias,
+ * diferencia, % de victorias y games a favor. Es el criterio de campeón de la
+ * Liga en toda la app (tabla, encabezado, estadísticas, Modo TV).
+ */
+export function topStandingRows(rows) {
+  const sorted = [...rows].filter((r) => r.pj > 0).sort(compareStandingRows);
+  const top = sorted[0];
+  if (!top || top.pg <= 0) return [];
+  const sinId = (r) => ({ ...r, id: '' });
+  return sorted.filter((r) => compareStandingRows(sinId(r), sinId(top)) === 0);
 }
 
 /** Returns the pair label for a given pair ID, or "?" */
@@ -286,21 +346,15 @@ export function getTournamentWinners(t) {
   const standings = calcStandings(t.players, t.matches);
   const isPairs   = t.mode === 'pairs' && t.pairs?.length > 0;
 
+  // Una pareja retirada no puede salir campeona.
   const rows = isPairs
-    ? t.pairs.map((pair) => {
-        const stats = standings.find((r) => r.id === pair.p1)
-                   ?? standings.find((r) => r.id === pair.p2)
-                   ?? { pj: 0, pg: 0, sf: 0, sc: 0 };
+    ? t.pairs.filter((pair) => pair.status !== 'withdrawn').map((pair) => {
+        const stats = pairRowStats(t, pair, standings);
         return { ...stats, ids: [pair.p1, pair.p2], name: `${nameOf(pair.p1)} & ${nameOf(pair.p2)}` };
       })
     : standings.map((s) => ({ ...s, ids: [s.id], name: s.name }));
 
-  const byWins  = [...rows].sort(compareStandingRows);
-  const topPg   = byWins[0]?.pg ?? 0;
-  const topDiff = byWins[0] ? byWins[0].sf - byWins[0].sc : 0;
-  return byWins
-    .filter((r) => r.pj > 0 && r.pg === topPg && (r.sf - r.sc) === topDiff)
-    .map((r) => ({ ids: r.ids, name: r.name }));
+  return topStandingRows(rows).map((r) => ({ ids: r.ids, name: r.name }));
 }
 
 /**
@@ -494,18 +548,16 @@ export function winnerLabelOf(tournament) {
   }
   const standings = calcStandings(tournament.players, tournament.matches);
   const filas = (tournament.mode === 'pairs' && tournament.pairs?.length > 0)
-    ? tournament.pairs.map((pair) => {
-      const stats = standings.find((r) => r.id === pair.p1)
-        ?? standings.find((r) => r.id === pair.p2)
-        ?? { pj: 0, pg: 0, sf: 0, sc: 0 };
+    ? tournament.pairs.filter((pair) => pair.status !== 'withdrawn').map((pair) => {
+      const stats = pairRowStats(tournament, pair, standings);
       const n1 = tournament.players.find((p) => p.id === pair.p1)?.name ?? '?';
       const n2 = tournament.players.find((p) => p.id === pair.p2)?.name ?? '?';
       return { ...stats, id: pair.id, name: `${n1} & ${n2}` };
-    }).sort(compareStandingRows)
+    })
     : standings;
-  const topPg   = filas[0]?.pg ?? 0;
-  const topDiff = filas[0] ? filas[0].sf - filas[0].sc : 0;
-  const top = filas.filter((r) => r.pj > 0 && r.pg === topPg && (r.sf - r.sc) === topDiff);
+  // calcStandings ordena por % de victorias: el campeón sale de topStandingRows,
+  // que usa el mismo orden que la tabla (antes nombraba campeón a otro jugador).
+  const top = topStandingRows(filas);
   return top.length ? top.map((r) => r.name).join(' / ') : null;
 }
 
@@ -571,6 +623,34 @@ export const isSaneEventDate = (v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v) && Num
 // Límites de parejas del formato americano.
 export const AMERICANO_MIN_PAIRS = 8;
 export const AMERICANO_MAX_PAIRS = 16;
+
+// En la fase previa de un americano, cada pareja juega 2 partidos.
+export const MAX_PREVIA_MATCHES = 2;
+
+/**
+ * Parejas que todavía no jugaron sus 2 partidos de la previa. Un partido es de
+ * la pareja sólo si el equipo son exactamente sus dos jugadores. Espejo de
+ * previaPendingPairs del back (lib/tournamentLogic.js), que es el que manda.
+ */
+export function previaPendingPairs(tournament) {
+  const key = (ids) => ids.map(String).sort().join('|');
+  const count = new Map((tournament.pairs ?? []).map((p) => [key([p.p1, p.p2]), 0]));
+  for (const m of tournament.matches ?? []) {
+    for (const team of [m.team1, m.team2]) {
+      const k = key(team ?? []);
+      if (count.has(k)) count.set(k, count.get(k) + 1);
+    }
+  }
+  return (tournament.pairs ?? [])
+    .filter((p) => p.status !== 'withdrawn')
+    .filter((p) => count.get(key([p.p1, p.p2])) < MAX_PREVIA_MATCHES);
+}
+
+/** La previa terminó cuando quedan menos de 2 parejas con partidos pendientes. */
+export function isPreviaComplete(tournament) {
+  return (tournament.pairs ?? []).some((p) => p.status !== 'withdrawn')
+    && previaPendingPairs(tournament).length < 2;
+}
 
 // Un americano con menos de 8 parejas es un "borrador": se puede crear y seguir
 // cargando parejas, pero no se puede jugar (ni calendario, ni partidos, ni cuadro).

@@ -23,6 +23,7 @@ import SectionRule from '../shared/SectionRule';
 import ProfileStats from './ProfileStats';
 import ProfileCategories from './ProfileCategories';
 import MyBookingsView from '../Club/MyBookingsView';
+import MyRegistrationsView from '../Registration/MyRegistrationsView';
 import PremiumChip from '../shared/PremiumChip';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import AvatarCropper from '../shared/AvatarCropper';
@@ -30,6 +31,7 @@ import ShareProfileModal from '../shared/ShareProfileModal';
 import SnapshotModal from '../Snapshot/SnapshotModal';
 import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
+import CategoryPicker from '../shared/CategoryPicker';
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -62,6 +64,8 @@ const BASE_TABS = [
 ];
 // "Mis reservas" es privado: solo se agrega en el perfil propio
 const BOOKINGS_TAB = { id: 'reservas', label: 'RESERVAS' };
+// "Mis inscripciones" también es privado.
+const REGISTRATIONS_TAB = { id: 'inscripciones', label: 'INSCRIPCIONES' };
 
 // El avatar se guarda a 512 px: pedirlo transformado sólo cambia el formato y la compresión.
 function avatarZoomUrl(src) {
@@ -308,6 +312,7 @@ export default function ProfileView() {
   const [editName,     setEditName]     = useState('');
   const [editUsername, setEditUsername] = useState('');
   const [editBio,      setEditBio]      = useState('');
+  const [editCategory, setEditCategory] = useState(null);
   const [socialLinks,  setSocialLinks]  = useState([{ ...EMPTY_LINK }]);
   const [tab,            setTab]            = useState('resumen');
   const [currentPass,  setCurrentPass]  = useState('');
@@ -380,6 +385,7 @@ export default function ProfileView() {
         setEditName(d.owner.name);
         setEditUsername(d.owner.username);
         setEditBio(d.owner.bio ?? '');
+        setEditCategory(d.owner.category ?? null);
         const existing = Array.isArray(d.owner.social_links) ? d.owner.social_links : [];
         setSocialLinks(ensureTrailingEmpty(existing));
         setAvatarUrl(d.owner.avatar_url ?? null);
@@ -404,7 +410,7 @@ export default function ProfileView() {
   // tabs va antes de los return condicionales para no romper el orden de hooks
   const isOwnProfile = !!data && user?.username === data.owner.username;
   const tabs = useMemo(
-    () => (isOwnProfile ? [...BASE_TABS, BOOKINGS_TAB] : BASE_TABS),
+    () => (isOwnProfile ? [...BASE_TABS, REGISTRATIONS_TAB, BOOKINGS_TAB] : BASE_TABS),
     [isOwnProfile],
   );
 
@@ -499,6 +505,7 @@ export default function ProfileView() {
     editName.trim() !== owner.name ||
     editUsername.trim() !== owner.username ||
     editBio.trim() !== (owner.bio ?? '') ||
+    (editCategory ?? null) !== (owner.category ?? null) ||
     newPass !== '' || currentPass !== '' ||
     JSON.stringify(filledLinks) !== JSON.stringify(savedLinks);
 
@@ -506,6 +513,7 @@ export default function ProfileView() {
     setEditName(owner.name);
     setEditUsername(owner.username);
     setEditBio(owner.bio ?? '');
+    setEditCategory(owner.category ?? null);
     setSocialLinks(ensureTrailingEmpty(savedLinks));
     setCurrentPass(''); setNewPass(''); setNewPass2('');
     setSaveError(null); setSaveOk(false);
@@ -596,6 +604,8 @@ export default function ProfileView() {
     const trimmedBio = editBio.trim();
     if (trimmedBio !== (owner.bio ?? '')) body.bio = trimmedBio;
 
+    if ((editCategory ?? null) !== (owner.category ?? null)) body.category = editCategory;
+
     if (newPass) {
       const pwErr = validatePassword(newPass);
       if (pwErr) { setSaveError(pwErr); return; }
@@ -623,6 +633,7 @@ export default function ProfileView() {
           name: updated.name ?? d.owner.name,
           username: newUsername,
           bio: updated.bio ?? d.owner.bio,
+          category: updated.category !== undefined ? updated.category : d.owner.category,
           social_links: updated.social_links ?? d.owner.social_links,
         },
       }));
@@ -821,6 +832,12 @@ export default function ProfileView() {
                   />
                   <span className="absolute bottom-2 right-3 text-[10px] text-dim font-mono">{editBio.length}/200</span>
                 </div>
+
+                <label style={label}>CATEGORÍA</label>
+                <CategoryPicker value={editCategory} onChange={setEditCategory} emptyLabel="Elegí tu categoría" />
+                <p className="text-[11px] text-dim font-sans mt-1.5 mb-0">
+                  La ven los organizadores cuando te inscribís a un torneo. El 1 es el nivel más alto.
+                </p>
 
                 <label style={label}>MAIL</label>
                 <div className="w-full bg-surface border border-border-mid text-muted px-3.5 py-2.5 rounded text-sm font-sans">
@@ -1198,6 +1215,7 @@ export default function ProfileView() {
 
         {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
         {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
+        {tab === 'inscripciones' && isOwnProfile && <MyRegistrationsView />}
       </div>
 
       {cropFile && (

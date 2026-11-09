@@ -9,6 +9,7 @@
 
 const ROLE_DISMISS_KEY  = 'padeliando_role_dismissed';
 const STEPS_DISMISS_KEY = 'padeliando_firststeps_dismissed';
+const LEVEL_DISMISS_KEY = 'padeliando_level_dismissed';
 
 const read  = (key) => { try { return localStorage.getItem(key) === '1' } catch { return false } };
 const write = (key) => { try { localStorage.setItem(key, '1') } catch { /* modo privado */ } };
@@ -17,6 +18,8 @@ export const isRoleDismissed       = () => read(ROLE_DISMISS_KEY);
 export const dismissRole           = () => write(ROLE_DISMISS_KEY);
 export const isFirstStepsDismissed = () => read(STEPS_DISMISS_KEY);
 export const dismissFirstSteps     = () => write(STEPS_DISMISS_KEY);
+export const isLevelDismissed      = () => read(LEVEL_DISMISS_KEY);
+export const dismissLevel          = () => write(LEVEL_DISMISS_KEY);
 
 export function buildSteps({ role, groups = [], partGroups = [], favGroups = [], user }) {
   const sum = (key) => groups.reduce((n, g) => n + (g[key] ?? 0), 0);

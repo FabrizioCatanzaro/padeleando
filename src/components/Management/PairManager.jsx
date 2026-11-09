@@ -3,9 +3,9 @@ import { getPairLabel, managementWarnings, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PA
 import Modal from "../shared/Modal";
 import ActionMenu from "../shared/ActionMenu";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Check, Pencil, Trash2, X, AlertTriangle } from "lucide-react";
+import { Check, Pencil, Trash2, X, AlertTriangle, UserMinus } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete }) {
+export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete, onWithdraw }) {
   const { players, pairs = [] } = tournament;
   const [showAdd, setShowAdd]       = useState(false);
   const [newP1, setNewP1]           = useState("");
@@ -14,8 +14,20 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   const [editP1, setEditP1]         = useState("");
   const [editP2, setEditP2]         = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [withdrawTarget, setWithdrawTarget] = useState(null);
 
-  const assignedIds   = pairs.flatMap((p) => [p.p1, p.p2]);
+  // Una pareja retirada sigue en la lista (su historia cuenta) pero libera a
+  // sus jugadores: pueden armar una pareja nueva como reemplazo.
+  const isWithdrawn  = (pair) => pair.status === 'withdrawn';
+  const activePairs  = pairs.filter((p) => !isWithdrawn(p));
+  const assignedIds   = activePairs.flatMap((p) => [p.p1, p.p2]);
+
+  // Americano: con partidos jugados (o el cuadro armado) la pareja ya no se
+  // edita ni se borra: se retira, y pierde 6-0 lo que le queda. En Liga las
+  // parejas cambian libremente. El back aplica la misma regla.
+  const teamKey = (ids) => [...ids].map(String).sort().join('|');
+  const playedKeys = new Set((tournament.matches ?? []).flatMap((m) => [teamKey(m.team1), teamKey(m.team2)]));
+  const pairStarted = (pair) => isAmericano && (!!tournament.bracket || playedKeys.has(teamKey([pair.p1, pair.p2])));
   const activePlayers = players.filter((p) => !p.removed);
 
   // Los avisos salen del helper compartido: la pestaña de gestión marca el "!"
@@ -47,7 +59,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   function confirmEdit() {
     if (!editP1 || !editP2 || editP1 === editP2) return;
     // No permitir asignar un jugador que ya está en otra pareja.
-    const otherIds = pairs.filter((pr) => pr.id !== editId).flatMap((pr) => [pr.p1, pr.p2]);
+    const otherIds = activePairs.filter((pr) => pr.id !== editId).flatMap((pr) => [pr.p1, pr.p2]);
     if (otherIds.includes(editP1) || otherIds.includes(editP2)) return;
     onEdit(editId, editP1, editP2);
     setEditId(null);
@@ -206,10 +218,23 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
                     />
                   );
                 })()}
-                <span className="flex-1 min-w-0 text-content font-sans">
+                <span className={`flex-1 min-w-0 font-sans ${isWithdrawn(pair) ? 'text-dim line-through' : 'text-content'}`}>
                   {getPairLabel(pair.id, pairs, players)}
                 </span>
-                {isOwner && (
+                {isWithdrawn(pair) && (
+                  <span className="shrink-0 font-mono text-[10px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
+                    RETIRADA
+                  </span>
+                )}
+                {isOwner && !isWithdrawn(pair) && pairStarted(pair) && (
+                  <button
+                    onClick={() => setWithdrawTarget(pair)}
+                    className="shrink-0 inline-flex items-center gap-1.5 bg-transparent border border-border-strong text-muted cursor-pointer text-[12px] font-sans px-2.5 py-1 rounded-sm hover:text-danger hover:border-danger/40 transition-colors"
+                  >
+                    <UserMinus size={14} /> Retirar
+                  </button>
+                )}
+                {isOwner && !isWithdrawn(pair) && !pairStarted(pair) && (
                   <>
                     {/* Desktop: acciones sueltas. Mobile: colapsadas en el menú de elipsis. */}
                     <div className="hidden sm:flex items-center shrink-0">
@@ -240,10 +265,21 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
 
       </CollapsibleSection>
 
+      {withdrawTarget && (
+        <Modal
+          title="¿Retirar esta pareja?"
+          message={`${getPairLabel(withdrawTarget.id, pairs, players)} deja de jugar. Sus partidos jugados se conservan en la tabla. Los programados pasan a W.O. 6-0 para el rival${tournament.bracket ? ', y en el cuadro su rival avanza por W.O.' : '.'} Esta acción no se puede deshacer.`}
+          confirmText="Retirar"
+          confirmDanger
+          onConfirm={() => { onWithdraw?.(withdrawTarget.id); setWithdrawTarget(null); }}
+          onCancel={() => setWithdrawTarget(null)}
+        />
+      )}
+
       {deleteTarget && (
         <Modal
           title="¿Eliminar esta pareja?"
-          message="Los partidos ya jugados con esta pareja se conservan. Esta acción no se puede deshacer."
+          message="Todavía no jugó ningún partido. Sus partidos programados también se borran. Esta acción no se puede deshacer."
           confirmText="Eliminar"
           confirmDanger
           onConfirm={() => { onDelete(deleteTarget.id); setDeleteTarget(null); }}

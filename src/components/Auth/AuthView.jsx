@@ -269,7 +269,8 @@ export default function AuthView({ mode: initialMode }) {
           setVerificationSent(res.email ?? email)
         } else if (res.user) {
           login(res.user)
-          navigate(afterAuth)
+          // Cuenta nueva: primero el cuestionario de nivel, después a donde iba.
+          navigate(`/nivel?next=${encodeURIComponent(afterAuth)}`)
         }
       } else {
         const { user } = await api.auth.login({ email, password })

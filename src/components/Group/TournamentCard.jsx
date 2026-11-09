@@ -31,7 +31,7 @@ export default function TournamentCard({ t, group, delay = 0, onClick }) {
     status: t.status,
     hasLiveMatch: isLive(t),
     hasPlayed: (t.match_count ?? 0) > 0,
-    isDraft: isDraftTournament({ format: t.format, pairCount: t.pair_count, playerCount: t.player_count }),
+    isDraft: !t.roster_hidden && isDraftTournament({ format: t.format, pairCount: t.pair_count, playerCount: t.player_count }),
   });
   const meta = TOURNAMENT_STATUS_META[status];
   const StatusIcon = meta.icon;

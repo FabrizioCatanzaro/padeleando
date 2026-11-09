@@ -181,6 +181,10 @@ export default function Setup() {
         signup_price:      signup.price,
         signup_price_unit: signup.unit,
         signup_contacts:   signup.contacts.filter((c) => c.value.trim()),
+        level:             signup.level ?? null,
+        signup_capacity:      signup.capacity ?? null,
+        signup_capacity_unit: signup.capacity_unit ?? null,
+        signup_closes_at:     signup.closes_at ?? null,
       });
       navigate(`/cat/${groupId}/torneo/${tId}`);
     } catch (e) {
@@ -291,6 +295,9 @@ export default function Setup() {
                 price:    group?.signup_price ?? null,
                 unit:     group?.signup_price_unit ?? 'player',
                 contacts: group?.signup_contacts ?? [],
+                level:    group?.level ?? null,
+                capacity: group?.signup_capacity ?? null,
+                capacity_unit: group?.signup_capacity_unit ?? null,
               }}
               profile={profileContacts(group?.owner_social_links)}
             />

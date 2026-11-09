@@ -1,7 +1,7 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye,
+  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye, Ticket,
 } from "lucide-react";
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
@@ -25,6 +25,9 @@ import {
   TvOverlay, LiveTicker, SpectatorLive, ReadonlyMatches, ReadonlyPlayers,
 } from "../Spectator/SpectatorParts";
 import { resolveSignup } from "../../utils/signup";
+import { api } from "../../utils/api";
+import RegistrationCard from "../Registration/RegistrationCard";
+import RegistrationsPanel from "../Registration/RegistrationsPanel";
 
 // Marca de "hay algo para revisar" en la pestaña de gestión.
 function WarningMark({ className = "", count }) {
@@ -54,6 +57,7 @@ function tabsDe({ esAmericano, puedeGestionar }) {
   }
   if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'JUGAD.', icon: Users });
   tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'STATS', icon: ChartNoAxesCombined });
+  if (puedeGestionar) tabs.push({ id: 'registrations', label: 'INSCRIPCIONES', corto: 'INSCR.', icon: Ticket });
   if (puedeGestionar) tabs.push({ id: 'management', label: 'GESTIÓN', corto: 'GESTIÓN', icon: Settings });
   return tabs;
 }
@@ -85,7 +89,10 @@ export default function TournamentPage({
   myPlayerIds = [],
 }) {
   const navigate = useNavigate();
-  const [tab, setTab] = useState(null);
+  // ?tab=registrations llega desde el aviso de inscripción nueva.
+  const [tab, setTab] = useState(() => {
+    try { return new URLSearchParams(window.location.search).get('tab'); } catch { return null; }
+  });
   const [shareOpen, setShareOpen] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [finishModal, setFinishModal] = useState(false);
@@ -94,18 +101,29 @@ export default function TournamentPage({
   const [tvMode, setTvMode] = useState(tvInicial);
   const [tvPaused, setTvPaused] = useState(false);
   const [tvStep, setTvStep] = useState(0);
+  // Inscripciones pendientes: la marca de la solapa INSCRIPCIONES.
+  const [pendientes, setPendientes] = useState(0);
+  useEffect(() => {
+    if (!puedeGestionar) return;
+    api.registrations.list(tournament.id)
+      .then((d) => setPendientes(d.summary?.pending ?? 0))
+      .catch(() => {});
+  }, [puedeGestionar, tournament.id]);
 
   const esAmericano = tournament.format === 'americano';
   const isPairs = esAmericano || tournament.mode === 'pairs';
   const TABS = tabsDe({ esAmericano, puedeGestionar });
-  const activeTab = tab ?? (esAmericano ? 'matches' : 'standings');
+  // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
+  const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : 'standings');
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
 
   const playedCount = countPlayed(tournament);
   // Partidos programados sin resultado. Viven en su propia tabla para no
   // contaminar los quince criterios de "jugado" que ya recorren la app.
   const scheduled = tournament.scheduled_matches ?? [];
-  const isDraft = isDraftTournament({
+  // Plantel oculto (el que mira no organiza y el torneo no empezó): la lista
+  // viene vacía a propósito, no es un borrador.
+  const isDraft = !tournament.roster_hidden && isDraftTournament({
     format: tournament.format,
     pairCount: tournament.pairs.length,
     playerCount: tournament.players.filter((p) => !p.removed).length,
@@ -213,7 +231,9 @@ export default function TournamentPage({
         </div>
       )}
 
-      {espectador?.signupBanner}
+      {/* Inscripción: el que no organiza se inscribe desde acá. La tarjeta
+          trae su propio estado; sin inscripción abierta no muestra nada. */}
+      {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} />}
       {espectador?.joinBanner}
       {espectador && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
 
@@ -233,6 +253,9 @@ export default function TournamentPage({
             {t.id === 'management' && warningCount > 0 && (
               <WarningMark count={warningCount} className="ml-1.5 align-middle" />
             )}
+            {t.id === 'registrations' && pendientes > 0 && (
+              <span aria-label={`${pendientes} pendientes`} className="ml-1.5 align-middle inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
+            )}
           </div>
         ))}
       </div>
@@ -249,6 +272,9 @@ export default function TournamentPage({
               <t.icon size={20} />
               {t.id === 'management' && warningCount > 0 && (
                 <WarningMark count={warningCount} className="absolute -top-1 -right-2" />
+              )}
+              {t.id === 'registrations' && pendientes > 0 && (
+                <span aria-label={`${pendientes} pendientes`} className="absolute -top-1 -right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
               )}
             </span>
             <span className="text-[9px] font-mono tracking-wide leading-none">{t.corto}</span>
@@ -328,6 +354,16 @@ export default function TournamentPage({
           </>
         )}
 
+        {activeTab === 'registrations' && puedeGestionar && (
+          <RegistrationsPanel
+            tournament={tournament}
+            onTournamentChanged={acciones?.onRefresh}
+            onAddPair={acciones?.onAddPair}
+            onConfigure={() => irATab('management')}
+            onPendingCount={setPendientes}
+          />
+        )}
+
         {activeTab === 'management' && puedeGestionar && (
           <Management
             tournament={tournament}
@@ -338,6 +374,7 @@ export default function TournamentPage({
             onAddPair={acciones.onAddPair}
             onEditPair={acciones.onEditPair}
             onDeletePair={acciones.onDeletePair}
+            onWithdrawPair={acciones.onWithdrawPair}
             onResetScores={acciones.onResetScores}
             onDeleteTournament={async () => {
               await acciones.onDeleteTournament();

@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Trophy } from "lucide-react";
-import { calcStandings, compareStandingRows } from "../../utils/helpers";
+import { calcStandings, pairRowStats, compareStandingRows, topStandingRows } from "../../utils/helpers";
 import PlayerAvatar, { PairAvatar } from "../shared/PlayerAvatar";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
@@ -71,9 +71,7 @@ export default function Standings({ tournament }) {
   let displayRows;
   if (hasPairs) {
     displayRows = tournament.pairs.map((pair) => {
-      const stats = individualRows.find((r) => r.id === pair.p1)
-                 ?? individualRows.find((r) => r.id === pair.p2)
-                 ?? { pj: 0, pg: 0, pp: 0, sf: 0, sc: 0 };
+      const stats = pairRowStats(tournament, pair, individualRows);
       const p1 = playerById[String(pair.p1)];
       const p2 = playerById[String(pair.p2)];
       return {
@@ -83,8 +81,10 @@ export default function Standings({ tournament }) {
         src1: p1?.linked_avatar_url ?? null,
         src2: p2?.linked_avatar_url ?? null,
         playerIds: [pair.p1, pair.p2],
+        withdrawn: pair.status === 'withdrawn',
       };
-    }).sort(compareStandingRows);
+    // Las retiradas van al fondo, como en el seed del cuadro (computeStandings).
+    }).sort((a, b) => Number(a.withdrawn) - Number(b.withdrawn) || compareStandingRows(a, b));
   } else {
     displayRows = individualRows.map((r) => {
       const p = playerById[String(r.id)];
@@ -92,13 +92,14 @@ export default function Standings({ tournament }) {
     }).sort(compareStandingRows);
   }
 
-  const topPg   = displayRows[0]?.pg ?? 0;
-  const topDiff = displayRows[0] ? displayRows[0].sf - displayRows[0].sc : 0;
-  const hasTie  = displayRows.filter(r => r.pg === topPg && (r.sf - r.sc) === topDiff).length > 1;
-  const isTop   = (r) => !hasTie && topPg > 0 && r.id === displayRows[0]?.id;
+  // Primer puesto con el desempate completo: victorias, diferencia, % de
+  // victorias, games a favor. Empatados en los cuatro, comparten el puesto.
+  const leaders = topStandingRows(displayRows.filter((r) => !r.withdrawn));
+  const hasTie  = leaders.length > 1;
+  const isTop   = (r) => !hasTie && leaders[0]?.id === r.id;
 
-  const champions = tournament.status === 'finished' && topPg > 0 && tournament.format !== 'americano'
-    ? displayRows.filter((r) => r.pg === topPg && (r.sf - r.sc) === topDiff)
+  const champions = tournament.status === 'finished' && tournament.format !== 'americano'
+    ? leaders
     : [];
   const championsCount = hasPairs ? champions.length * 2 : champions.length;
   const championsLabel = championsCount > 1 ? "CAMPEONES" : "CAMPEÓN";
@@ -176,6 +177,9 @@ export default function Standings({ tournament }) {
                         <div className="min-w-0 flex flex-col leading-tight">
                           <span className="truncate">{r.p1Name}</span>
                           <span className="truncate">&amp; {r.p2Name}</span>
+                          {r.withdrawn && (
+                            <span className="font-mono text-[9px] tracking-[1px] text-muted">RETIRADA</span>
+                          )}
                         </div>
                       ) : (
                         <span className="line-clamp-2 leading-tight min-w-0">{r.name}</span>
