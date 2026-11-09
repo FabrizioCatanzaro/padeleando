@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Instagram, Plus, Trash2, Gem } from 'lucide-react';
 import { api } from '../../utils/api';
 import Btn from '../shared/Btn';
@@ -20,6 +20,24 @@ export default function InstagramPosts({ tournamentId, isOwner = false, isPremiu
   const [error, setError]     = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [showPremium, setShowPremium] = useState(false);
+  // Alto real de cada post. El iframe de Instagram avisa su alto con un
+  // mensaje "MEASURE"; con un alto fijo los posts verticales se cortaban.
+  const [altos, setAltos] = useState({});
+  const frames = useRef({});
+
+  useEffect(() => {
+    function onMessage(e) {
+      if (e.origin !== 'https://www.instagram.com') return;
+      let data = e.data;
+      if (typeof data === 'string') { try { data = JSON.parse(data); } catch { return; } }
+      const alto = Number(data?.details?.height);
+      if (data?.type !== 'MEASURE' || !Number.isFinite(alto) || alto <= 0) return;
+      const id = Object.keys(frames.current).find((k) => frames.current[k]?.contentWindow === e.source);
+      if (id) setAltos((prev) => (prev[id] === alto ? prev : { ...prev, [id]: Math.ceil(alto) }));
+    }
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -98,7 +116,7 @@ export default function InstagramPosts({ tournamentId, isOwner = false, isPremiu
       )}
 
       {posts.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 mt-3">
+        <div className="grid gap-4 sm:grid-cols-2 items-start mt-3">
           {posts.map((p) => (
             <figure key={p.id} className="m-0 flex flex-col gap-2">
               <iframe
@@ -106,8 +124,9 @@ export default function InstagramPosts({ tournamentId, isOwner = false, isPremiu
                 title={`Post de Instagram ${p.shortcode}`}
                 loading="lazy"
                 scrolling="no"
+                ref={(el) => { frames.current[p.id] = el; }}
                 className="w-full rounded-xl border border-border-mid bg-white"
-                style={{ height: 560 }}
+                style={{ height: altos[p.id] ?? 720 }}
               />
               <figcaption className="flex items-center justify-between gap-2 text-[12px]">
                 <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-secondary hover:text-white">
