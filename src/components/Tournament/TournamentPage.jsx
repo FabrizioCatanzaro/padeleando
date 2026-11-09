@@ -5,7 +5,8 @@ import {
 } from "lucide-react";
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
-  tournamentDisplayStatus, TOURNAMENT_STATUS_META, winnerLabelOf,
+  tournamentDisplayStatus, TOURNAMENT_STATUS_META,
+  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete,
 } from "../../utils/helpers";
 import Standings from "../Standings/Standings";
 import Matches from "../Matches/Matches";
@@ -16,6 +17,7 @@ import Management from "../Management/Management";
 import Previa from "../Americano/Previa";
 import Bracket from "../Americano/Bracket";
 import PhotoGallery from "../Photos/PhotoGallery";
+import InstagramPosts from "../Photos/InstagramPosts";
 import Btn from "../shared/Btn";
 import ShareModal from "../shared/ShareModal";
 import QrModal from "../shared/QrModal";
@@ -47,18 +49,30 @@ function WarningMark({ className = "", count }) {
 // Las solapas dependen del formato y de si podés gestionar. El que sólo mira no
 // tiene GESTIÓN; a cambio tiene JUGADORES, que al organizador le vive dentro de
 // gestión.
-function tabsDe({ esAmericano, puedeGestionar }) {
-  const tabs = [{ id: 'standings', label: 'TABLA', corto: 'TABLA', icon: Trophy }];
+// Chip junto al título con la relación del que mira con el torneo.
+function miEstadoDe(e) {
+  if (!e) return null;
+  if (e.status === 'approved') return { label: 'Inscripto', tone: 'green' };
+  if (e.status === 'pending')  return { label: 'Inscripción pendiente', tone: 'amber' };
+  if (e.status === 'waitlist') return { label: 'En lista de espera', tone: 'cyan' };
+  if (e.inTournament) return { label: 'Jugás este torneo', tone: 'green' };
+  return null;
+}
+
+// CUADRO aparece cuando hay cuadro o la previa ya terminó (para generarlo):
+// antes era una solapa vacía en la barra de abajo (auditoría UI).
+function tabsDe({ esAmericano, puedeGestionar, conCuadro }) {
+  const tabs = [{ id: 'standings', label: 'TABLA', corto: 'Tabla', icon: Trophy }];
   if (esAmericano) {
-    tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'PREVIA', icon: List });
-    tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'CUADRO', icon: Split });
+    tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'Previa', icon: List });
+    if (conCuadro) tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
   } else {
-    tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'PARTIDOS', icon: Flame });
+    tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
   }
-  if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'JUGAD.', icon: Users });
-  tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'STATS', icon: ChartNoAxesCombined });
-  if (puedeGestionar) tabs.push({ id: 'registrations', label: 'INSCRIPCIONES', corto: 'INSCR.', icon: Ticket });
-  if (puedeGestionar) tabs.push({ id: 'management', label: 'GESTIÓN', corto: 'GESTIÓN', icon: Settings });
+  if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'Jugadores', icon: Users });
+  tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'Stats', icon: ChartNoAxesCombined });
+  if (puedeGestionar) tabs.push({ id: 'registrations', label: 'INSCRIPCIONES', corto: 'Inscriptos', icon: Ticket });
+  if (puedeGestionar) tabs.push({ id: 'management', label: 'GESTIÓN', corto: 'Gestión', icon: Settings });
   return tabs;
 }
 
@@ -101,6 +115,8 @@ export default function TournamentPage({
   const [tvMode, setTvMode] = useState(tvInicial);
   const [tvPaused, setTvPaused] = useState(false);
   const [tvStep, setTvStep] = useState(0);
+  // Estado de la inscripción del que mira: lo trae RegistrationCard.
+  const [miInscripcion, setMiInscripcion] = useState(null);
   // Inscripciones pendientes: la marca de la solapa INSCRIPCIONES.
   const [pendientes, setPendientes] = useState(0);
   useEffect(() => {
@@ -112,7 +128,8 @@ export default function TournamentPage({
 
   const esAmericano = tournament.format === 'americano';
   const isPairs = esAmericano || tournament.mode === 'pairs';
-  const TABS = tabsDe({ esAmericano, puedeGestionar });
+  const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament));
+  const TABS = tabsDe({ esAmericano, puedeGestionar, conCuadro });
   // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
   const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : 'standings');
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
@@ -132,7 +149,15 @@ export default function TournamentPage({
   const statusMeta = TOURNAMENT_STATUS_META[tournamentDisplayStatus({
     status: tournament.status, hasLiveMatch: isLive(tournament), hasPlayed: playedCount > 0, isDraft,
   })];
-  const winnerLabel = winnerLabelOf(tournament);
+  // Borrador: qué falta para arrancar, en una frase (auditoría UI).
+  const activos = tournament.players.filter((p) => !p.removed).length;
+  const faltan = esAmericano ? AMERICANO_MIN_PAIRS - tournament.pairs.length : LIGA_MIN_PLAYERS - activos;
+  const draftText = isDraft && faltan > 0
+    ? `Falta${faltan === 1 ? '' : 'n'} ${faltan} ${esAmericano ? (faltan === 1 ? 'pareja' : 'parejas') : (faltan === 1 ? 'jugador' : 'jugadores')} para arrancar`
+    : null;
+  // La cinta y la barra de "Actualizado" sólo sirven con el torneo en curso.
+  const enJuegoAhora = (Array.isArray(tournament.live_match) ? tournament.live_match : []).some((m) => m?.startedAt != null);
+  const enCurso = tournament.status !== 'finished';
 
   // El torneo puede traer la inscripción ya resuelta (la resuelve el servidor);
   // si no, se arma acá con lo de la categoría.
@@ -181,7 +206,8 @@ export default function TournamentPage({
         playedCount={playedCount}
         scheduledCount={scheduled.length}
         statusMeta={statusMeta}
-        winnerLabel={winnerLabel}
+        draft={draftText}
+        miEstado={miEstadoDe(miInscripcion)}
         isPairs={isPairs}
         signup={signup}
         tvActivo={tvMode}
@@ -215,7 +241,7 @@ export default function TournamentPage({
 
       {/* Barra del espectador: cuándo se actualizó y cuánto falta para el próximo
           refresco. El organizador no la necesita — sus cambios son suyos. */}
-      {espectador && (
+      {espectador && enCurso && (
         <div className="bg-cyan/5 border-b border-cyan/15">
           <div className="h-1 bg-cyan/10 overflow-hidden">
             <div
@@ -233,9 +259,9 @@ export default function TournamentPage({
 
       {/* Inscripción: el que no organiza se inscribe desde acá. La tarjeta
           trae su propio estado; sin inscripción abierta no muestra nada. */}
-      {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} />}
+      {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} onEstado={setMiInscripcion} />}
       {espectador?.joinBanner}
-      {espectador && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
+      {espectador && enJuegoAhora && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
 
       {puedeGestionar && esAmericano && tournament.status === 'active' && tournament.bracket?.final?.winner_id && (
         <div className="px-6 py-3 border-b border-border bg-surface-alt flex items-center justify-between gap-3">
@@ -266,7 +292,7 @@ export default function TournamentPage({
           <button
             key={t.id}
             onClick={() => irATab(t.id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${activeTab === t.id && !tvMode ? 'text-brand bg-brand/10' : 'text-muted bg-transparent'}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${activeTab === t.id && !tvMode ? 'text-brand bg-brand/10' : 'text-secondary bg-transparent'}`}
           >
             <span className="relative inline-flex leading-none">
               <t.icon size={20} />
@@ -277,7 +303,7 @@ export default function TournamentPage({
                 <span aria-label={`${pendientes} pendientes`} className="absolute -top-1 -right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
               )}
             </span>
-            <span className="text-[9px] font-mono tracking-wide leading-none">{t.corto}</span>
+            <span className="text-[11px] font-semibold leading-none">{t.corto}</span>
           </button>
         ))}
       </div>
@@ -384,16 +410,22 @@ export default function TournamentPage({
             onUpdateMode={acciones.onUpdateMode}
             onUpdateClubEvent={acciones.onUpdateClubEvent}
             onUpdateSignup={acciones.onUpdateSignup}
+            onUpdateDatos={acciones.onUpdateDatos}
             onRefresh={acciones.onRefresh}
           />
         )}
 
-        <PhotoGallery
+        {/* Fotos cuando el torneo arrancó: antes de que haya jugadores el botón
+            competía con la acción principal (auditoría UI). */}
+        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && <PhotoGallery
           tournamentId={tournament.id}
           isOwner={puedeGestionar}
           isPremium={groupOwnerIsPremium}
           canUpload={puedeGestionar}
-        />
+        />}
+        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && (
+          <InstagramPosts tournamentId={tournament.id} isOwner={puedeGestionar} isPremium={groupOwnerIsPremium} />
+        )}
       </div>
 
       {tvMode && (

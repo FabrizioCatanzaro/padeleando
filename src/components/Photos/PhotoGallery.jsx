@@ -232,8 +232,8 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
   if (loading) {
     return (
       <div className="mt-8 pt-6 border-t border-border">
-        <div className="font-condensed font-bold text-sm tracking-[3px] text-muted">FOTOS</div>
-        <div className="text-xs font-mono text-dim mt-3">Cargando...</div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Fotos</h2>
+        <div className="text-[13px] text-secondary mt-3">Cargando…</div>
       </div>
     );
   }
@@ -244,9 +244,9 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
   return (
     <div className="mt-8 pt-6 border-t border-border">
       <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
-        <div className="font-condensed font-bold text-sm tracking-[3px] text-muted flex items-center gap-2">
-          <ImageIcon size={14} /> FOTOS {total > 0 && <span className="text-dim font-mono">({total}/{MAX_PHOTOS})</span>}
-        </div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white flex items-center gap-2">
+          <ImageIcon size={15} /> Fotos {total > 0 && <span className="font-sans font-normal text-[13px] text-secondary">{total} de {MAX_PHOTOS}</span>}
+        </h2>
 
         {isOwner && (
           <>
@@ -262,12 +262,12 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
               type="button"
               onClick={openFilePicker}
               disabled={(busy && isPremium) || reachedLimit}
-              className="relative flex items-center gap-1.5 bg-brand text-base border-0 px-3 py-1.5 font-condensed font-bold text-[12px] tracking-wide cursor-pointer rounded disabled:opacity-50 disabled:cursor-wait"
+              className="relative flex items-center gap-1.5 bg-transparent text-content border border-border-strong px-3 py-2 font-sans text-[13px] cursor-pointer rounded-sm hover:text-white hover:border-soft disabled:opacity-50 disabled:cursor-wait"
             >
               <Camera size={13} />
               {batch && isPremium
-                ? `SUBIENDO ${batch.done}/${batch.total}...`
-                : 'SUBIR FOTOS'}
+                ? `Subiendo ${batch.done} de ${batch.total}…`
+                : 'Subir fotos'}
               <span className="absolute -top-2 -right-2 bg-[#7c3aed] text-white rounded-full w-4 h-4 flex items-center justify-center shadow-sm">
                 <Gem size={9} />
               </span>
@@ -285,7 +285,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
 
       {total === 0 && isOwner && (
         <div className="text-center text-dim py-8 px-5 font-sans text-sm border border-dashed border-border-mid rounded-lg">
-          Todavía no hay fotos. Subí la primera para darle vida al torneo.
+          Todavía no hay fotos.
         </div>
       )}
 

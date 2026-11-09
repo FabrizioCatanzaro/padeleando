@@ -32,9 +32,10 @@ export default function ShareStoryButton({ onClick, variant = 'compact', label =
       type="button"
       onClick={onClick}
       title={label}
-      className={`inline-flex items-center gap-1.5 bg-transparent border border-border-strong text-muted px-3 py-2 font-condensed font-bold text-[12px] tracking-wide cursor-pointer rounded-sm hover:text-brand hover:border-brand/50 transition-colors ${className}`}
+      aria-label={label}
+      className={`inline-flex items-center gap-1.5 shrink-0 whitespace-nowrap bg-transparent border border-border-strong text-content px-3 py-2 font-sans text-[13px] cursor-pointer rounded-sm hover:text-brand hover:border-brand/50 transition-colors ${className}`}
     >
-      <Share2 size={13} /> HISTORIA
+      <Share2 size={13} /> <span className="sm:hidden">Compartir</span><span className="hidden sm:inline">{label}</span>
     </button>
   );
 }

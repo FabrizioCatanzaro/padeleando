@@ -119,15 +119,15 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
     return (
       <article key={r.id} className="bg-surface border border-border-strong rounded-xl p-3.5 flex flex-col gap-3">
         <div className="flex justify-between items-center gap-2 flex-wrap">
-          <span className="text-[11px] font-bold tracking-wide text-secondary">
-            {r.kind === 'pair' ? 'PAREJA' : 'SOLO, BUSCA PAREJA'} · {hace(r.created_at).toUpperCase()}
+          <span className="text-[12px] font-semibold text-secondary">
+            {r.kind === 'pair' ? 'Pareja' : 'Solo, busca pareja'} · {hace(r.created_at)}
           </span>
           {issues.length > 0 ? (
-            <span className="text-[11px] font-bold tracking-wide text-amber-300 bg-amber-500/15 border border-amber-500/45 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
-              <AlertTriangle size={12} /> REVISAR CATEGORÍA
+            <span className="text-[12px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/45 px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+              <AlertTriangle size={12} /> Revisar categoría
             </span>
           ) : r.status !== 'pending' && (
-            <span className={`text-[11px] font-bold tracking-wide px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
+            <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
           )}
         </div>
         <Jugador name={r.p1_name} username={r.p1_username} avatar={r.p1_avatar_url} category={r.p1_category} stats={r.p1_stats} />
@@ -148,7 +148,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
           <div className="grid grid-cols-2 gap-2">
             <Btn onClick={() => { setRechazo(r); setMotivo(''); }} disabled={busy === r.id}>Rechazar</Btn>
             <Btn variant="primary" onClick={() => decidir(r, 'approve')} loading={busy === r.id}>
-              {r.status === 'waitlist' ? 'SUMAR' : 'APROBAR'}
+              {r.status === 'waitlist' ? 'Sumar' : 'Aprobar'}
             </Btn>
           </div>
         )}
@@ -157,24 +157,10 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
   };
 
   return (
-    <div className="flex flex-col gap-4 max-w-xl">
-      <div className="grid grid-cols-4 gap-2">
-        {[
-          ['Pendientes', summary.pending, 'text-amber-300'],
-          ['Aprobadas', summary.approved, 'text-green'],
-          ['En espera', summary.waitlist, 'text-cyan'],
-          ['Pagadas', summary.paid, 'text-white'],
-        ].map(([l, n, c]) => (
-          <div key={l} className="bg-surface border border-border rounded-lg py-2.5 px-2 text-center">
-            <div className={`text-[20px] font-bold ${c}`}>{n}</div>
-            <div className="text-[11px] text-secondary">{l}</div>
-          </div>
-        ))}
-      </div>
-
+    <div className="flex flex-col gap-4 w-full max-w-xl mx-auto">
       <div className="bg-surface border border-border rounded-xl px-3.5 py-3 flex flex-col gap-2">
         <div className="flex justify-between gap-2 text-[13px] flex-wrap">
-          <span className="text-white font-semibold">{cupo ? cupo.texto : 'Sin cupo'}{signup.level ? ` · ${levelLabel(signup.level)}` : ''}</span>
+          <span className="text-white font-semibold">{cupo ? cupo.texto : 'Sin cupo'}{signup.level ? ` · ${levelLabel(signup.level)}` : ''} · {summary.paid} {summary.paid === 1 ? 'pagada' : 'pagadas'}</span>
           <span className="text-secondary">{signup.open ? (cierre ? `Cierra ${cierre}` : 'Abierta') : (signup.reason ?? 'Cerrada')}</span>
         </div>
         {cupo && (
@@ -187,7 +173,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
         </button>
       </div>
 
-      <div role="group" aria-label="Filtro" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div role="group" aria-label="Filtro" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
         {FILTROS.map((f) => {
           const n = grupos[f.id].length;
           const on = filtro === f.id;

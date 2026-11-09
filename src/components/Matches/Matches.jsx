@@ -1,6 +1,6 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef } from "react";
-import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
+import { expandPair, emptyForm, localDateStr, getPairLabel, visibleSetsCount, scoreFromSets, groupMatchesByDate } from "../../utils/helpers";
 import MatchCard from "./MatchCard";
 import MatchForm from "./MatchForm";
 import ScheduledCard from "./ScheduledCard";
@@ -391,16 +391,16 @@ export default function Matches({
         />
       )}
       <div className="flex justify-between items-center gap-2 flex-wrap mb-4">
-        <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">PARTIDOS</div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Partidos</h2>
         <div className="flex gap-2 flex-wrap justify-end min-w-0">
           {sorted.length > 0 && (
             <button
               onClick={() => setShareFixture(true)}
               title="Compartir partidos"
               aria-label="Compartir partidos"
-              className="bg-transparent text-muted border border-border-strong px-3 py-2.5 cursor-pointer rounded-sm hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3 py-2.5 font-sans text-[13px] cursor-pointer rounded-sm hover:text-white transition-colors"
             >
-              <Share2 size={15} />
+              <Share2 size={15} /> Compartir
             </button>
           )}
           {canEdit && (
@@ -460,9 +460,9 @@ export default function Matches({
       {programados.length > 0 && (
         <div className="mb-5">
           <div className="flex items-center gap-2.5 mb-2.5">
-            <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">PRÓXIMOS</span>
+            <span className="text-[13px] font-bold text-white shrink-0">Próximos</span>
             <span className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-dim shrink-0">
+            <span className="text-[12px] text-secondary shrink-0">
               {programados.length} {programados.length === 1 ? 'programado' : 'programados'}
             </span>
           </div>
@@ -486,9 +486,9 @@ export default function Matches({
 
       {sorted.length > 0 && programados.length > 0 && (
         <div className="flex items-center gap-2.5 mb-2.5">
-          <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">JUGADOS</span>
+          <span className="text-[13px] font-bold text-white shrink-0">Jugados</span>
           <span className="flex-1 h-px bg-border" />
-          <span className="text-[11px] text-dim shrink-0">{sorted.length}</span>
+          <span className="text-[12px] text-secondary shrink-0">{sorted.length}</span>
         </div>
       )}
 
@@ -499,25 +499,30 @@ export default function Matches({
             : <>No hay partidos registrados todavía.<br />¡Jugá el primero!</>}
         </div>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {sorted.map((m, i) =>
-            editId === m.id && editForm ? (
-              <MatchForm
-                key={m.id}
-                form={editForm} setForm={setEditForm}
-                tournament={tournament}
-                onSave={handleSaveEdit}
-                onCancel={() => { setEditId(null); setEditForm(null); }}
-                isEditing={true}
-                timerState={EMPTY_TIMER}
-                onTimerChange={() => {}}
-              />
-            ) : (
-              <MatchCard key={m.id} match={m} tournament={tournament} isOwner={canEdit}
-                onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)}
-                matchNum={sorted.length - i} />
-            )
-          )}
+        <div className="flex flex-col gap-5">
+          {/* Agrupados por día, con un título (auditoría UI). */}
+          {groupMatchesByDate(sorted).map((g) => (
+            <section key={g.key} className="flex flex-col gap-2.5">
+              <h3 className="m-0 text-[13px] font-bold text-white">{g.label}</h3>
+              {g.items.map((m) =>
+                editId === m.id && editForm ? (
+                  <MatchForm
+                    key={m.id}
+                    form={editForm} setForm={setEditForm}
+                    tournament={tournament}
+                    onSave={handleSaveEdit}
+                    onCancel={() => { setEditId(null); setEditForm(null); }}
+                    isEditing={true}
+                    timerState={EMPTY_TIMER}
+                    onTimerChange={() => {}}
+                  />
+                ) : (
+                  <MatchCard key={m.id} match={m} tournament={tournament} isOwner={canEdit} hideDate
+                    onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)} />
+                )
+              )}
+            </section>
+          ))}
         </div>
       )}
     </div>

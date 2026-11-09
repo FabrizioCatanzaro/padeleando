@@ -22,7 +22,12 @@
   /* Escala de grises de texto. Los valores anteriores (#555 y #666) daban
      2,47:1 y 3,21:1 sobre --color-surface-alt, por debajo del 4,5:1 que pide
      WCAG AA para texto normal. Ahora los cinco niveles cumplen sobre base,
-     surface y surface-alt, y se mantiene la jerarquía visual entre ellos. */
+     surface y surface-alt, y se mantiene la jerarquía visual entre ellos.
+     Los nombres van de menos a más contraste en los DOS temas:
+       muted < dim < secondary < soft < content
+     (en oscuro "muted" es el más oscuro; en claro, el más claro). Para texto
+     nuevo: etiquetas y ayudas en secondary, texto de lectura en content o
+     soft; muted sólo para lo que debe pasar desapercibido. */
   --color-muted: #808080;      /* 4,66:1 en el peor fondo */
   --color-dim: #8c8c8c;        /* 5,48:1 */
   --color-secondary: #9e9e9e;  /* 6,88:1 */

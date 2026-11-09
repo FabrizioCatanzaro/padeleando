@@ -140,7 +140,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
     <>
     <CollapsibleSection
       storageKey="pd:mgmt:players"
-      title="JUGADORES"
+      title="Jugadores"
       count={tournament.players.filter((p) => !p.removed).length}
       className="mb-4"
       badge={missingPlayers > 0 ? (
@@ -149,14 +149,14 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
       actions={isOwner ? (expand) => (
         <button
           onClick={() => { expand(); setShowAdd(!showAdd); }}
-          className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap"
+          className="bg-brand text-base border-0 px-5 py-2.5 font-sans font-bold text-[14px] cursor-pointer rounded-sm whitespace-nowrap"
         >
           {showAdd ? "Cancelar" : "+ Agregar"}
         </button>
       ) : null}
     >
       {missingPlayers > 0 && (
-        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[12px] font-mono text-brand leading-relaxed">
+        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[13px] text-brand leading-relaxed">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <span>
             Borrador — falta{missingPlayers === 1 ? '' : 'n'} {missingPlayers} {missingPlayers === 1 ? 'jugador' : 'jugadores'} para
@@ -176,7 +176,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
             placeholder="Nombre del jugador"
             groupId={tournament.group_id}
           />
-          <button onClick={handleAdd} className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap">
+          <button onClick={handleAdd} className="bg-brand text-base border-0 px-5 py-2.5 font-sans font-bold text-[14px] cursor-pointer rounded-sm whitespace-nowrap">
             Agregar
           </button>
         </div>
@@ -199,7 +199,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-dim text-[11px] font-mono w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
+                <span className="text-dim text-[12px] font-mono w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
                 <PlayerAvatar name={p.name} src={p.linked_avatar_url ?? null} size={28} premium={p.is_premium ?? false} />
                 {p.linked_username ? (
                   <Link
@@ -214,18 +214,18 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
 
                 {/* Badge de vinculación */}
                 {p.user_id && (
-                  <span className="flex items-center gap-1 shrink-0 text-[10px] font-mono text-green bg-[#1a2e1a] border border-[#4af07a44] px-1.5 py-0.5 rounded">
+                  <span className="flex items-center gap-1 shrink-0 text-[12px] font-mono text-green bg-[#1a2e1a] border border-[#4af07a44] px-1.5 py-0.5 rounded">
                     <Check size={10} /> @{p.linked_username}
                   </span>
                 )}
                 {!p.user_id && p.invitation_status === 'pending' && (
-                  <span className="text-[10px] font-mono text-brand/70 flex items-center gap-1">
+                  <span className="text-[12px] font-mono text-brand/70 flex items-center gap-1">
                     <Clock size={10} /> pendiente
                   </span>
                 )}
 
                 {hasMatches(p.id) && (
-                  <span className="text-[10px] text-muted font-mono">
+                  <span className="text-[12px] text-muted font-mono">
                     {tournament.matches.filter(m => [...m.team1, ...m.team2].includes(p.id)).length}P
                   </span>
                 )}
@@ -292,7 +292,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
             {/* Panel de envío de invitación */}
             {inviteState[p.id]?.open && (
               <div className="flex flex-col gap-2 pt-1 border-t border-border-mid mt-1">
-                <div className="text-[11px] text-muted font-mono">
+                <div className="text-[12px] text-muted font-mono">
                   Invitar a @usuario o email a reclamar el slot de <span className="text-content">{p.name}</span>
                 </div>
                 <div className="flex gap-2">
@@ -319,16 +319,16 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
                   </div>
                 </div>
                 {inviteState[p.id]?.error && (
-                  <div className="text-[11px] text-danger font-mono">{inviteState[p.id].error}</div>
+                  <div className="text-[12px] text-danger font-mono">{inviteState[p.id].error}</div>
                 )}
                 <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <span className="text-[10px] text-dim font-mono">
+                  <span className="text-[12px] text-dim font-mono">
                     Al aceptar, sus partidos en toda la categoría cuentan en su perfil.
                   </span>
                   <button
                     onClick={() => createLink(p)}
                     disabled={inviteState[p.id]?.sending}
-                    className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 text-[11px] font-mono cursor-pointer rounded-sm hover:text-brand hover:border-brand transition disabled:opacity-50"
+                    className="flex items-center gap-1.5 bg-transparent text-muted border border-border-strong px-2.5 py-1.5 text-[12px] font-mono cursor-pointer rounded-sm hover:text-brand hover:border-brand transition disabled:opacity-50"
                   >
                     <Link2 size={12} /> ¿No tiene cuenta?
                   </button>
@@ -339,7 +339,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
             {/* Link de invitación generado */}
             {linkFor?.playerId === p.id && (
               <div className="flex flex-col gap-2 pt-1 border-t border-border-mid mt-1">
-                <div className="text-[11px] text-brand font-mono">
+                <div className="text-[12px] text-brand font-mono">
                   Link de invitación de <span className="text-content">{p.name}</span> · se acepta una sola vez
                 </div>
                 <div className="flex gap-2">
@@ -370,18 +370,18 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
 
       {tournament.players.some((p) => p.removed) && (
         <div className="mt-4">
-          <div className="font-condensed font-bold text-[11px] tracking-[3px] text-muted mb-2 opacity-70">ELIMINADOS DEL TORNEO</div>
+          <div className="text-[14px] font-bold text-soft mb-2">Eliminados del torneo</div>
           <div className="flex flex-col gap-1.5">
             {tournament.players.filter((p) => p.removed).map((p) => (
               <div key={p.id} className="flex items-center gap-2 bg-base border border-dashed border-border-mid rounded-md px-3 py-2 opacity-60">
                 <PlayerAvatar name={p.name} src={p.linked_avatar_url ?? null} size={24} premium={p.is_premium ?? false} />
                 <span className="flex-1 text-muted font-sans line-through">{p.name}</span>
                 {hasMatches(p.id) && (
-                  <span className="text-[10px] text-muted font-mono">
+                  <span className="text-[12px] text-muted font-mono">
                     {tournament.matches.filter(m => [...m.team1, ...m.team2].includes(p.id)).length}P
                   </span>
                 )}
-                <span className="text-[10px] font-mono text-muted border border-border-strong px-1.5 py-0.5 rounded">
+                <span className="text-[12px] font-mono text-muted border border-border-strong px-1.5 py-0.5 rounded">
                   eliminado
                 </span>
               </div>

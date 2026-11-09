@@ -25,7 +25,7 @@ export default function Main() {
     handleAddPlayer, handleEditPlayer, handleDeletePlayer,
     handleAddPair, handleEditPair, handleDeletePair, handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
-    getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleSetLiveMatch,
+    getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode, refresh,
   } = useTournament(groupId, tournamentId);
@@ -80,7 +80,7 @@ export default function Main() {
     onAddPair: handleAddPair, onEditPair: handleEditPair, onDeletePair: handleDeletePair, onWithdrawPair: handleWithdrawPair,
     onResetScores: handleResetScores, onDeleteTournament: handleDeleteTournament,
     onToggleStatus: handleToggleStatus, onUpdateName: handleUpdateName,
-    onUpdateClubEvent: handleUpdateClubEvent, onUpdateSignup: handleUpdateSignup,
+    onUpdateClubEvent: handleUpdateClubEvent, onUpdateSignup: handleUpdateSignup, onUpdateDatos: handleUpdateDatos,
     onSetLiveMatch: handleSetLiveMatch,
     onGenerateSchedule: handleGenerateSchedule, onGenerateBracket: handleGenerateBracket,
     onUpdateBracketMatch: handleUpdateBracketMatch, onClearBracketMatch: handleClearBracketMatch,
