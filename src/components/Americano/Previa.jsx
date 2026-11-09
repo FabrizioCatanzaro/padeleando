@@ -7,7 +7,7 @@ import ScheduledCard from "../Matches/ScheduledCard";
 import ScheduleForm from "../Matches/ScheduleForm";
 import Modal from "../shared/Modal";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
-import { Share2, Trash2, Dices, CalendarPlus, Check } from "lucide-react";
+import { Share2, Dices, CalendarPlus, Check } from "lucide-react";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -19,35 +19,12 @@ function setsEqual(a, b) {
   return true;
 }
 
-function findPlayedMatch(tournament, entry) {
-  const pair1 = tournament.pairs.find(p => p.id === entry.team1.id);
-  const pair2 = tournament.pairs.find(p => p.id === entry.team2.id);
-  if (!pair1 || !pair2) return null;
-  const ids1 = new Set([pair1.p1, pair1.p2]);
-  const ids2 = new Set([pair2.p1, pair2.p2]);
-  return tournament.matches.find(m => {
-    const mt1 = new Set(m.team1);
-    const mt2 = new Set(m.team2);
-    return (setsEqual(mt1, ids1) && setsEqual(mt2, ids2))
-        || (setsEqual(mt1, ids2) && setsEqual(mt2, ids1));
-  }) ?? null;
-}
-
 export default function Previa({
   tournament, isOwner, categoryName, myPlayerIds = [],
   onAddMatch, onEditMatch, onDeleteMatch, onSetLiveMatch,
   onAddScheduled, onEditScheduled, onDeleteScheduled,
   onGenerateSchedule, onGenerateBracket,
 }) {
-  const SCHEDULE_KEY = `previa_schedule_${tournament.id}`;
-
-  const [schedule, setSchedule] = useState(() => {
-    try {
-      const raw = localStorage.getItem(SCHEDULE_KEY);
-      return raw ? JSON.parse(raw) : null;
-    } catch { return null; }
-  });
-  const [showSchedule,      setShowSchedule]      = useState(true);
   const [generating,        setGenerating]        = useState(false);
   const [generatingBracket, setGeneratingBracket] = useState(false);
 
@@ -65,7 +42,6 @@ export default function Previa({
   const [editId,       setEditId]       = useState(null);
   const [editForm,     setEditForm]     = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  const [confirmClearSchedule, setConfirmClearSchedule] = useState(false);
   const [shareFixture, setShareFixture] = useState(false);
   // Programar un partido nuevo de la previa, o editar la programación de uno.
   const [scheduling, setScheduling] = useState(null);
@@ -309,22 +285,16 @@ export default function Previa({
   }
 
   // ── Schedule generation ──────────────────────────────────────────────────────
+  // El dado programa en la base los partidos que faltan de la previa (con su
+  // ronda): aparecen en PRÓXIMOS para todos. Antes armaba un "calendario
+  // sugerido" que vivía sólo en el localStorage del organizador.
   async function handleGenerateSchedule() {
     setGenerating(true);
     try {
-      const sched = await onGenerateSchedule();
-      setSchedule(sched);
+      await onGenerateSchedule();
     } finally {
       setGenerating(false);
     }
-  }
-
-  // Borra el calendario sugerido. Es sólo una guía local: los partidos ya
-  // registrados no se tocan.
-  function handleClearSchedule() {
-    localStorage.removeItem(SCHEDULE_KEY);
-    setSchedule(null);
-    setShowSchedule(true);
   }
 
   async function handleGenerateBracket() {
@@ -334,12 +304,10 @@ export default function Previa({
   }
 
   // ── Derived state ────────────────────────────────────────────────────────────
-  const allSchedulePlayed = schedule &&
-    schedule.every(entry => findPlayedMatch(tournament, entry) !== null);
 
   const sorted = [...tournament.matches].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
-  // Contar PJ por pareja (usando el mismo matching de player IDs que findPlayedMatch)
+  // Contar PJ por pareja: el partido es de la pareja si el equipo son exactamente sus dos jugadores
   const pairMatchCounts = {};
   tournament.pairs.forEach(p => { pairMatchCounts[p.id] = 0; });
   tournament.matches.forEach(m => {
@@ -357,6 +325,14 @@ export default function Previa({
   // cargando no siguen figurando como "por jugar".
   const idsAbiertos = new Set(liveMatches.map(m => m.form?.scheduledId).filter(Boolean));
   const programados = (tournament.scheduled_matches ?? []).filter(sm => !idsAbiertos.has(sm.id));
+  // Los generados con el dado traen ronda: se agrupan por ronda (las de la
+  // misma ronda se pueden jugar en paralelo). Los programados a mano van al final.
+  const hayRondas = programados.some(sm => sm.round != null);
+  const gruposProgramados = hayRondas
+    ? [...new Set(programados.map(sm => sm.round ?? null))]
+        .sort((a, b) => (a ?? Infinity) - (b ?? Infinity))
+        .map(ronda => ({ ronda, partidos: programados.filter(sm => (sm.round ?? null) === ronda) }))
+    : [{ ronda: null, partidos: programados }];
   const esMio = (sm) => myPlayerIds.length > 0
     && [...sm.team1, ...sm.team2].some(id => myPlayerIds.includes(id));
 
@@ -373,16 +349,8 @@ export default function Previa({
     }
   }
 
-  // Partido en curso (cargado en liveMatches) que corresponde a una entrada del calendario
-  function findLiveForEntry(entry) {
-    const t1 = String(entry.team1.id), t2 = String(entry.team2.id);
-    return liveMatches.find(m => {
-      const a = String(m.form.team1Pair), b = String(m.form.team2Pair);
-      return (a === t1 && b === t2) || (a === t2 && b === t1);
-    }) ?? null;
-  }
-
-  // ¿Hay algún partido con el cronómetro corriendo? → bloquea regenerar el calendario
+  // ¿Hay algún partido con el cronómetro corriendo? → bloquea programar el calendario:
+  // el generador no ve los partidos en curso y podría darle un tercero a esa pareja
   const anyLiveRunning = liveMatches.some(m => m.timer.startedAt !== null && m.timer.stoppedAt === null);
 
   // La previa se agota cuando quedan menos de 2 parejas con cupo: un partido
@@ -390,8 +358,7 @@ export default function Previa({
   const pairsWithSlot  = tournament.pairs.filter(p => pairMatchCounts[p.id] < MAX_PREVIA_MATCHES);
   const previaComplete = tournament.pairs.length > 0 && pairsWithSlot.length < 2;
 
-  // Va dentro del aviso de previa completa o al final de la lista, nunca en los
-  // dos: en el aviso al tamaño de los botones de acción, al final como CTA.
+  // Va sólo dentro del aviso de previa completa.
   const bracketButton = (cls) => (
     <button
       onClick={handleGenerateBracket}
@@ -418,16 +385,6 @@ export default function Previa({
           confirmDanger
           onConfirm={async () => { setConfirmDelete(null); await onDeleteMatch(confirmDelete); }}
           onCancel={() => setConfirmDelete(null)}
-        />
-      )}
-      {confirmClearSchedule && (
-        <Modal
-          title="Eliminar calendario sugerido"
-          message="El calendario es sólo una guía: los partidos ya registrados no se borran. Podés volver a generar uno con el botón del dado."
-          confirmText="Eliminar"
-          confirmDanger
-          onConfirm={() => { handleClearSchedule(); setConfirmClearSchedule(false); }}
-          onCancel={() => setConfirmClearSchedule(false)}
         />
       )}
       {confirmUnschedule && (
@@ -468,9 +425,9 @@ export default function Previa({
                 onClick={handleGenerateSchedule}
                 disabled={generating || anyLiveRunning || previaComplete}
                 title={previaComplete ? 'Todas las parejas ya jugaron sus partidos de la fase previa'
-                     : anyLiveRunning ? 'No se puede regenerar el calendario con un partido en vivo'
-                     : 'Generar calendario al azar'}
-                aria-label="Generar calendario al azar"
+                     : anyLiveRunning ? 'No se puede programar el calendario con un partido en vivo'
+                     : 'Programar al azar los partidos que faltan'}
+                aria-label="Programar al azar los partidos que faltan"
                 className="bg-transparent text-muted border border-border-strong px-3 py-2.5 cursor-pointer rounded-sm hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Dices size={15} className={generating ? 'animate-spin' : undefined} />
@@ -527,89 +484,6 @@ export default function Previa({
               : 'El organizador ya puede generar el cuadro eliminatorio.'}
           </p>
           {isOwner && bracketButton('mt-4 px-5 py-2.5 font-bold text-[13px] tracking-wide')}
-        </div>
-      )}
-
-      {/* Schedule guide */}
-      {schedule && !isDraft && (
-        <div className="mb-5 bg-surface border border-border-mid rounded-lg overflow-hidden">
-          <div
-            className="flex items-center justify-between gap-2 px-4 py-2.5 cursor-pointer"
-            onClick={() => setShowSchedule(v => !v)}
-          >
-            <div className="text-[11px] tracking-[2px] text-brand font-mono">CALENDARIO SUGERIDO</div>
-            <div className="flex items-center gap-3">
-              {isOwner && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmClearSchedule(true); }}
-                  title="Eliminar el calendario sugerido"
-                  className="bg-transparent border-0 text-muted cursor-pointer p-0 leading-none hover:text-danger transition-colors"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-              <span className="text-muted text-[11px] font-mono">{showSchedule ? '▲' : '▼'}</span>
-            </div>
-          </div>
-          {showSchedule && (
-            <div className="border-t border-border px-4 pb-3 pt-2">
-              {[...new Set(schedule.map(e => e.round))].sort().map(round => (
-                <div key={round}>
-                  <div className="text-[10px] tracking-[1px] text-muted font-mono mb-1.5 mt-2">RONDA {round}</div>
-                  <div className="flex flex-col gap-1.5">
-                    {schedule.filter(e => e.round === round).map(entry => {
-                      const played  = findPlayedMatch(tournament, entry);
-                      const key     = `${entry.team1.id}_${entry.team2.id}_r${entry.round}`;
-                      const win1    = played && parseInt(played.score1) > parseInt(played.score2);
-                      const live    = played ? null : findLiveForEntry(entry);
-                      const liveRunning = !!live && live.timer.startedAt !== null && live.timer.stoppedAt === null;
-                      const canLoad = !played && !live
-                        && (pairMatchCounts[entry.team1.id] ?? 0) < 2
-                        && (pairMatchCounts[entry.team2.id] ?? 0) < 2;
-                      return (
-                        <div key={key} className="flex items-center gap-2 py-1.5">
-                          <span className={`flex-1 font-condensed font-semibold text-[14px] ${played ? (win1 ? 'text-brand' : 'text-muted') : 'text-white'}`}>
-                            {entry.team1.name}
-                          </span>
-                          {played ? (
-                            <span className="font-condensed font-black text-[17px] flex items-center gap-1 shrink-0">
-                              <span className={win1 ? 'text-brand' : 'text-muted'}>{played.score1}</span>
-                              <span className="text-border-strong text-[13px]">—</span>
-                              <span className={!win1 ? 'text-cyan' : 'text-muted'}>{played.score2}</span>
-                            </span>
-                          ) : liveRunning ? (
-                            <span className="shrink-0 flex items-center gap-1.5 font-mono font-bold text-[10px] tracking-[1px] text-green bg-green/10 border border-green/30 px-2 py-0.5 rounded-full">
-                              <span className="w-1.5 h-1.5 rounded-full bg-green animate-pulse" />
-                              EN VIVO
-                            </span>
-                          ) : live ? (
-                            <span className="shrink-0 font-mono text-[10px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
-                              cargado
-                            </span>
-                          ) : (
-                            <>
-                              <span className="text-border-strong font-condensed text-[13px] shrink-0">vs</span>
-                              {isOwner && canLoad && (
-                                <button
-                                  onClick={() => addNewMatch({ team1Pair: entry.team1.id, team2Pair: entry.team2.id })}
-                                  className="shrink-0 bg-surface-alt border border-border-strong text-muted px-2 py-0.5 font-condensed font-bold text-[11px] tracking-wide cursor-pointer rounded-sm hover:text-white"
-                                >
-                                  + cargar
-                                </button>
-                              )}
-                            </>
-                          )}
-                          <span className={`flex-1 font-condensed font-semibold text-[14px] text-right ${played ? (!win1 ? 'text-cyan' : 'text-muted') : 'text-white'}`}>
-                            {entry.team2.name}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       )}
 
@@ -670,21 +544,30 @@ export default function Previa({
               {programados.length} {programados.length === 1 ? 'programado' : 'programados'}
             </span>
           </div>
-          <div className="flex flex-col gap-2.5">
-            {programados.map(sm => (
-              <ScheduledCard
-                key={sm.id}
-                match={sm}
-                tournament={tournament}
-                isOwner={isOwner}
-                esMio={esMio(sm)}
-                onEmpezar={() => abrirProgramado(sm, true)}
-                onCargar={() => abrirProgramado(sm, false)}
-                onEdit={() => setScheduling(sm)}
-                onDelete={() => setConfirmUnschedule(sm.id)}
-              />
-            ))}
-          </div>
+          {gruposProgramados.map(({ ronda, partidos }) => (
+            <div key={ronda ?? 'sin-ronda'} className="mb-2.5 last:mb-0">
+              {hayRondas && (
+                <div className="text-[10px] tracking-[1px] text-muted font-mono mb-1.5">
+                  {ronda != null ? `RONDA ${ronda}` : 'SIN RONDA'}
+                </div>
+              )}
+              <div className="flex flex-col gap-2.5">
+                {partidos.map(sm => (
+                  <ScheduledCard
+                    key={sm.id}
+                    match={sm}
+                    tournament={tournament}
+                    isOwner={isOwner}
+                    esMio={esMio(sm)}
+                    onEmpezar={() => abrirProgramado(sm, true)}
+                    onCargar={() => abrirProgramado(sm, false)}
+                    onEdit={() => setScheduling(sm)}
+                    onDelete={() => setConfirmUnschedule(sm.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
@@ -716,9 +599,9 @@ export default function Previa({
         </div>
       )}
 
-      {/* Generate bracket */}
-      {isOwner && !isDraft && !tournament.bracket && !previaComplete && (allSchedulePlayed || !schedule) && tournament.matches.length > 0 &&
-        bracketButton('mt-6 w-full py-3.5 font-black text-[16px] tracking-[2px]')}
+      {/* El cuadro se genera sólo desde el aviso de FASE PREVIA COMPLETA. Acá
+          había un segundo botón que aparecía tras un solo partido si el
+          calendario no estaba en este navegador; el back ahora también lo rechaza. */}
       {tournament.bracket && (
         <div className="bg-surface-alt border border-border-strong rounded-md px-3.5 py-2.5 text-[12px] text-brand font-mono mt-4 flex items-center justify-center gap-1.5">
           <Check size={13} strokeWidth={3} className="shrink-0" />

@@ -1,7 +1,18 @@
 import { Plus, X } from 'lucide-react';
 import { CONTACT_META, CONTACT_TYPES, formatPrice } from '../../utils/signup';
+import { levelLabel } from '../../utils/category';
+import LevelPicker from './LevelPicker';
 
 // `inherited` es lo que trae la categoría; null en un campo = heredarlo.
+// ISO → valor de <input type="datetime-local"> en la hora del navegador.
+function toLocalInput(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const p = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
 export default function SignupEditor({ value, onChange, inherited = null, profile = [] }) {
   const set = (patch) => onChange({ ...value, ...patch });
   const contacts = value.contacts ?? [];
@@ -17,8 +28,21 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
     ? formatPrice(inherited.price, inherited.unit)
     : null;
 
+  const inheritedLevel = inherited?.level ? levelLabel(inherited.level) : null;
+
   return (
     <div className="flex flex-col gap-4">
+      {/* La categoría del torneo marca a los inscriptos excedidos de nivel.
+          Vacía en la jornada = la de la categoría del organizador. */}
+      <div>
+        <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">CATEGORÍA DEL TORNEO</label>
+        <LevelPicker
+          value={value.level ?? null}
+          onChange={(level) => set({ level })}
+          emptyLabel={inheritedLevel ? `Hereda: ${inheritedLevel}` : 'Sin categoría'}
+        />
+      </div>
+
       <label className="flex items-center gap-2.5 cursor-pointer">
         <input
           type="checkbox"
@@ -31,6 +55,48 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
 
       {value.open && (
         <>
+          {/* Cupo y cierre: los usa la inscripción desde la app (lista de
+              espera, cierre automático). Vacío = sin cupo / sin cierre. */}
+          <div className="flex gap-2 items-end">
+            <div className="w-24 shrink-0">
+              <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">CUPO</label>
+              <input
+                type="number"
+                min="1"
+                inputMode="numeric"
+                value={value.capacity ?? ''}
+                onChange={(e) => set({ capacity: e.target.value === '' ? null : Number(e.target.value) })}
+                placeholder={inherited?.capacity ? `Hereda: ${inherited.capacity}` : 'Sin cupo'}
+                className="w-full bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
+              />
+            </div>
+            <div className="shrink-0">
+              <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">CUENTA</label>
+              <select
+                value={value.capacity_unit ?? inherited?.capacity_unit ?? 'pair'}
+                onChange={(e) => set({ capacity_unit: e.target.value })}
+                className="bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none cursor-pointer"
+              >
+                <option value="pair">Parejas</option>
+                <option value="player">Jugadores</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="signup-cierre" className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">CIERRE DE LA INSCRIPCIÓN</label>
+            <input
+              id="signup-cierre"
+              type="datetime-local"
+              value={toLocalInput(value.closes_at)}
+              onChange={(e) => set({ closes_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+              className="bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
+            />
+            <span className="block text-[11px] font-sans text-dim mt-1">
+              A esa hora deja de aceptar inscripciones y cancelaciones. Vacío = cierra cuando la apagues.
+            </span>
+          </div>
+
           <div className="flex gap-2 items-end">
             <div className="flex-1 min-w-0">
               <label className="block text-[10px] font-mono tracking-widest text-[#555] mb-1.5">PRECIO</label>

@@ -21,6 +21,7 @@ const GroupView    = lazy(() => import('./components/Group/GroupView'))
 const ProfileView  = lazy(() => import('./components/Auth/ProfileView'))
 const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'))
 const VerifyEmail   = lazy(() => import('./components/Auth/VerifyEmail'))
+const LevelQuizView = lazy(() => import('./components/Auth/LevelQuizView'))
 const AdminDashboard      = lazy(() => import('./components/Admin/AdminDashboard'))
 const AdminUsers          = lazy(() => import('./components/Admin/AdminUsers'))
 const AdminTournaments    = lazy(() => import('./components/Admin/AdminTournaments'))
@@ -133,6 +134,7 @@ export default function App() {
         <Route path="/reset-password/:token"                     element={<Titled title="Restablecer contraseña"><ResetPassword /></Titled>} />
         <Route path="/verify-email/:token"                       element={<Titled title="Verificar email"><VerifyEmail /></Titled>} />
         <Route path="/u/:username"                               element={<ProfileView />} />
+        <Route path="/nivel"                                     element={<PrivateRoute><Titled title="Tu nivel"><LevelQuizView /></Titled></PrivateRoute>} />
         <Route path="/club/:id"                                  element={<ClubProfileView />} />
         <Route path="/view/:id"                                  element={<ReadonlyView />} />
         <Route path="/readonly/:id"                              element={<RedirectToView />} />

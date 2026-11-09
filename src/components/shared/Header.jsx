@@ -12,7 +12,7 @@ import logoTxtUrl from '../../assets/padeleando-txt.webp'
 import PlayerAvatar from './PlayerAvatar'
 import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
-import { notifTitle, notifSummary } from '../../utils/notifText'
+import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
 
 // Preferencia de sonido de la campana, apagada por defecto.
@@ -57,7 +57,7 @@ function NotifItemText({ n, onNavigate }) {
   );
   if (n.type === 'join_request') return (
     <>{actor} solicitó unirse al torneo{' '}
-      <span className="text-white font-semibold">{n.tournament_name ?? 'un torneo'}</span>
+      <span className="text-white font-semibold">{torneoConCategoria(n)}</span>
       {n.requested_player_name ? <> como <span className="text-brand">{n.requested_player_name}</span></> : null}</>
   );
   if (n.type === 'new_tournament') return (
@@ -123,6 +123,7 @@ function NotifItemText({ n, onNavigate }) {
   if (n.type === 'booking_requested') return <>{n.body}</>;
   if (n.type === 'booking_decided')   return <>{n.body}</>;
   if (n.type === 'booking_cancelled') return <>{n.body}</>;
+  if (isRegistrationNotif(n)) return <>{registrationText(n)}</>;
   // Un tipo sin rama propia se leía como una notificación en blanco.
   return <>{notifSummary(n)}</>;
 }
@@ -528,7 +529,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer)) ? 'cursor-pointer hover:bg-white/5' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n))) ? 'cursor-pointer hover:bg-white/5' : ''}`}
       onClick={
         n.type === 'admin_message' ? () => onNavigate('/notifications')
           : n.type === 'club_request' && isAdminViewer ? () => onNavigate('/admin/clubs/requests')
@@ -536,6 +537,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
           // entity_id es el club: lleva directo a su ficha
           : (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') ? () => onNavigate(`/club/${n.entity_id}`)
           : n.type === 'premium_claim' ? () => onNavigate('/admin/users')
+          : isRegistrationNotif(n) && registrationHref(n) ? () => onNavigate(registrationHref(n))
           : undefined
       }
     >

@@ -8,9 +8,9 @@
  */
 import { useState, useEffect, useRef, useSyncExternalStore, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
-import { calcStandings, courtLabel, getPairLabel, isAmericanoDraft, fmtHora, tournamentDisplayStatus, TOURNAMENT_STATUS_META,
+import { calcStandings, courtLabel, getPairLabel, isDraftTournament, fmtHora, tournamentDisplayStatus, TOURNAMENT_STATUS_META,
   getAllMatches, playedMatches, calcPartnerships, tiedLabel, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS,
-  setWinner, visibleSetsCount, countPlayed, PHASE_LABEL, BRACKET_PHASES } from "../../utils/helpers";
+  setWinner, visibleSetsCount, countPlayed, PHASE_LABEL, BRACKET_PHASES, topStandingRows } from "../../utils/helpers";
 
 // Mínimo de partidos para que la pantalla de estadísticas entre en el Modo TV.
 const TV_STATS_MIN_MATCHES = 3;
@@ -139,8 +139,8 @@ export function JoinBanner({ user, tournament, joinStatus, claimablePlayers = []
     );
   }
 
-  // Logueado: sólo si no es jugador ni dueño y ya cargó el estado.
-  if (!joinStatus || joinStatus.is_player || joinStatus.is_owner) return null;
+  // Logueado: sólo si no es jugador ni organizador (dueño o co-organizador) y ya cargó el estado.
+  if (!joinStatus || joinStatus.is_player || joinStatus.can_manage || joinStatus.is_owner) return null;
   const req = joinStatus.request;
 
   if (!req || req.status === 'rejected') {
@@ -366,7 +366,11 @@ function TvHeader({ tournament, club, groupName, groupEmojis, paused, onPrev, on
     status: tournament.status,
     hasLiveMatch: hasLive,
     hasPlayed: countPlayed(tournament) > 0,
-    isDraft: isAmericanoDraft({ format: tournament.format, pairCount: tournament.pairs?.length }),
+    isDraft: !tournament.roster_hidden && isDraftTournament({
+      format: tournament.format,
+      pairCount: tournament.pairs?.length,
+      playerCount: tournament.players?.filter((p) => !p.removed).length,
+    }),
   });
   const status = TOURNAMENT_STATUS_META[dispStatus === 'active' && hasLive ? 'live' : dispStatus];
   const StatusIcon = status.icon;
@@ -590,9 +594,8 @@ function TvStatsScreen({ tournament }) {
 
   // MVP — mismo criterio que la pestaña STATS: la cima por victorias y diferencia.
   const standings = calcStandings(players, matches);
-  const topPg     = standings[0]?.pg ?? 0;
-  const topDiff   = standings[0] ? standings[0].sf - standings[0].sc : 0;
-  const leaders   = standings.filter((p) => p.pg === topPg && (p.sf - p.sc) === topDiff);
+  const leaders   = topStandingRows(standings);
+  const topPg     = leaders[0]?.pg ?? 0;
 
   const partnerships = calcPartnerships(players, played);
   const best         = partnerships[0];
@@ -1253,6 +1256,15 @@ export function ReadonlyMatches({ tournament, groupName }) {
 export function ReadonlyPlayers({ tournament }) {
   const navigate = useNavigate();
   const { players, pairs, mode } = tournament;
+
+  if (tournament.roster_hidden) {
+    return (
+      <div className="flex flex-col gap-2 bg-surface border border-border-mid rounded-xl p-4 max-w-xl">
+        <div className="font-condensed font-bold text-[14px] tracking-[2px] text-muted">JUGADORES</div>
+        <p className="m-0 text-[13px] text-soft leading-relaxed">La lista se publica cuando empieza el torneo.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6">

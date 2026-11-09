@@ -155,6 +155,11 @@ export const api = {
       manage:       (clubId)           => req('GET',   `/clubs/${clubId}/bookings/manage`),
       decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
     },
+    // Vincular Mercado Pago del club (Premium): connect devuelve la URL de MP a la que redirigir.
+    mercadopago: {
+      connect:    (clubId) => req('GET',    `/clubs/${clubId}/mercadopago/connect`),
+      disconnect: (clubId) => req('DELETE', `/clubs/${clubId}/mercadopago`),
+    },
   },
   // "Mis reservas" cruza todos los clubes: no vive bajo /clubs/:id
   bookings: {
@@ -200,6 +205,7 @@ export const api = {
     create: (body)   => req('POST',   '/pairs',       body),
     update: (id, b)  => req('PUT',    `/pairs/${id}`, b),
     delete: (id)     => req('DELETE', `/pairs/${id}`),
+    withdraw: (id)   => req('POST',   `/pairs/${id}/withdraw`),
   },
   readonly: {
     get: (id) => req('GET', `/readonly/${id}`),
@@ -247,6 +253,16 @@ export const api = {
     broadcast:     (body)                   => req('POST', '/admin/broadcast', body),
     broadcasts:    ({ page = 1, limit = 20 } = {}) =>
       req('GET', `/admin/broadcasts?page=${page}&limit=${limit}`),
+  },
+  // Inscripción a torneos (routes/registrations.js del back).
+  registrations: {
+    create: (body)          => req('POST',  '/registrations', body),
+    mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
+    mineAll: ()             => req('GET',   '/registrations/mine'),
+    cancel: (id)            => req('POST',  `/registrations/${id}/cancel`),
+    list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),
+    decide: (id, action, reason) => req('PATCH', `/registrations/${id}`, { action, reason }),
+    paid:   (id, paid)      => req('PATCH', `/registrations/${id}/paid`, { paid }),
   },
   joinRequests: {
     send:     (tournamentId, playerId) => req('POST',  '/join-requests', { tournamentId, playerId }),

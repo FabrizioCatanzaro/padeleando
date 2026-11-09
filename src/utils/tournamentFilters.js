@@ -1,4 +1,4 @@
-import { tournamentDisplayStatus, isAmericanoDraft, isLive } from './helpers';
+import { tournamentDisplayStatus, isDraftTournament, isLive } from './helpers';
 
 export const EMPTY_FILTERS = { q: '', statuses: [], formats: [], from: '', to: '' };
 
@@ -30,7 +30,7 @@ export function statusOf(t) {
     status: t.status,
     hasLiveMatch: isLive(t),
     hasPlayed: (t.match_count ?? 0) > 0,
-    isDraft: isAmericanoDraft({ format: t.format, pairCount: t.pair_count }),
+    isDraft: !t.roster_hidden && isDraftTournament({ format: t.format, pairCount: t.pair_count, playerCount: t.player_count }),
   });
 }
 

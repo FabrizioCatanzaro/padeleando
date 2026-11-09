@@ -72,7 +72,8 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
   const labelCls  = 'block font-condensed font-bold text-[9.5px] tracking-[0.14em] uppercase mb-1.5';
 
   function opcionesPareja(actual, otro) {
-    return tournament.pairs.map((p) => {
+    // Una pareja retirada ya no se programa.
+    return tournament.pairs.filter((p) => p.status !== 'withdrawn' || p.id === actual).map((p) => {
       const n = pjDePareja(p.id);
       const lleno = esAmericano && n >= MAX_PREVIA_MATCHES && p.id !== actual;
       return (

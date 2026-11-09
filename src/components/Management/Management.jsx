@@ -79,6 +79,9 @@ function SignupSection({ tournament, onSave }) {
     price:    tournament.group_signup_price ?? null,
     unit:     tournament.group_signup_price_unit ?? 'player',
     contacts: tournament.group_signup_contacts ?? [],
+    level:    tournament.group_level ?? null,
+    capacity: tournament.group_signup_capacity ?? null,
+    capacity_unit: tournament.group_signup_capacity_unit ?? null,
   };
   // Sólo lo propio: precargar lo heredado lo copiaría al guardar.
   const [value, setValue] = useState(() => ({
@@ -86,6 +89,10 @@ function SignupSection({ tournament, onSave }) {
     price:    tournament.signup_price ?? null,
     unit:     tournament.signup_price_unit ?? inherited.unit,
     contacts: tournament.signup_contacts ?? [],
+    level:    tournament.level ?? null,
+    capacity: tournament.signup_capacity ?? null,
+    capacity_unit: tournament.signup_capacity_unit ?? null,
+    closes_at: tournament.signup_closes_at ?? null,
   }));
   const [saving, setSaving] = useState(false);
 
@@ -111,7 +118,7 @@ function SignupSection({ tournament, onSave }) {
 export default function Management({
   tournament, isOwner,
   onAddPlayer, onEditPlayer, onDeletePlayer,
-  onAddPair, onEditPair, onDeletePair,
+  onAddPair, onEditPair, onDeletePair, onWithdrawPair,
   onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateClubEvent, onUpdateSignup,
   onRefresh,
 }) {
@@ -182,6 +189,7 @@ export default function Management({
           onAdd={onAddPair}
           onEdit={onEditPair}
           onDelete={onDeletePair}
+          onWithdraw={onWithdrawPair}
         />
       )}
 

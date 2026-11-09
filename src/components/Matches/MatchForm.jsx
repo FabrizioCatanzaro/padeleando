@@ -535,7 +535,8 @@ function TeamBox({ label, accent = "brand", children }) {
 function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, timerState, onTimerChange, onEmpezar, pairMatchCounts, pairMatchLimit, fixedTeams = false, titulo, saving = false, onProgramar }) {
   const { pairs, players } = tournament;
   const removedIds    = new Set(players.filter((p) => p.removed).map((p) => p.id));
-  const selectablePairs = pairs.filter((p) => !removedIds.has(p.p1) && !removedIds.has(p.p2));
+  // Una pareja retirada ya no juega: no se ofrece para partidos nuevos.
+  const selectablePairs = pairs.filter((p) => !removedIds.has(p.p1) && !removedIds.has(p.p2) && (isEditing || p.status !== 'withdrawn'));
   const showCounts = !isEditing && pairMatchCounts && pairMatchLimit;
 
   function pairOptionLabel(pairId) {

@@ -2,7 +2,7 @@ import { Users, User, Flame, Trophy, Building2, Ticket } from 'lucide-react';
 import FadeInCard from '../shared/FadeInCard';
 import ClubTile from '../shared/ClubTile';
 import {
-  fmt, fmtHora, tournamentDisplayStatus, isAmericanoDraft, isLive, TOURNAMENT_STATUS_META,
+  fmt, fmtHora, tournamentDisplayStatus, isDraftTournament, isLive, TOURNAMENT_STATUS_META,
 } from '../../utils/helpers';
 import { resolveSignup, showsSignup, formatPrice, CONTACT_META, contactHref } from '../../utils/signup';
 
@@ -31,7 +31,7 @@ export default function TournamentCard({ t, group, delay = 0, onClick }) {
     status: t.status,
     hasLiveMatch: isLive(t),
     hasPlayed: (t.match_count ?? 0) > 0,
-    isDraft: isAmericanoDraft({ format: t.format, pairCount: t.pair_count }),
+    isDraft: !t.roster_hidden && isDraftTournament({ format: t.format, pairCount: t.pair_count, playerCount: t.player_count }),
   });
   const meta = TOURNAMENT_STATUS_META[status];
   const StatusIcon = meta.icon;

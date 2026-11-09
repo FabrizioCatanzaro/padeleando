@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Trophy, Pencil, Trash2, Info } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-import { courtLabel, AMERICANO_MIN_PAIRS, setWinner, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
+import { courtLabel, AMERICANO_MIN_PAIRS, MAX_PREVIA_MATCHES, previaPendingPairs, isPreviaComplete, setWinner, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
 import MatchForm from "../Matches/MatchForm";
 import Modal from "../shared/Modal";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
@@ -368,6 +368,11 @@ function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchN
             CANCHA {court}
           </span>
         )}
+        {match.walkover && (
+          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="font-condensed font-bold text-[9px] tracking-[0.12em] text-muted border border-border-strong px-2 py-[3px] rounded-[5px]">
+            W.O.
+          </span>
+        )}
         <span className="flex-1" />
         {isOwner && (
           <span className="inline-flex gap-1 shrink-0">
@@ -631,6 +636,8 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
   // ── Sin bracket ──────────────────────────────────────────────────────────────
   if (!bracket) {
+    const previaCompleta    = isPreviaComplete(tournament);
+    const parejasPendientes = previaPendingPairs(tournament).length;
     // Borrador: sin el mínimo de parejas no se puede generar el cuadro.
     const pairCount = tournament.pairs?.length ?? 0;
     if (pairCount < AMERICANO_MIN_PAIRS) {
@@ -652,10 +659,10 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     return (
       <div>
         <div className="font-condensed font-bold text-[14px] tracking-[3px] text-muted mb-4">CUADRO</div>
-        {isOwner ? (
+        {isOwner && previaCompleta ? (
           <>
             <p className="text-muted font-mono text-[12px] mb-4">
-              Completá todos los partidos de la fase previa para generar el cuadro.
+              La fase previa terminó: ya podés generar el cuadro.
             </p>
             <button
               onClick={handleGenerateBracket}
@@ -665,6 +672,13 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
               {generating ? "GENERANDO..." : "GENERAR CUADRO"}
             </button>
           </>
+        ) : isOwner ? (
+          // Sin la previa completa el back rechaza el cuadro: los seeds saldrían
+          // de una tabla a medias y los partidos que falten ya no lo moverían.
+          <p className="text-muted font-mono text-[12px]">
+            Falta{parejasPendientes === 1 ? '' : 'n'} <strong className="text-white">{parejasPendientes}</strong> {parejasPendientes === 1 ? 'pareja' : 'parejas'} por
+            completar sus {MAX_PREVIA_MATCHES} partidos de la fase previa. Al terminarla se habilita el cuadro.
+          </p>
         ) : (
           <p className="text-muted font-mono text-[13px]">El cuadro aún no fue generado.</p>
         )}

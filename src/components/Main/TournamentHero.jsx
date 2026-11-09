@@ -192,16 +192,19 @@ export default function TournamentHero({
           onEdit={irAGestion}
           title={isOwner ? 'Cambiar la fecha y la hora' : undefined}
         />
+        {/* Plantel oculto hasta que empiece: un 0 se leería como "no se anotó nadie". */}
         <RailCell
-          value={tournament.players.filter((p) => !p.removed).length}
+          value={tournament.roster_hidden ? '—' : tournament.players.filter((p) => !p.removed).length}
           label="Jugadores"
+          sub={tournament.roster_hidden ? 'al empezar' : null}
           onEdit={irAGestion}
           title={isOwner ? 'Gestionar los jugadores' : undefined}
         />
         {isPairs ? (
           <RailCell
-            value={tournament.pairs.length}
+            value={tournament.roster_hidden ? '—' : tournament.pairs.length}
             label="Parejas"
+            sub={tournament.roster_hidden ? 'al empezar' : null}
             onEdit={irAGestion}
             title={isOwner ? 'Gestionar las parejas' : undefined}
           />

@@ -23,7 +23,7 @@ import { useToast } from '../../context/useToast';
 import Btn from '../shared/Btn';
 import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
-import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps } from '../../utils/onboarding';
+import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, isLevelDismissed, dismissLevel } from '../../utils/onboarding';
 import SearchPalette from './SearchPalette';
 import CategoryList from './CategoryList';
 import Discover from './Discover';
@@ -84,6 +84,7 @@ export default function HomeView() {
   // devolvía el esqueleto de la vista con sesión y al apagarse se insertaba el
   // hero completo, empujando el resto ~480 px. Ese era el CLS de 0,685.
   const [loading,      setLoading]      = useState(isLoggedIn);
+  const [levelDismissed, setLevelDismissed] = useState(isLevelDismissed);
   const [name,         setName]         = useState('');
   const [desc,         setDesc]         = useState('');
   const [isPublic,     setIsPublic]     = useState(true);
@@ -865,6 +866,22 @@ export default function HomeView() {
             <StatRail stats={rail} />
             <LiveBand tournaments={liveMine} onOpen={(id) => navigate(`/view/${id}`)} />
             {liveMine.length === 0 && <NextBand t={upcomingMine[0] ?? null} onOpen={(id) => navigate(`/view/${id}`)} />}
+
+            {/* ── Categoría: mientras el perfil no la tenga y no la haya pospuesto ── */}
+            {!loading && !user?.category && !levelDismissed && (
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-surface border border-brand/30 rounded-lg p-4 mb-6">
+                <div className="flex-1 min-w-0">
+                  <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1">TU CATEGORÍA</div>
+                  <p className="text-soft font-sans text-[13px] m-0">
+                    Respondé 6 preguntas y te recomendamos una. La ven los organizadores cuando te inscribís.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Btn variant="ghost" size="sm" onClick={() => { dismissLevel(); setLevelDismissed(true); }}>Después</Btn>
+                  <Btn variant="primary" size="sm" onClick={() => navigate('/nivel')}>CALCULAR</Btn>
+                </div>
+              </div>
+            )}
 
             {/* ── Onboarding: una pregunta, después el checklist ── */}
             {!loading && (

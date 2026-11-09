@@ -89,6 +89,10 @@ export function useTournament(groupId, tournamentId) {
       signup_price:      extra.signup_price ?? null,
       signup_price_unit: extra.signup_price_unit ?? null,
       signup_contacts:   extra.signup_contacts?.length ? extra.signup_contacts : null,
+      level:             extra.level ?? null,
+      signup_capacity:      extra.signup_capacity ?? null,
+      signup_capacity_unit: extra.signup_capacity_unit ?? null,
+      signup_closes_at:     extra.signup_closes_at ?? null,
     });
     setTournament(adaptTournament(t));
     return t.id; // para que App.js pueda navegar al torneo
@@ -229,7 +233,13 @@ export function useTournament(groupId, tournamentId) {
   }
 
   async function handleDeletePlayer(playerId) {
-    await api.players.removeFromTournament(playerId, tournamentId);
+    try {
+      await api.players.removeFromTournament(playerId, tournamentId);
+    } catch (err) {
+      // 409 si está en una pareja activa: primero se retira o elimina la pareja.
+      showToast(err.message, 'error');
+      return;
+    }
     await syncMode();
     await reload(true);
     showToast('Jugador eliminado', 'error');
@@ -247,16 +257,41 @@ export function useTournament(groupId, tournamentId) {
   }
 
   async function handleEditPair(pairId, p1Id, p2Id) {
-    await api.pairs.update(pairId, { p1Id, p2Id });
+    try {
+      await api.pairs.update(pairId, { p1Id, p2Id });
+    } catch (err) {
+      showToast(err.message, 'error');
+      return;
+    }
     await reload(true);
     flash();
     showToast('Pareja actualizada');
   }
 
   async function handleDeletePair(pairId) {
-    await api.pairs.delete(pairId);
+    try {
+      await api.pairs.delete(pairId);
+    } catch (err) {
+      showToast(err.message, 'error');
+      return;
+    }
     await reload(true);
     showToast('Pareja eliminada', 'error');
+  }
+
+  // Baja con el torneo en juego: sus programados pasan a W.O. 6-0 y, si hay
+  // cuadro, sus cruces se resuelven solos. Se recarga entero porque cambian
+  // parejas, partidos, programados y cuadro a la vez.
+  async function handleWithdrawPair(pairId) {
+    try {
+      const res = await api.pairs.withdraw(pairId);
+      await reload(true);
+      showToast(res.walkovers > 0
+        ? `Pareja retirada: ${res.walkovers} ${res.walkovers === 1 ? 'partido' : 'partidos'} por W.O.`
+        : 'Pareja retirada', 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
   // ── Scores y torneo ─────────────────────────────────────────────────
@@ -305,12 +340,16 @@ export function useTournament(groupId, tournamentId) {
     showToast('Club y fecha actualizados');
   }
 
-  async function handleUpdateSignup({ open, price, unit, contacts }) {
+  async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at }) {
     const updated = await api.tournaments.update(tournament.id, {
       signup_open:       open,
       signup_price:      price,
       signup_price_unit: unit,
       signup_contacts:   (contacts ?? []).filter((c) => c.value.trim()),
+      level:             level ?? null,
+      signup_capacity:      capacity ?? null,
+      signup_capacity_unit: capacity_unit ?? null,
+      signup_closes_at:     closes_at ?? null,
     });
     setTournament((prev) => (prev ? { ...prev, ...updated } : prev));
     showToast('Inscripción actualizada');
@@ -324,16 +363,36 @@ export function useTournament(groupId, tournamentId) {
     setTournament((prev) => (prev ? { ...prev, live_match: data ?? null } : prev));
   }
 
+  // El back guarda el calendario como partidos programados y devuelve el
+  // fixture completo: se reemplaza en el estado local sin recargar el torneo.
   async function handleGenerateSchedule() {
-    const data = await api.tournaments.schedule(tournament.id);
-    localStorage.setItem(`previa_schedule_${tournament.id}`, JSON.stringify(data.schedule));
-    return data.schedule;
+    try {
+      const data = await api.tournaments.schedule(tournament.id);
+      // El calendario sugerido vivía acá antes de guardarse en la base.
+      try { localStorage.removeItem(`previa_schedule_${tournament.id}`); } catch { /* sin storage */ }
+      setTournament((prev) =>
+        prev ? { ...prev, scheduled_matches: data.scheduled_matches.map(adaptScheduled) } : prev
+      );
+      showToast(data.created > 0
+        ? `${data.created} ${data.created === 1 ? 'partido programado' : 'partidos programados'}`
+        : 'No quedan partidos por programar', 'info');
+      return data.schedule;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return null;
+    }
   }
 
   async function handleGenerateBracket() {
-    const res = await api.tournaments.bracket(tournament.id);
-    applyBracket(res.bracket);
-    showToast('Cuadro generado');
+    try {
+      const res = await api.tournaments.bracket(tournament.id);
+      applyBracket(res.bracket);
+      showToast('Cuadro generado');
+    } catch (err) {
+      showToast(err.message, 'error');
+      // Otro organizador ya lo generó: se trae el torneo para mostrar ese cuadro.
+      if (err.data?.code === 'bracket_exists') reload(true);
+    }
   }
 
   // Los tres endpoints del cuadro devuelven el bracket ya actualizado: se aplica al
@@ -391,7 +450,7 @@ export function useTournament(groupId, tournamentId) {
     handleAddMatch,    handleEditMatch,    handleDeleteMatch,
     handleAddScheduled, handleEditScheduled, handleDeleteScheduled,
     handleAddPlayer,   handleEditPlayer,   handleDeletePlayer,
-    handleAddPair,     handleEditPair,     handleDeletePair,
+    handleAddPair,     handleEditPair,     handleDeletePair,     handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,

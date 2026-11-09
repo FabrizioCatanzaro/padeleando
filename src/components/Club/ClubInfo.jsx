@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { MapPin, Phone, MessageCircle, Globe, Instagram, Facebook, Clock, LayoutGrid, Calendar, Pencil, ShieldCheck, ChevronRight } from 'lucide-react';
+import { MapPin, Phone, MessageCircle, Globe, Instagram, Facebook, Clock, LayoutGrid, Calendar, Pencil, ShieldCheck, ChevronRight, Gem, Link2, Link2Off } from 'lucide-react';
 import { scheduleLines, whatsappLink, socialUrl, socialLabel } from './clubForm';
 import { missingFields } from '../../utils/clubPage';
 import { formatMoney } from '../../utils/money';
@@ -45,7 +45,7 @@ function Linea({ icon, children, href }) {
 // Los datos fijos y, al pie, el pedido de correcciones. Antes ese pedido partía
 // la página al medio; acá cae justo debajo del teléfono que alguien acaba de
 // leer, que es el momento en que se da cuenta de que está viejo.
-export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManage = admin, onPedir, onReclamar, onGestionarCanchas }) {
+export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManage = admin, onPedir, onReclamar, onGestionarCanchas, onConectarMp, onDesconectarMp, onPedirPremiumMp }) {
   const horarios = scheduleLines(club.schedule);
   const social   = (club.social_links ?? []).filter((s) => s.url);
   const faltan   = missingFields(club);
@@ -147,6 +147,52 @@ export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManag
               {socialLabel(s)}
             </Linea>
           ))}
+        </Bloque>
+      )}
+
+      {/* Solo el dueño ve esto (no el admin de un club sin dueño: no hay a quién atarle la cuenta de MP) */}
+      {club.is_owner && (
+        <Bloque titulo="COBROS">
+          {club.mp_connected ? (
+            <div className="flex items-center justify-between gap-3 px-4 pt-2">
+              <span className="flex items-center gap-2 text-[13px] text-white font-sans">
+                <Link2 size={15} className="text-brand shrink-0" /> Mercado Pago vinculado
+              </span>
+              <button
+                type="button"
+                onClick={onDesconectarMp}
+                className="shrink-0 inline-flex items-center gap-1.5 text-[11px] font-mono text-muted hover:text-danger bg-transparent border-none cursor-pointer p-0"
+              >
+                <Link2Off size={12} /> DESVINCULAR
+              </button>
+            </div>
+          ) : club.owner_is_premium ? (
+            <div className="px-4 pt-2">
+              <p className="text-[11.5px] text-dim mb-2 leading-relaxed">
+                Vinculá tu cuenta de Mercado Pago para cobrar las reservas online: se confirman solas cuando el jugador paga.
+              </p>
+              <button
+                type="button"
+                onClick={onConectarMp}
+                className="inline-flex items-center gap-2 bg-brand text-base border-0 px-3.5 py-2 rounded-lg font-condensed font-bold text-[11.5px] tracking-widest cursor-pointer"
+              >
+                <Link2 size={13} /> VINCULAR MERCADO PAGO
+              </button>
+            </div>
+          ) : (
+            <div className="px-4 pt-2">
+              <p className="text-[11.5px] text-dim mb-2 leading-relaxed">
+                Con Premium podés vincular tu Mercado Pago y cobrar las reservas online, sin aprobarlas a mano.
+              </p>
+              <button
+                type="button"
+                onClick={onPedirPremiumMp}
+                className="inline-flex items-center gap-2 bg-transparent border border-border-strong text-muted hover:text-white hover:border-soft px-3 py-1.5 rounded-lg font-condensed font-bold text-[11px] tracking-widest cursor-pointer transition-colors"
+              >
+                <Gem size={12} /> ACTUALIZAR A PREMIUM
+              </button>
+            </div>
+          )}
         </Bloque>
       )}
 

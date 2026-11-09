@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { api } from '../../utils/api';
 import { renderRichText } from '../../utils/richText';
-import { notifSummary } from '../../utils/notifText';
+import { notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria } from '../../utils/notifText';
 import { useAuth } from '../../context/useAuth';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Loader from '../Loader/Loader';
@@ -302,7 +302,7 @@ function NotifText({ n, navigate }) {
     return (
       <div className="text-[13px] text-secondary">
         {actorEl} solicitó unirse al torneo{' '}
-        <span className="text-white font-semibold">{n.tournament_name ?? 'un torneo'}</span>
+        <span className="text-white font-semibold">{torneoConCategoria(n)}</span>
         {n.requested_player_name ? <> como <span className="text-brand">{n.requested_player_name}</span></> : null}
       </div>
     );
@@ -422,6 +422,22 @@ function NotifText({ n, navigate }) {
         >
           Ver club →
         </button>
+      </div>
+    );
+  }
+  if (isRegistrationNotif(n)) {
+    const href = registrationHref(n);
+    return (
+      <div className="text-[13px] text-secondary">
+        {registrationText(n)}{' '}
+        {href && (
+          <button
+            onClick={() => navigate(href)}
+            className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
+          >
+            {n.type === 'registration_received' ? 'Ver inscripciones →' : 'Ver torneo →'}
+          </button>
+        )}
       </div>
     );
   }

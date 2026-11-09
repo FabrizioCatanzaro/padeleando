@@ -76,6 +76,11 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
         <span className="text-dim text-[11px]">·</span>
         <span className="text-[11.5px] text-muted font-mono">{fmt(date || createdAt)}</span>
         {cancha != null && <Badge variant="label" color="brand">CANCHA {cancha}</Badge>}
+        {match.walkover && (
+          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="font-condensed font-bold text-[9px] tracking-[0.12em] text-muted border border-border-strong px-2 py-[3px] rounded-[5px]">
+            W.O.
+          </span>
+        )}
         {dur && (
           <span className="text-[11.5px] text-dim font-mono inline-flex items-center gap-1.5">
             <Clock size={11} className="shrink-0" />{dur}

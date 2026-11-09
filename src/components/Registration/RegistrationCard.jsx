@@ -1,0 +1,172 @@
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Check, AlertTriangle, Ticket } from 'lucide-react';
+import { api } from '../../utils/api';
+import { useAuth } from '../../context/useAuth';
+import { useToast } from '../../context/useToast';
+import { formatPrice, contactHref, CONTACT_META } from '../../utils/signup';
+import { levelLabel, checkRegistrationLevel } from '../../utils/category';
+import Btn from '../shared/Btn';
+import RegistrationFlow from './RegistrationFlow';
+import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
+
+// Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
+// Sin sesión muestra precio y contactos e invita a entrar; con sesión trae el
+// estado de su inscripción (GET /registrations/mine) y abre el formulario.
+export default function RegistrationCard({ tournament, groupName = null, signup: signupBase }) {
+  const { isLoggedIn, user } = useAuth();
+  const { showToast } = useToast();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [data, setData] = useState(null);
+  const [flowOpen, setFlowOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [error, setError] = useState(null);
+
+  const load = useCallback(() => {
+    if (!isLoggedIn) return;
+    api.registrations.mine(tournament.id).then(setData).catch(() => {});
+  }, [isLoggedIn, tournament.id]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const signup = data?.signup ?? { ...signupBase, open: !!signupBase?.open };
+  const reg = data?.registration ?? null;
+  const activo = reg && ['pending', 'approved', 'waitlist'].includes(reg.status);
+
+  // Sin inscripción abierta y sin una inscripción propia que mostrar: nada.
+  if (!signup.open && !activo && !reg) return null;
+  if (data?.can_manage) return null;
+
+  const cierre = fmtCierre(signup.closes_at);
+  const disp = DISPONIBILIDAD[signup.availability] ?? null;
+  const precio = formatPrice(signup.price, signup.price_unit ?? signup.unit);
+  const nivel = levelLabel(signup.level);
+  const check = signup.level ? checkRegistrationLevel([user?.category ?? null], signup.level, { solo: true }) : null;
+
+  async function cancelar() {
+    if (!reg) return;
+    setCancelling(true);
+    setError(null);
+    try { await api.registrations.cancel(reg.id); load(); }
+    catch (e) { setError(e.message); }
+    finally { setCancelling(false); }
+  }
+
+  const contactos = (signupBase?.contacts ?? []).map((c) => {
+    const meta = CONTACT_META[c.type];
+    const href = contactHref(c, tournament.name);
+    if (!meta || !href) return null;
+    const Icon = meta.icon;
+    return (
+      <a key={c.type} href={href} target="_blank" rel="noopener noreferrer"
+        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-border-strong text-content text-[13px] no-underline hover:border-soft">
+        <Icon size={14} className="shrink-0" />{meta.label}
+      </a>
+    );
+  }).filter(Boolean);
+
+  // ── Ya tiene una inscripción: su estado ───────────────────────────────────
+  const flow = flowOpen && (
+    <RegistrationFlow
+      tournament={tournament}
+      groupName={groupName}
+      signup={signup}
+      contactos={contactos}
+      onClose={() => setFlowOpen(false)}
+      onDone={(reg) => {
+        setFlowOpen(false);
+        // Estado PENDIENTE al instante; la recarga trae el nombre del compañero.
+        if (reg) setData((d) => ({ ...(d ?? {}), signup: d?.signup ?? signup, registration: reg }));
+        showToast('Inscripción enviada. Te avisamos cuando el organizador decida.');
+        load();
+      }}
+    />
+  );
+
+  if (reg && reg.status !== 'cancelled') {
+    const meta = ESTADO_META[reg.status];
+    const pareja = reg.kind === 'pair'
+      ? `${user?.name ?? 'Vos'} & ${reg.p2_user_name ?? reg.p2_name ?? 'tu compañero'}`
+      : `${user?.name ?? 'Vos'} · busca pareja`;
+    return (
+      <section aria-label="Tu inscripción" className="mx-5 sm:mx-6 mt-4 bg-surface border border-border-mid rounded-xl p-4 flex flex-col gap-3 max-w-xl">
+        <div className="flex items-center justify-between gap-2">
+          <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-white">TU INSCRIPCIÓN</span>
+          <span className={`text-[11px] font-bold tracking-wide px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
+        </div>
+        <div className="text-[16px] text-white font-bold">{pareja}</div>
+        <p className="m-0 text-[13px] text-soft leading-relaxed">
+          {reg.status === 'pending' && 'El organizador todavía no decidió. Te avisamos por la app.'}
+          {reg.status === 'approved' && 'Ya tenés un lugar en el torneo.'}
+          {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
+          {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
+        </p>
+        {activo && signup.open && (
+          <>
+            <Btn variant="danger" full onClick={cancelar} loading={cancelling}>Cancelar inscripción</Btn>
+            {cierre && <span className="text-[12px] text-dim text-center">Podés cancelar hasta el {cierre}.</span>}
+          </>
+        )}
+        {reg.status === 'rejected' && signup.open && (
+          <Btn full onClick={() => setFlowOpen(true)}>Inscribirme de nuevo</Btn>
+        )}
+        {error && <p className="m-0 text-[12px] text-danger">{error}</p>}
+        {flow}
+      </section>
+    );
+  }
+
+  // ── Inscripción abierta ───────────────────────────────────────────────────
+  return (
+    <section aria-label="Inscripción" className="mx-5 sm:mx-6 mt-4 bg-surface border border-brand/35 rounded-xl p-4 flex flex-col gap-3.5 max-w-xl">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-brand inline-flex items-center gap-1.5">
+          <Ticket size={14} /> INSCRIPCIÓN ABIERTA
+        </span>
+        {cierre && <span className="text-[12px] text-secondary">Cierra {cierre}</span>}
+      </div>
+
+      {disp && (
+        <div className="flex flex-col gap-1.5">
+          <span className={`self-start text-[11px] font-bold tracking-wide px-2.5 py-1 rounded-full border ${disp.color}`}>{disp.label}</span>
+          {signup.availability === 'full' && <span className="text-[12px] text-cyan">Tu inscripción queda en lista de espera.</span>}
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-2.5">
+        {precio && (
+          <div className="bg-surface-alt rounded-lg px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-dim font-semibold">PRECIO</div>
+            <div className="text-[15px] text-white font-bold mt-0.5">{precio}</div>
+          </div>
+        )}
+        {nivel && (
+          <div className="bg-surface-alt rounded-lg px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-dim font-semibold">CATEGORÍA</div>
+            <div className="text-[15px] text-white font-bold mt-0.5">{nivel}</div>
+            {isLoggedIn && check && (
+              check.issues.length === 0 && user?.category
+                ? <div className="text-[12px] text-green inline-flex items-center gap-1"><Check size={12} strokeWidth={3} /> Tu categoría: {user.category}</div>
+                : check.issues.length > 0
+                  ? <div className="text-[12px] text-amber-300 inline-flex items-start gap-1"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {check.issues[0]}</div>
+                  : null
+            )}
+          </div>
+        )}
+      </div>
+
+      {isLoggedIn ? (
+        <Btn variant="primary" size="lg" full onClick={() => setFlowOpen(true)}>INSCRIBIRME</Btn>
+      ) : (
+        <Btn variant="primary" size="lg" full onClick={() => navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`)}>
+          ENTRÁ PARA INSCRIBIRTE
+        </Btn>
+      )}
+      <p className="m-0 text-[12px] text-secondary text-center">El organizador aprueba cada inscripción.</p>
+      {contactos.length > 0 && <div className="flex gap-2 flex-wrap justify-center">{contactos}</div>}
+
+      {flow}
+    </section>
+  );
+}
