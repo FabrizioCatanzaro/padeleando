@@ -409,6 +409,7 @@ export default function TournamentPage({
             onUpdateMode={acciones.onUpdateMode}
             onUpdateClubEvent={acciones.onUpdateClubEvent}
             onUpdateSignup={acciones.onUpdateSignup}
+            onUpdateDatos={acciones.onUpdateDatos}
             onRefresh={acciones.onRefresh}
           />
         )}

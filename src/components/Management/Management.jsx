@@ -10,70 +10,36 @@ import Btn from "../shared/Btn";
 import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
 
-function ClubEventEditor({ tournament, onSave }) {
-  const [club, setClub]   = useState(() => entityClub(tournament));
-  const [date, setDate]   = useState(tournament.event_date ? String(tournament.event_date).slice(0, 10) : "");
-  const [time, setTime]   = useState(fmtHora(tournament.event_time));
-  const [saving, setSaving] = useState(false);
+const fechaDe = (t) => (t.event_date ? String(t.event_date).slice(0, 10) : '');
 
-  const clubId      = club?.pending ? null : (club?.id ?? null);
-  const requestId   = club?.pending ? club.request_id : null;
-  const clubChanged = clubId !== (tournament.club_id ?? null)
-    || requestId !== (tournament.pending_club_request_id ?? null);
-  const dirty = clubChanged
-    || (date || null) !== (tournament.event_date ? String(tournament.event_date).slice(0, 10) : null)
-    || (time || null) !== (fmtHora(tournament.event_time) || null);
-
-  async function save() {
-    setSaving(true);
-    try {
-      const payload = { club_id: clubId, pending_club_request_id: requestId, event_date: date || null, event_time: time || null };
-      // Al cambiar de club, las canchas del torneo pasan a ser las del nuevo club.
-      if (clubChanged) payload.number_of_courts = clubCourts(club);
-      await onSave(payload);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="py-4 border-b border-border">
-      <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Club y fecha</h4>
-      <div className="flex flex-col gap-3">
-        <div>
-          <label className="block text-[12px] font-semibold text-soft mb-1.5">Club</label>
-          <ClubSelector value={club} onChange={setClub} />
-        </div>
-        <div className="flex gap-3">
-          <div className="flex-1 min-w-0">
-            <label className="block text-[12px] font-semibold text-soft mb-1.5">Fecha</label>
-            <input
-              type="date"
-              value={date}
-              min="1900-01-01"
-              max="2100-12-31"
-              onChange={(e) => { if (isSaneEventDate(e.target.value)) setDate(e.target.value); }}
-              className="w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
-            />
-          </div>
-          <div className="w-28 shrink-0">
-            <label className="block text-[12px] font-semibold text-soft mb-1.5">Hora</label>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
-            />
-          </div>
-        </div>
-        <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} disabled={!dirty}>Guardar club y fecha</Btn>
-      </div>
-    </div>
-  );
+function signupDe(t) {
+  return {
+    open:     t.signup_open ?? (t.group_signup_open ?? false),
+    price:    t.signup_price ?? null,
+    unit:     t.signup_price_unit ?? (t.group_signup_price_unit ?? 'player'),
+    contacts: t.signup_contacts ?? [],
+    level:    t.level ?? null,
+    capacity: t.signup_capacity ?? null,
+    capacity_unit: t.signup_capacity_unit ?? null,
+    closes_at: t.signup_closes_at ?? null,
+  };
 }
 
-// Precio y contacto de esta jornada. Lo que quede vacío lo hereda de la categoría.
-function SignupSection({ tournament, onSave }) {
+/**
+ * Datos del torneo: club, fecha e inscripción con UN botón (auditoría UI).
+ * Antes eran dos bloques con su propio GUARDAR y no quedaba claro qué se
+ * había guardado. Se manda sólo lo que cambió, en una sola llamada.
+ */
+function DatosDelTorneo({ tournament, onSave }) {
+  const [club, setClub] = useState(() => entityClub(tournament));
+  const [date, setDate] = useState(() => fechaDe(tournament));
+  const [time, setTime] = useState(() => fmtHora(tournament.event_time));
+  const [signup, setSignup] = useState(() => signupDe(tournament));
+  // Lo guardado: contra esto se mide si hay cambios.
+  const [base, setBase] = useState(() => ({ signup: JSON.stringify(signupDe(tournament)) }));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
   const inherited = {
     open:     tournament.group_signup_open ?? false,
     price:    tournament.group_signup_price ?? null,
@@ -83,34 +49,92 @@ function SignupSection({ tournament, onSave }) {
     capacity: tournament.group_signup_capacity ?? null,
     capacity_unit: tournament.group_signup_capacity_unit ?? null,
   };
-  // Sólo lo propio: precargar lo heredado lo copiaría al guardar.
-  const [value, setValue] = useState(() => ({
-    open:     tournament.signup_open ?? inherited.open,
-    price:    tournament.signup_price ?? null,
-    unit:     tournament.signup_price_unit ?? inherited.unit,
-    contacts: tournament.signup_contacts ?? [],
-    level:    tournament.level ?? null,
-    capacity: tournament.signup_capacity ?? null,
-    capacity_unit: tournament.signup_capacity_unit ?? null,
-    closes_at: tournament.signup_closes_at ?? null,
-  }));
-  const [saving, setSaving] = useState(false);
+
+  const clubId      = club?.pending ? null : (club?.id ?? null);
+  const requestId   = club?.pending ? club.request_id : null;
+  const clubChanged = clubId !== (tournament.club_id ?? null)
+    || requestId !== (tournament.pending_club_request_id ?? null);
+  const clubDirty = clubChanged
+    || (date || null) !== (fechaDe(tournament) || null)
+    || (time || null) !== (fmtHora(tournament.event_time) || null);
+  const signupDirty = JSON.stringify(signup) !== base.signup;
+  const dirty = clubDirty || signupDirty;
 
   async function save() {
     setSaving(true);
-    try { await onSave(value); } finally { setSaving(false); }
+    setError(null);
+    try {
+      await onSave({
+        club: clubDirty ? {
+          club_id: clubId, pending_club_request_id: requestId,
+          event_date: date || null, event_time: time || null,
+          // Al cambiar de club, las canchas del torneo pasan a ser las del nuevo club.
+          ...(clubChanged ? { number_of_courts: clubCourts(club) } : {}),
+        } : null,
+        signup: signupDirty ? signup : null,
+      });
+      setBase({ signup: JSON.stringify(signup) });
+    } catch (e) {
+      setError(e.message ?? 'No se pudo guardar');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="pt-4">
-      <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Inscripción</h4>
-      <SignupEditor
-        value={value}
-        onChange={setValue}
-        inherited={inherited}
-        profile={profileContacts(tournament.owner_social_links)}
-      />
-      <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} className="mt-4">Guardar inscripción</Btn>
+    <div className="flex flex-col">
+      <div className="py-4 border-b border-border">
+        <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Club y fecha</h4>
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="block text-[12px] font-semibold text-soft mb-1.5">Club</label>
+            <ClubSelector value={club} onChange={setClub} />
+          </div>
+          <div className="flex gap-3">
+            <div className="flex-1 min-w-0">
+              <label className="block text-[12px] font-semibold text-soft mb-1.5">Fecha</label>
+              <input
+                type="date"
+                value={date}
+                min="1900-01-01"
+                max="2100-12-31"
+                onChange={(e) => { if (isSaneEventDate(e.target.value)) setDate(e.target.value); }}
+                className="w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
+              />
+            </div>
+            <div className="w-28 shrink-0">
+              <label className="block text-[12px] font-semibold text-soft mb-1.5">Hora</label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-4">
+        <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Inscripción</h4>
+        <SignupEditor
+          value={signup}
+          onChange={setSignup}
+          inherited={inherited}
+          profile={profileContacts(tournament.owner_social_links)}
+        />
+      </div>
+
+      {/* Un solo botón, pegado abajo mientras haya cambios sin guardar. */}
+      <div className={`mt-5 flex items-center justify-between gap-3 flex-wrap ${dirty ? 'sticky bottom-20 sm:bottom-4 z-10 bg-surface border border-brand/40 rounded-xl px-3.5 py-3 shadow-xl' : ''}`}>
+        <span className={`text-[13px] ${dirty ? 'text-white font-semibold' : 'text-secondary'}`}>
+          {error ? <span className="text-danger">{error}</span>
+            : dirty ? 'Tenés cambios sin guardar.' : 'Todo guardado.'}
+        </span>
+        <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} disabled={!dirty}>
+          Guardar cambios
+        </Btn>
+      </div>
     </div>
   );
 }
@@ -119,7 +143,7 @@ export default function Management({
   tournament, isOwner,
   onAddPlayer, onEditPlayer, onDeletePlayer,
   onAddPair, onEditPair, onDeletePair, onWithdrawPair,
-  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateClubEvent, onUpdateSignup,
+  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos,
   onRefresh,
 }) {
   const [resetModal, setResetModal]   = useState(false);
@@ -227,8 +251,7 @@ export default function Management({
             <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
           </summary>
           <div className="px-4 pb-4 border-t border-border">
-            <ClubEventEditor tournament={tournament} onSave={onUpdateClubEvent} />
-            <SignupSection tournament={tournament} onSave={onUpdateSignup} />
+            <DatosDelTorneo tournament={tournament} onSave={onUpdateDatos} />
           </div>
         </details>
       )}

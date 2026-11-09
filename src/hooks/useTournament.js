@@ -340,6 +340,35 @@ export function useTournament(groupId, tournamentId) {
     showToast('Club y fecha actualizados');
   }
 
+  // "Datos del torneo" con un solo botón: club, fecha e inscripción en una
+  // sola llamada, sólo con lo que cambió (auditoría UI).
+  async function handleUpdateDatos({ club = null, signup = null }) {
+    const body = {};
+    if (club) {
+      Object.assign(body, {
+        club_id: club.club_id, pending_club_request_id: club.pending_club_request_id,
+        event_date: club.event_date, event_time: club.event_time,
+      });
+      if (club.number_of_courts !== undefined) body.number_of_courts = club.number_of_courts;
+    }
+    if (signup) {
+      Object.assign(body, {
+        signup_open:          signup.open,
+        signup_price:         signup.price,
+        signup_price_unit:    signup.unit,
+        signup_contacts:      (signup.contacts ?? []).filter((c) => c.value.trim()),
+        level:                signup.level ?? null,
+        signup_capacity:      signup.capacity ?? null,
+        signup_capacity_unit: signup.capacity_unit ?? null,
+        signup_closes_at:     signup.closes_at ?? null,
+      });
+    }
+    if (Object.keys(body).length === 0) return;
+    await api.tournaments.update(tournament.id, body);
+    await reload(true);
+    showToast('Datos del torneo guardados');
+  }
+
   async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at }) {
     const updated = await api.tournaments.update(tournament.id, {
       signup_open:       open,
@@ -452,7 +481,7 @@ export function useTournament(groupId, tournamentId) {
     handleAddPlayer,   handleEditPlayer,   handleDeletePlayer,
     handleAddPair,     handleEditPair,     handleDeletePair,     handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
-    getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleSetLiveMatch,
+    getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode,
     refresh: () => reload(true),
