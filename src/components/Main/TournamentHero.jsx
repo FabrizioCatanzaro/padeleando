@@ -46,8 +46,8 @@ function RailCell({ value, label, sub, onEdit, title, children, muted = false })
           {value}
         </div>
       )}
-      <div className="text-[9px] tracking-[0.12em] text-muted mt-1.5 uppercase truncate">{label}</div>
-      {sub && <div className="text-[10px] text-dim mt-0.5 truncate">{sub}</div>}
+      <div className="text-[12px] text-secondary mt-1.5 truncate">{label}</div>
+      {sub && <div className="text-[12px] text-secondary mt-0.5 truncate">{sub}</div>}
       {editable && (
         <Pencil size={11} className="absolute top-2 right-2 text-muted opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity" />
       )}

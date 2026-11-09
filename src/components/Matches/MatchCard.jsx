@@ -1,31 +1,41 @@
 import { Clock, Pencil, Trash2 } from "lucide-react";
 import { fmt, getPairLabel, courtLabel, setWinner, visibleSetsCount } from "../../utils/helpers";
-import Badge from "../shared/Badge";
 
-// Fila del marcador. El ganador ya no se distingue sólo por el color: lleva una
-// barra de acento a la izquierda. Amarillo contra celeste es el mismo gris en
-// escala de grises y en daltonismo rojo-verde, y el resultado de un partido no
-// puede depender de ver bien los colores.
+// Nombre de un equipo: "Ana & Beto" va en dos líneas, un jugador por línea,
+// para que nunca se corte con "…" (auditoría UI, 2026-11-09).
+export function TeamName({ label }) {
+  if (typeof label !== 'string') return label;
+  const idx = label.indexOf(' & ');
+  if (idx === -1) return <span>{label}</span>;
+  return (
+    <span className="flex flex-col">
+      <span>{label.slice(0, idx)}</span>
+      <span>{label.slice(idx + 3)}</span>
+    </span>
+  );
+}
+
+// Fila del marcador. El ganador se ve siempre igual, sea cual sea el lado:
+// blanco, en negrita y con barra amarilla. El perdedor va en gris. Antes el
+// color dependía del lado (amarillo o celeste) y el mismo dato tenía dos
+// colores. `color` queda por compatibilidad y no cambia nada.
+// eslint-disable-next-line no-unused-vars
 export function ScoreRow({ label, cells, win, color, prefix = null, compacto = false }) {
-  const accent = color === 'cyan' ? 'text-cyan' : 'text-brand';
-  const bar    = color === 'cyan' ? 'bg-cyan'   : 'bg-brand';
-  // El nodo del cuadro es angosto: la misma fila, con la tipografía y las
-  // celdas achicadas. Lo que no cambia es de qué está hecha.
-  const tam    = compacto ? 'text-[13px]' : 'text-base sm:text-xl';
-  const tamNum = compacto ? 'text-[15px]' : 'text-[19px] sm:text-[22px]';
+  const tam    = compacto ? 'text-[13px]' : 'text-[15px]';
+  const tamNum = compacto ? 'text-[15px]' : 'text-[20px] sm:text-[22px]';
   const ancho  = compacto ? 'w-6' : 'w-8 sm:w-9';
   return (
     <div className={`flex items-center ${compacto ? 'gap-2' : 'gap-3'}`}>
-      <span className={`w-[3px] self-stretch rounded-sm shrink-0 ${win ? bar : 'bg-transparent'}`} />
+      <span className={`w-[3px] self-stretch rounded-sm shrink-0 ${win ? 'bg-brand' : 'bg-transparent'}`} />
       {prefix}
-      <div className={`flex-1 min-w-0 font-condensed font-semibold ${tam} leading-tight truncate ${win ? accent : 'text-secondary'}`}>
-        {label}
+      <div className={`flex-1 min-w-0 font-sans ${tam} leading-snug ${win ? 'text-white font-bold' : 'text-secondary font-medium'}`}>
+        <TeamName label={label} />
       </div>
-      <div className={`flex shrink-0 font-mono font-bold ${tamNum} tabular-nums`}>
+      <div className={`flex shrink-0 font-condensed font-bold ${tamNum} tabular-nums`}>
         {cells.map((cell, i) => (
           <span
             key={i}
-            className={`${ancho} text-center ${i > 0 ? 'border-l border-border-mid' : ''} ${cell.win ? accent : 'text-dim'}`}
+            className={`${ancho} text-center ${i > 0 ? 'border-l border-border-mid' : ''} ${cell.win ? 'text-white' : 'text-secondary'}`}
           >
             {cell.v}
           </span>
@@ -35,7 +45,8 @@ export function ScoreRow({ label, cells, win, color, prefix = null, compacto = f
   );
 }
 
-export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete, matchNum }) {
+// matchNum ya no se muestra: al jugador no le dice nada (auditoría UI).
+export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete }) {
   const { team1, team2, score1, score2, date, createdAt, sets = [], sets_format } = match;
   const { players, pairs, mode } = tournament;
 
@@ -72,18 +83,16 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
   return (
     <div className="bg-surface border border-border-mid rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-        {matchNum != null && <span className="text-[11.5px] text-muted font-mono tabular-nums">#{matchNum}</span>}
-        <span className="text-dim text-[11px]">·</span>
-        <span className="text-[11.5px] text-muted font-mono">{fmt(date || createdAt)}</span>
-        {cancha != null && <Badge variant="label" color="brand">CANCHA {cancha}</Badge>}
+        <span className="text-[12px] text-secondary">{fmt(date || createdAt)}</span>
+        {cancha != null && <span className="text-[12px] text-secondary">· Cancha {cancha}</span>}
         {match.walkover && (
-          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="font-condensed font-bold text-[9px] tracking-[0.12em] text-muted border border-border-strong px-2 py-[3px] rounded-[5px]">
+          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="text-[12px] font-semibold text-muted border border-border-strong px-2 py-0.5 rounded-full">
             W.O.
           </span>
         )}
         {dur && (
-          <span className="text-[11.5px] text-dim font-mono inline-flex items-center gap-1.5">
-            <Clock size={11} className="shrink-0" />{dur}
+          <span className="text-[12px] text-secondary inline-flex items-center gap-1.5">
+            <Clock size={12} className="shrink-0" />{dur}
           </span>
         )}
         <span className="flex-1" />
@@ -115,7 +124,7 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
         )}
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <ScoreRow
           label={getLabel(team1)}
           cells={cols.map((c) => ({ v: c.v1, win: c.w1 }))}

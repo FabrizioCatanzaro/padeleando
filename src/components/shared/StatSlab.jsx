@@ -34,7 +34,7 @@ export default function StatSlab({ label, value, sub, tone = 'secondary', icon: 
       {Icon && <Icon size={66} strokeWidth={1.6} className={`absolute -top-2.5 -right-3 pointer-events-none ${t.mark}`} />}
       <div className="flex items-center gap-[7px]">
         <span className={`w-1.5 h-1.5 rounded-[1px] shrink-0 ${t.dot}`} />
-        <span className="text-[9.5px] tracking-[0.13em] uppercase font-semibold text-muted">{label}</span>
+        <span className="text-[12px] font-semibold text-soft">{label}</span>
       </div>
       <div className="relative flex-1 flex flex-col justify-end">
         <div

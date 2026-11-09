@@ -407,16 +407,14 @@ export default function Previa({
       )}
       {/* Header */}
       <div className="flex flex-col gap-3 mb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">FASE PREVIA</div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Fase previa</h2>
         <div className="flex gap-2 flex-wrap">
           {sorted.length > 0 && (
             <button
               onClick={() => setShareFixture(true)}
-              title="Compartir partidos"
-              aria-label="Compartir partidos"
-              className="bg-transparent text-muted border border-border-strong px-3 py-2.5 cursor-pointer rounded-sm hover:text-white transition-colors"
+              className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3 py-2.5 font-sans text-[13px] cursor-pointer rounded-sm hover:text-white transition-colors"
             >
-              <Share2 size={15} />
+              <Share2 size={15} /> Compartir calendario
             </button>
           )}
           {isOwner && !isDraft && (
@@ -444,9 +442,9 @@ export default function Previa({
                 onClick={() => addNewMatch()}
                 disabled={previaComplete}
                 title={previaComplete ? 'Todas las parejas ya jugaron sus partidos de la fase previa' : undefined}
-                className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+                className="bg-brand text-base border-0 px-5 py-2.5 font-sans font-bold text-[14px] cursor-pointer rounded-sm whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                + NUEVO PARTIDO
+                + Nuevo partido
               </button>
             </>
           )}
@@ -456,16 +454,13 @@ export default function Previa({
       {/* Aviso de borrador — sin el mínimo de parejas no se puede jugar */}
       {isDraft && (
         <div className="bg-surface border border-brand/30 rounded-lg p-4 mb-5">
-          <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1.5">BORRADOR</div>
-          <p className="text-soft font-sans text-[13px] leading-relaxed">
-            Hay <strong className="text-white">{pairCount} {pairCount === 1 ? 'pareja' : 'parejas'}</strong> y
-            el americano necesita <strong className="text-white">{AMERICANO_MIN_PAIRS}</strong> para arrancar —
-            falta{missingPairs === 1 ? '' : 'n'} <strong className="text-white">{missingPairs}</strong>.
+          <p className="m-0 text-white font-sans text-[15px] font-semibold leading-relaxed">
+            Falta{missingPairs === 1 ? '' : 'n'} {missingPairs} {missingPairs === 1 ? 'pareja' : 'parejas'} para arrancar.
           </p>
-          <p className="text-muted font-mono text-[12px] leading-relaxed mt-2">
+          <p className="m-0 text-soft font-sans text-[13px] leading-relaxed mt-1">
             {isOwner
-              ? 'Sumá los jugadores y armá las parejas desde GESTIÓN. Al llegar al mínimo se habilitan el calendario, los partidos y el cuadro.'
-              : 'El organizador todavía está armando las parejas.'}
+              ? `Con ${AMERICANO_MIN_PAIRS} parejas se arma el calendario.`
+              : 'El organizador está armando las parejas.'}
           </p>
         </div>
       )}
@@ -473,12 +468,10 @@ export default function Previa({
       {/* Previa agotada — el siguiente paso es el cuadro */}
       {previaComplete && !isDraft && !tournament.bracket && (
         <div className="bg-surface border border-brand/30 rounded-lg p-4 mb-5">
-          <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1.5">FASE PREVIA COMPLETA</div>
-          <p className="text-soft font-sans text-[13px] leading-relaxed">
-            Las <strong className="text-white">{tournament.pairs.length} parejas</strong> ya jugaron
-            sus {MAX_PREVIA_MATCHES} partidos: no quedan cruces por generar.
+          <p className="m-0 text-white font-sans text-[15px] font-semibold leading-relaxed">
+            Terminó la fase previa.
           </p>
-          <p className="text-muted font-mono text-[12px] leading-relaxed mt-2">
+          <p className="m-0 text-soft font-sans text-[13px] leading-relaxed mt-1">
             {isOwner
               ? 'Las posiciones de esta fase definen los cruces del cuadro eliminatorio.'
               : 'El organizador ya puede generar el cuadro eliminatorio.'}
@@ -538,17 +531,17 @@ export default function Previa({
       {programados.length > 0 && (
         <div className="mb-5">
           <div className="flex items-center gap-2.5 mb-2.5">
-            <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">PRÓXIMOS</span>
+            <span className="text-[13px] font-bold text-white shrink-0">Próximos</span>
             <span className="flex-1 h-px bg-border" />
-            <span className="text-[11px] text-dim shrink-0">
+            <span className="text-[12px] text-secondary shrink-0">
               {programados.length} {programados.length === 1 ? 'programado' : 'programados'}
             </span>
           </div>
           {gruposProgramados.map(({ ronda, partidos }) => (
             <div key={ronda ?? 'sin-ronda'} className="mb-2.5 last:mb-0">
               {hayRondas && (
-                <div className="text-[10px] tracking-[1px] text-muted font-mono mb-1.5">
-                  {ronda != null ? `RONDA ${ronda}` : 'SIN RONDA'}
+                <div className="text-[13px] font-semibold text-soft mb-1.5">
+                  {ronda != null ? `Ronda ${ronda}` : 'Sin ronda'}
                 </div>
               )}
               <div className="flex flex-col gap-2.5">
@@ -573,9 +566,9 @@ export default function Previa({
 
       {sorted.length > 0 && programados.length > 0 && (
         <div className="flex items-center gap-2.5 mb-2.5">
-          <span className="font-condensed font-bold text-[11px] tracking-[0.15em] text-muted shrink-0">JUGADOS</span>
+          <span className="text-[13px] font-bold text-white shrink-0">Jugados</span>
           <span className="flex-1 h-px bg-border" />
-          <span className="text-[11px] text-dim shrink-0">{sorted.length}</span>
+          <span className="text-[12px] text-secondary shrink-0">{sorted.length}</span>
         </div>
       )}
 
@@ -586,15 +579,14 @@ export default function Previa({
           {programados.length > 0
             ? <>Todavía no se jugó ninguno de los partidos programados.</>
             : <>No hay partidos registrados todavía.<br />
-              {isOwner ? `Usá el botón del dado para generar el calendario o "NUEVO PARTIDO" para agregar uno manualmente.` : '¡Pronto habrá resultados!'}</>}
+              {isOwner ? 'Usá el dado para armar el calendario o "Nuevo partido" para cargar uno.' : 'Todavía no hay resultados.'}</>}
         </div>
         )
       ) : (
         <div className="flex flex-col gap-2.5">
-          {sorted.map((m, i) => (
+          {sorted.map((m) => (
             <MatchCard key={m.id} match={m} tournament={tournament} isOwner={isOwner}
-              onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)}
-              matchNum={sorted.length - i} />
+              onEdit={() => handleEdit(m)} onDelete={() => handleDelete(m.id)} />
           ))}
         </div>
       )}

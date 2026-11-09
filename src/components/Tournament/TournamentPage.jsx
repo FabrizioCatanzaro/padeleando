@@ -48,17 +48,17 @@ function WarningMark({ className = "", count }) {
 // tiene GESTIÓN; a cambio tiene JUGADORES, que al organizador le vive dentro de
 // gestión.
 function tabsDe({ esAmericano, puedeGestionar }) {
-  const tabs = [{ id: 'standings', label: 'TABLA', corto: 'TABLA', icon: Trophy }];
+  const tabs = [{ id: 'standings', label: 'TABLA', corto: 'Tabla', icon: Trophy }];
   if (esAmericano) {
-    tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'PREVIA', icon: List });
-    tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'CUADRO', icon: Split });
+    tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'Previa', icon: List });
+    tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
   } else {
-    tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'PARTIDOS', icon: Flame });
+    tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
   }
-  if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'JUGAD.', icon: Users });
-  tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'STATS', icon: ChartNoAxesCombined });
-  if (puedeGestionar) tabs.push({ id: 'registrations', label: 'INSCRIPCIONES', corto: 'INSCR.', icon: Ticket });
-  if (puedeGestionar) tabs.push({ id: 'management', label: 'GESTIÓN', corto: 'GESTIÓN', icon: Settings });
+  if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'Jugadores', icon: Users });
+  tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'Stats', icon: ChartNoAxesCombined });
+  if (puedeGestionar) tabs.push({ id: 'registrations', label: 'INSCRIPCIONES', corto: 'Inscriptos', icon: Ticket });
+  if (puedeGestionar) tabs.push({ id: 'management', label: 'GESTIÓN', corto: 'Gestión', icon: Settings });
   return tabs;
 }
 
@@ -266,7 +266,7 @@ export default function TournamentPage({
           <button
             key={t.id}
             onClick={() => irATab(t.id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${activeTab === t.id && !tvMode ? 'text-brand bg-brand/10' : 'text-muted bg-transparent'}`}
+            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${activeTab === t.id && !tvMode ? 'text-brand bg-brand/10' : 'text-secondary bg-transparent'}`}
           >
             <span className="relative inline-flex leading-none">
               <t.icon size={20} />
@@ -277,7 +277,7 @@ export default function TournamentPage({
                 <span aria-label={`${pendientes} pendientes`} className="absolute -top-1 -right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
               )}
             </span>
-            <span className="text-[9px] font-mono tracking-wide leading-none">{t.corto}</span>
+            <span className="text-[11px] font-semibold leading-none">{t.corto}</span>
           </button>
         ))}
       </div>

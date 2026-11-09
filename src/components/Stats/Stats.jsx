@@ -43,12 +43,12 @@ export default function Stats({ tournament, ownerIsPremium = false }) {
 
   return (
     <div>
-      <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted mb-4">ESTADÍSTICAS</div>
+      <div className="font-condensed font-semibold text-[15px] text-white mb-4">Estadísticas</div>
 
       <div className="flex mb-5 border-b border-border">
         {[
           { id: "current", label: "Este torneo" },
-          { id: "history", label: histLoaded ? `Históricas (${allTournaments.length})` : "Históricas" },
+          { id: "history", label: histLoaded ? `Toda la categoría (${allTournaments.length})` : "Toda la categoría" },
         ].map((t) => (
           <button key={t.id} onClick={() => handleTabChange(t.id)}
             className={`bg-transparent border-0 px-3.5 py-3.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer border-b-2 whitespace-nowrap transition-all ${histTab === t.id ? 'text-brand border-b-brand' : 'text-muted border-b-transparent'}`}>
@@ -248,7 +248,7 @@ function CurrentStats({ tournament }) {
               kind="name"
               tone="brand"
               icon={Flame}
-              sub={`${topPairWinRate}% (${topPairRecord}) · DIF ${fmtDiff(topPairDiffVal)}`}
+              sub={`Ganó ${topPairRecord.replace('/', ' de ')} (${topPairWinRate}%) · ${fmtDiff(topPairDiffVal)} en games`}
               meter={topPairWinRate}
             />
           )
@@ -277,7 +277,7 @@ function CurrentStats({ tournament }) {
             kind="name"
             tone="cyan"
             icon={Handshake}
-            sub={`${topWinRate}% (${topWins}/${topPlayed}) · DIF ${fmtDiff(topPairDiffVal)}`}
+            sub={`Ganó ${topWins} de ${topPlayed} (${topWinRate}%) · ${fmtDiff(topPairDiffVal)} en games`}
             meter={topWinRate}
           />
         )}
@@ -365,7 +365,7 @@ function CurrentStats({ tournament }) {
 
       {!isPairs && !isAmericano && <PerPlayerTable standings={standings} />}
       {!isPairs && <PartnershipsTable partnerships={partnerships} />}
-      {isPairs && <PartnershipsTable partnerships={partnerships} titleOverride="RENDIMIENTO POR PAREJA" />}
+      {isPairs && <PartnershipsTable partnerships={partnerships} titleOverride="Rendimiento por pareja" />}
 
       {showStory && (
         <SnapshotModal
@@ -523,7 +523,7 @@ function HeadToHead({ h2h, rows, selected, onSelect }) {
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
-        <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted">CRUCES</div>
+        <div className="font-condensed font-semibold text-[15px] text-white">Cruces</div>
         <select
           value={activeKey}
           onChange={(e) => onSelect(e.target.value)}
@@ -542,7 +542,7 @@ function HeadToHead({ h2h, rows, selected, onSelect }) {
             value={nemesis.name}
             kind="name"
             tone="danger"
-            sub={`${nemesis.g}G ${nemesis.p}P · ${nemesis.pct}% a favor`}
+            sub={`${nemesis.g} ganados, ${nemesis.p} perdidos · ${nemesis.pct}% a favor`}
             meter={nemesis.pct}
           />
           <StatSlab
@@ -550,7 +550,7 @@ function HeadToHead({ h2h, rows, selected, onSelect }) {
             value={victim.name}
             kind="name"
             tone="green"
-            sub={`${victim.g}G ${victim.p}P · ${victim.pct}% a favor`}
+            sub={`${victim.g} ganados, ${victim.p} perdidos · ${victim.pct}% a favor`}
             meter={victim.pct}
           />
         </div>
@@ -558,21 +558,20 @@ function HeadToHead({ h2h, rows, selected, onSelect }) {
 
       <div className="flex flex-col gap-2">
         {rivals.slice(0, 8).map((r) => (
-          <div key={r.key} className="flex items-center gap-3 bg-surface border border-border-mid rounded-md px-3.5 py-2.5">
-            <div className="flex-1 min-w-0 truncate text-content text-[14px]">{r.name}</div>
-            <div className="flex-2 max-w-[120px]">
-              <div className="h-1.5 bg-danger/40 rounded-full overflow-hidden">
-                <div className="h-full bg-green rounded-full" style={{ width: `${r.pct}%` }} />
-              </div>
+          <div key={r.key} className="flex flex-col gap-2 bg-surface border border-border-mid rounded-md px-3.5 py-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 text-white text-[15px] font-semibold leading-snug">{r.name}</span>
+              <span className={`shrink-0 text-[15px] font-bold ${r.pct >= 50 ? 'text-green' : 'text-danger'}`}>{r.pct}%</span>
             </div>
-            <div className="min-w-22.5 text-right font-mono text-soft text-[13px]">
-              {r.g}G {r.p}P <span className={r.pct >= 50 ? 'text-green' : 'text-danger'}>({r.pct}%)</span>
+            <div className="h-1.5 bg-danger/40 rounded-full overflow-hidden">
+              <div className="h-full bg-green rounded-full" style={{ width: `${r.pct}%` }} />
             </div>
+            <span className="text-soft text-[13px]">{r.g} ganados, {r.p} perdidos</span>
           </div>
         ))}
       </div>
       {rivals.length > 0 && rated.length === 0 && (
-        <div className="mt-2 text-[10px] font-mono text-dim">
+        <div className="mt-2 text-[12px] text-dim">
           Hacen falta {H2H_MIN} cruces con un mismo rival para marcar rival más duro y víctima favorita.
         </div>
       )}
@@ -875,7 +874,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
     <>
       {title ? (
         <div className="flex items-center justify-between gap-3 pb-4 mb-5">
-          <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">{title}</div>
+          <div className="font-condensed font-semibold text-[15px] text-white">{title}</div>
           <ShareStoryButton variant="icon" onClick={() => setShowStory(true)} />
         </div>
       ) : (
@@ -916,7 +915,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
       {/* ── AVANZADAS (solo si el dueño tiene premium) ── */}
       {ownerIsPremium ? (
         <>
-          <div className="flex items-center gap-2 font-condensed font-bold text-[16px] tracking-[3px] text-muted my-5 py-4 border-t border-border">
+          <div className="flex items-center gap-2 font-condensed font-semibold text-[15px] text-white my-5 py-4 border-t border-border">
             <Gem size={15} className="text-brand shrink-0" />
             ESTADÍSTICAS AVANZADAS
           </div>
@@ -960,7 +959,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
           <div className="mb-6">
             <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
               <div className="flex items-center gap-3">
-                <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted">RANKING HISTÓRICO</div>
+                <div className="font-condensed font-semibold text-[15px] text-white">Ranking histórico</div>
                 {rankStoryRows.length > 0 && <ShareStoryButton onClick={() => setShowRankStory(true)} />}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -989,7 +988,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
               : <PerPlayerTable standings={rankedRows} movementMap={movementMap} sortBy={rankMode} pageSize={RANK_PAGE_SIZE} />
             }
             {showPairTable && !allPairMode && (
-              <div className="mt-2 text-[10px] font-mono text-dim">
+              <div className="mt-2 text-[12px] text-dim">
                 Sólo cuenta los torneos de parejas fijas ({playedTournaments.filter((t) => t.mode === 'pairs').length} de {playedTournaments.length}).
               </div>
             )}
@@ -999,7 +998,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
             {champChartData.length > 0 && (
               <div className="bg-surface border border-border-mid rounded-lg p-4">
-                <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">CAMPEONES</div>
+                <div className="text-[12px] font-semibold text-soft mb-3">Campeones</div>
                 <ResponsiveContainer width="100%" height={150}>
                   <BarChart data={champChartData} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1a1a1a" horizontal={false} />
@@ -1013,7 +1012,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
             )}
             {attendance.length > 0 && (
               <div className="bg-surface border border-border-mid rounded-lg p-4">
-                <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">
+                <div className="text-[12px] font-semibold text-soft mb-3">
                   ASISTENCIA ({attendance[0].total} {attendance[0].total === 1 ? 'TORNEO' : 'TORNEOS'})
                 </div>
                 <div className="flex flex-col gap-2">
@@ -1024,7 +1023,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
                         <div className="h-full rounded-full bg-cyan" style={{ width: `${r.pct}%` }} />
                       </div>
                       <div className="w-9 shrink-0 text-right text-[11px] font-mono text-secondary">{r.pct}%</div>
-                      <div className="w-20 shrink-0 text-right text-[10px] font-mono">
+                      <div className="w-20 shrink-0 text-right text-[12px]">
                         {r.ausenteHace > 0
                           ? <span className="text-danger">falta {r.ausenteHace}</span>
                           : <span className="text-dim">{r.jornadas}/{r.total}</span>}
@@ -1036,7 +1035,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
                   <button
                     type="button"
                     onClick={() => setShowAllAttendance((v) => !v)}
-                    className="mt-3 w-full text-center text-[10px] font-mono text-dim hover:text-white transition-colors cursor-pointer bg-transparent border-none py-1"
+                    className="mt-3 w-full text-center text-[12px] text-dim hover:text-white transition-colors cursor-pointer bg-transparent border-none py-1"
                   >
                     {showAllAttendance ? '▲ Ver menos' : `▼ Ver todos (${attendance.length})`}
                   </button>
@@ -1047,7 +1046,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
 
           {rankHistory.length >= 3 && rankTop.length > 1 && (
             <div className="bg-surface border border-border-mid rounded-lg p-4 mb-6">
-              <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">
+              <div className="text-[12px] font-semibold text-soft mb-3">
                 PUESTO POR TORNEO (TOP {rankTop.length})
               </div>
               <ResponsiveContainer width="100%" height={170}>
@@ -1079,12 +1078,12 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
 
           {activityChartData.length > 1 && (
             <div className="bg-surface border border-border-mid rounded-lg p-4 mb-6">
-              <div className="text-[10px] font-mono tracking-[2px] text-muted mb-3">EVOLUCIÓN POR TORNEO</div>
+              <div className="text-[12px] font-semibold text-soft mb-3">Evolución por torneo</div>
               <div className="flex items-center gap-4 mb-3">
-                <span className="flex items-center gap-1.5 text-[10px] font-mono text-muted">
+                <span className="flex items-center gap-1.5 text-[12px] text-muted">
                   <span className="inline-block w-3 h-3 rounded-sm bg-[#4ab8f0]" />Partidos
                 </span>
-                <span className="flex items-center gap-1.5 text-[10px] font-mono text-muted">
+                <span className="flex items-center gap-1.5 text-[12px] text-muted">
                   <span className="inline-block w-4 h-0.5 bg-brand" />Games totales
                 </span>
               </div>
@@ -1136,7 +1135,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
 
       {showClubs && clubRows.length > 0 && (
         <div className="mt-6">
-          <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted mb-3">CANCHAS</div>
+          <div className="font-condensed font-semibold text-[15px] text-white mb-3">Canchas</div>
           <div className="flex flex-col gap-2">
             {clubRows.map((c) => (
               <div key={c.id}
@@ -1155,7 +1154,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
 
       {showTorneos && (
         <div className="mt-6">
-          <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted mb-3">TORNEOS</div>
+          <div className="font-condensed font-semibold text-[15px] text-white mb-3">Torneos</div>
           <div className="flex flex-col gap-2">
             {[...tournaments].sort((a, b) => tournamentDate(b).localeCompare(tournamentDate(a))).map((t) => {
               const winnerLabel = getTournamentWinnerLabel(t);
@@ -1236,17 +1235,17 @@ function PerPlayerTable({ standings, showTourneys, useLabelKey, movementMap = {}
   return (
     <div className="mt-4">
       {!showTourneys && !useLabelKey && (
-        <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted mb-3">RENDIMIENTO POR JUGADOR</div>
+        <div className="font-condensed font-semibold text-[15px] text-white mb-3">Rendimiento por jugador</div>
       )}
       {/* Header */}
       <div className="flex items-center gap-2 px-3.5 mb-2">
         <div className="shrink-0 w-8" />
-        <div className="flex-1 min-w-0 text-[10px] font-mono tracking-[2px] text-dim">NOMBRE</div>
-        <div className="shrink-0 w-7 text-[10px] font-mono tracking-[2px] text-dim text-center">J</div>
-        <div className="shrink-0 w-14 text-[10px] font-mono tracking-[2px] text-dim text-center">WIN RATE</div>
-        <div className={`shrink-0 w-7 text-[10px] font-mono tracking-[2px] text-center ${winsActive ? 'text-brand' : 'text-dim'}`}>G</div>
-        <div className="shrink-0 w-7 text-[10px] font-mono tracking-[2px] text-dim text-center">P</div>
-        <div className={`shrink-0 w-9 text-[10px] font-mono tracking-[2px] text-right ${winsActive ? 'text-dim' : 'text-brand'}`}>%</div>
+        <div className="flex-1 min-w-0 text-[12px] font-semibold text-dim">NOMBRE</div>
+        <div className="shrink-0 w-7 text-[12px] font-semibold text-dim text-center">J</div>
+        <div className="shrink-0 w-14 text-[12px] font-semibold text-dim text-center">% vict.</div>
+        <div className={`shrink-0 w-7 text-[12px] font-semibold text-center ${winsActive ? 'text-brand' : 'text-dim'}`}>G</div>
+        <div className="shrink-0 w-7 text-[12px] font-semibold text-dim text-center">P</div>
+        <div className={`shrink-0 w-9 text-[12px] font-semibold text-right ${winsActive ? 'text-dim' : 'text-brand'}`}>%</div>
       </div>
 
       <div className="flex flex-col gap-2">
@@ -1259,9 +1258,9 @@ function PerPlayerTable({ standings, showTourneys, useLabelKey, movementMap = {}
             <div key={p.id ?? p.name} className="flex items-center gap-2 bg-surface border border-border-mid rounded-md px-3.5 py-2.5">
               <div className="shrink-0 w-8 flex items-center gap-0.5">
                 <span className="text-[#666] font-mono font-bold text-[13px]">{i + 1}</span>
-                {movement === 'up'   && <span className="text-green   text-[9px] leading-none">▲</span>}
-                {movement === 'down' && <span className="text-danger  text-[9px] leading-none">▼</span>}
-                {movement === 'new'  && <span className="text-brand   text-[8px] leading-none font-bold font-mono">N</span>}
+                {movement === 'up'   && <span className="text-green   text-[11px] leading-none">▲</span>}
+                {movement === 'down' && <span className="text-danger  text-[11px] leading-none">▼</span>}
+                {movement === 'new'  && <span className="text-brand   text-[11px] leading-none font-bold">N</span>}
               </div>
               <div
                 className={`flex-1 min-w-0 truncate font-semibold text-white ${username ? 'cursor-pointer hover:text-brand transition-colors' : ''}`}
@@ -1290,7 +1289,7 @@ function PerPlayerTable({ standings, showTourneys, useLabelKey, movementMap = {}
         <button
           type="button"
           onClick={() => setLimit((v) => (hidden > 0 ? v + pageSize : pageSize))}
-          className="mt-3 w-full text-center text-[10px] font-mono text-dim hover:text-white transition-colors cursor-pointer bg-transparent border-none py-1"
+          className="mt-3 w-full text-center text-[12px] text-dim hover:text-white transition-colors cursor-pointer bg-transparent border-none py-1"
         >
           {hidden === 0    ? '▲ Ver menos'
            : hidden <= pageSize ? `▼ Ver ${hidden === 1 ? 'el último' : `los ${hidden} restantes`}`
@@ -1305,21 +1304,22 @@ function PartnershipsTable({ partnerships, titleOverride }) {
   if (partnerships.length === 0) return null;
   return (
     <div className="mt-6">
-      <div className="font-condensed font-bold text-[13px] tracking-[3px] text-muted mb-3">
-        {titleOverride ?? "PAREJAS"}
+      <div className="font-condensed font-semibold text-[15px] text-white mb-3">
+        {titleOverride ?? "Parejas"}
       </div>
       <div className="flex flex-col gap-2">
         {partnerships.map((p, i) => (
-          <div key={i} className="flex items-center gap-3 bg-surface border border-border-mid rounded-md px-3.5 py-2.5">
-            <div className="flex-1 text-content text-[14px]">{p.label}</div>
-            <div className="flex-2">
-              <div className="h-1.5 bg-border rounded-full overflow-hidden">
-                <div className="h-full bg-cyan rounded-full" style={{ width: `${p.winRate}%` }} />
-              </div>
+          <div key={i} className="flex flex-col gap-2 bg-surface border border-border-mid rounded-md px-3.5 py-3">
+            {/* Nombre arriba y barra abajo, a lo ancho: al lado de la barra el
+                nombre se partía en cuatro líneas (auditoría UI). */}
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="min-w-0 text-white text-[15px] font-semibold leading-snug">{p.label}</span>
+              <span className="shrink-0 text-cyan text-[15px] font-bold">{p.winRate}%</span>
             </div>
-            <div className="min-w-22.5 text-right font-mono text-soft text-[13px]">
-              {p.wins}G {p.played - p.wins}P <span className="text-cyan">({p.winRate}%)</span>
+            <div className="h-1.5 bg-border rounded-full overflow-hidden">
+              <div className="h-full bg-cyan rounded-full" style={{ width: `${p.winRate}%` }} />
             </div>
+            <span className="text-soft text-[13px]">{p.wins} ganados, {p.played - p.wins} perdidos</span>
           </div>
         ))}
       </div>

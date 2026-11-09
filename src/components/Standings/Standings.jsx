@@ -50,6 +50,11 @@ function FormDots({ form }) {
 
 const POS_COLOR = ['text-amber-400', 'text-[#b0b8c8]', 'text-[#cd7f32]'];
 
+// Celular: posición, nombre, Pts y Dif. Escritorio: todas las columnas.
+const ROW_GRID = 'grid grid-cols-[28px_minmax(0,1fr)_44px_48px] sm:grid-cols-[32px_minmax(0,1fr)_48px_64px_64px_48px_48px_52px_72px] gap-2 items-center';
+
+const formText = (form) => (form.length ? form.map((r) => (r === 'W' ? 'Ganó' : 'Perdió')).join(' · ') : 'Sin partidos');
+
 export default function Standings({ tournament }) {
   const [showStory, setShowStory] = useState(false);
   // calcStandings recorre todos los partidos por cada jugador y ordena: sin
@@ -102,111 +107,101 @@ export default function Standings({ tournament }) {
     ? leaders
     : [];
   const championsCount = hasPairs ? champions.length * 2 : champions.length;
-  const championsLabel = championsCount > 1 ? "CAMPEONES" : "CAMPEÓN";
+  const championsLabel = championsCount > 1 ? "Campeones" : "Campeón";
+  const [openId, setOpenId] = useState(null);
 
   return (
     <div>
       {champions.length > 0 && (
-        <div className="relative mb-6 overflow-hidden rounded-lg border border-amber-400/40 bg-linear-to-b from-amber-400/15 via-amber-400/5 to-transparent p-6 text-center">
-          <div className="absolute inset-x-0 top-0 h-px bg-linear-to-r from-transparent via-amber-400/60 to-transparent" />
-          <Trophy size={36} className="mx-auto mb-2 text-amber-400" />
-          <div className="font-mono text-[10px] tracking-[4px] text-amber-400/70 mb-1.5">{championsLabel}</div>
-          <div className="flex flex-col items-center gap-3">
+        <section aria-label={championsLabel} className="mb-5 flex items-center gap-3 rounded-xl border border-brand/35 bg-brand/5 px-4 py-3">
+          <Trophy size={28} className="shrink-0 text-brand" aria-hidden="true" />
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[12px] font-semibold text-brand">{championsLabel}</span>
             {champions.map((c) => (
-              <div key={c.id} className="flex flex-col items-center gap-2">
-                {c.p1Name
-                  ? <PairAvatar name1={c.p1Name} name2={c.p2Name} src1={c.src1} src2={c.src2} size={56} />
-                  : <PlayerAvatar name={c.name} src={c.src} size={56} premium={!!(playerById[String(c.id)]?.is_premium)} />
-                }
-                <div className="font-condensed font-black text-[24px] text-white leading-tight">{c.name}</div>
-              </div>
+              <span key={c.id} className="text-[16px] sm:text-[18px] font-bold text-white leading-snug">{c.name}</span>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <div className="flex items-center justify-between mb-4">
-        <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">TABLA DE POSICIONES</div>
+      <div className="flex items-center justify-between gap-3 mb-3">
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Tabla de posiciones</h2>
         {displayRows.length > 0 && <ShareStoryButton onClick={() => setShowStory(true)} />}
       </div>
 
-      <div className="rounded-lg border border-border">
-        <table className="w-full table-fixed border-collapse font-condensed">
-          <thead>
-            <tr className="bg-surface">
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-8">#</th>
-              <th className="px-2 py-2.5 text-left text-[10px] tracking-[2px] text-dim border-b border-border font-mono">
-                {hasPairs ? "PAREJA" : "JUGADOR"}
-              </th>
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-11">PTS</th>
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-10">PJ</th>
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-10">PG</th>
-              <th className="hidden sm:table-cell px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-10">GF</th>
-              <th className="hidden sm:table-cell px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-10">GC</th>
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-12">DIF</th>
-              <th className="px-2 py-2.5 text-center text-[10px] tracking-[2px] text-dim border-b border-border font-mono w-14">ÚLT.</th>
-            </tr>
-          </thead>
-          <tbody>
-            {displayRows.map((r, i) => {
-              const top  = isTop(r);
-              const form = calcForm(r.playerIds, tournament.matches);
-              const rowBg = top
-                ? "bg-gradient-to-r from-brand/10 to-transparent border-l-2 border-l-brand"
-                : i % 2 === 0 ? "bg-surface/50" : "bg-base";
-              return (
-                <tr key={r.id} className={`${rowBg} transition-colors`}>
-                  <td className="px-2 py-3 text-center">
-                    {top && !isAmericano ? (
-                      <Trophy size={14} className="text-amber-400 mx-auto" />
-                    ) : (
-                      <span className={`font-mono text-[13px] font-bold ${POS_COLOR[i] ?? 'text-dim'}`}>
-                        {i + 1}
-                      </span>
-                    )}
-                  </td>
-                  <td className={`px-2 py-3 text-left text-[12px] sm:text-[18px] font-semibold ${top ? "text-brand" : "text-white"}`}>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="shrink-0">
-                        {r.p1Name
-                          ? <PairAvatar name1={r.p1Name} name2={r.p2Name} src1={r.src1} src2={r.src2} size={22} />
-                          : <PlayerAvatar name={r.name} src={r.src} size={22} premium={!!(playerById[String(r.id)]?.is_premium)} />
-                        }
-                      </div>
-                      {r.p1Name ? (
-                        <div className="min-w-0 flex flex-col leading-tight">
-                          <span className="truncate">{r.p1Name}</span>
-                          <span className="truncate">&amp; {r.p2Name}</span>
-                          {r.withdrawn && (
-                            <span className="font-mono text-[9px] tracking-[1px] text-muted">RETIRADA</span>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="line-clamp-2 leading-tight min-w-0">{r.name}</span>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-2 py-3 text-center text-[15px] font-bold text-brand">{r.pg * 3}</td>
-                  <td className="px-2 py-3 text-center text-[13px] text-secondary">{r.pj}</td>
-                  <td className="px-2 py-3 text-center text-[13px] text-secondary">{r.pg}</td>
-                  <td className="hidden sm:table-cell px-2 py-3 text-center text-[13px] text-secondary">{r.sf}</td>
-                  <td className="hidden sm:table-cell px-2 py-3 text-center text-[13px] text-secondary">{r.sc}</td>
-                  <td className={`px-2 py-3 text-center text-[13px] font-bold ${r.sf - r.sc >= 0 ? "text-green" : "text-danger"}`}>
-                    {r.sf - r.sc > 0 ? "+" : ""}{r.sf - r.sc}
-                  </td>
-                  <td className="px-2 py-3 text-center">
-                    <FormDots form={form} />
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+      <div className="rounded-xl border border-border-mid overflow-hidden bg-surface">
+        <div className={`${ROW_GRID} px-3 py-2 text-[12px] text-secondary border-b border-border`}>
+          <span>#</span>
+          <span>{hasPairs ? "Pareja" : "Jugador"}</span>
+          <span className="text-right">Pts</span>
+          <span className="hidden sm:block text-right">Jugados</span>
+          <span className="hidden sm:block text-right">Ganados</span>
+          <span className="hidden sm:block text-right" title="Games a favor">GF</span>
+          <span className="hidden sm:block text-right" title="Games en contra">GC</span>
+          <span className="text-right">Dif.</span>
+          <span className="hidden sm:block text-center">Últimos 3</span>
+        </div>
+        {displayRows.map((r, i) => {
+          const top  = isTop(r);
+          const form = calcForm(r.playerIds, tournament.matches);
+          const dif  = r.sf - r.sc;
+          const open = openId === r.id;
+          return (
+            <div key={r.id} className={`border-b border-border last:border-b-0 ${top ? 'bg-brand/5' : ''}`}>
+              <button
+                type="button"
+                onClick={() => setOpenId(open ? null : r.id)}
+                aria-expanded={open}
+                className={`${ROW_GRID} w-full px-3 py-3 bg-transparent border-0 text-left cursor-pointer sm:cursor-default ${open ? 'bg-surface-alt sm:bg-transparent' : ''}`}
+              >
+                <span className="flex items-center">
+                  {top && !isAmericano
+                    ? <Trophy size={15} className="text-amber-400" aria-label="Primero" />
+                    : <span className={`text-[15px] font-bold ${POS_COLOR[i] ?? 'text-soft'}`}>{i + 1}</span>}
+                </span>
+                <span className="flex items-center gap-2 min-w-0">
+                  <span className="hidden sm:block shrink-0">
+                    {r.p1Name
+                      ? <PairAvatar name1={r.p1Name} name2={r.p2Name} src1={r.src1} src2={r.src2} size={26} />
+                      : <PlayerAvatar name={r.name} src={r.src} size={26} premium={!!(playerById[String(r.id)]?.is_premium)} />}
+                  </span>
+                  {r.p1Name ? (
+                    <span className="flex flex-col min-w-0 text-[15px] font-semibold text-white leading-snug">
+                      <span>{r.p1Name}</span>
+                      <span>{r.p2Name}</span>
+                      {r.withdrawn && <span className="text-[12px] font-medium text-muted">Se retiró</span>}
+                    </span>
+                  ) : (
+                    <span className="text-[15px] font-semibold text-white leading-snug min-w-0">{r.name}</span>
+                  )}
+                </span>
+                <span className="text-right font-condensed font-bold text-[17px] text-brand">{r.pg * 3}</span>
+                <span className="hidden sm:block text-right text-[14px] text-content">{r.pj}</span>
+                <span className="hidden sm:block text-right text-[14px] text-content">{r.pg}</span>
+                <span className="hidden sm:block text-right text-[14px] text-content">{r.sf}</span>
+                <span className="hidden sm:block text-right text-[14px] text-content">{r.sc}</span>
+                <span className={`text-right text-[15px] font-bold ${dif >= 0 ? 'text-green' : 'text-danger'}`}>
+                  {dif > 0 ? '+' : ''}{dif}
+                </span>
+                <span className="hidden sm:flex justify-center"><FormDots form={form} /></span>
+              </button>
+              {open && (
+                <div className="sm:hidden grid grid-cols-3 gap-2 px-3 pb-3 pl-12">
+                  <div className="flex flex-col gap-0.5"><span className="text-[12px] text-secondary">Jugados</span><span className="text-[15px] font-semibold text-white">{r.pj}</span></div>
+                  <div className="flex flex-col gap-0.5"><span className="text-[12px] text-secondary">Ganados</span><span className="text-[15px] font-semibold text-white">{r.pg}</span></div>
+                  <div className="flex flex-col gap-0.5"><span className="text-[12px] text-secondary">Games</span><span className="text-[15px] font-semibold text-white">{r.sf} a {r.sc}</span></div>
+                  <div className="col-span-3 text-[13px] text-soft">Últimos 3: <span className="font-semibold text-white">{formText(form)}</span></div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
-      <div className="mt-3 text-[10px] text-dim font-mono leading-relaxed">
-        PTS: 3 por victoria · PG: victorias · PJ: partidos jugados · DIF: diferencia de games · ÚLT: últimos 3
-      </div>
+      <p className="mt-2 mb-0 text-[12px] text-secondary leading-relaxed">
+        Se ordena por victorias, después diferencia de games.
+        <span className="sm:hidden"> Tocá una fila para ver el detalle.</span>
+      </p>
 
       {showStory && (
         <SnapshotModal

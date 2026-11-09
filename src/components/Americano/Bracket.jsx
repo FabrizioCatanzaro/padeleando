@@ -50,11 +50,14 @@ const SEED_TONE = {
   2: "bg-slate-300 text-base",       // plata
   3: "bg-[#cd7f32] text-white",      // bronce
 };
+// "SEMIFINALES" → "Semifinales": etiquetas sin mayúsculas sostenidas (auditoría UI).
+const sentence = (t) => (typeof t === 'string' && t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : t);
+
 function SeedChip({ seed }) {
   if (seed == null) return null;
   const tone = SEED_TONE[seed] ?? "bg-border-mid text-muted";
   return (
-    <span className={`inline-flex items-center justify-center w-4 h-4 rounded-full text-[9px] font-mono font-bold shrink-0 ${tone}`}>
+    <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[11px] font-bold shrink-0 ${tone}`}>
       {seed}
     </span>
   );
@@ -68,8 +71,8 @@ function PairName({ name, className = "" }) {
   }
   return (
     <span className={`flex flex-col leading-tight min-w-0 ${className}`}>
-      <span className="truncate">{name.slice(0, idx)}</span>
-      <span className="truncate">&amp; {name.slice(idx + 3)}</span>
+      <span className="break-words">{name.slice(0, idx)}</span>
+      <span className="break-words">{name.slice(idx + 3)}</span>
     </span>
   );
 }
@@ -227,18 +230,18 @@ function BracketMatchCard({
       {(cancha != null || anunciado) && (
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {enVivo && (
-            <span className="inline-flex items-center gap-1 font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-green border border-green/40">
-              EN VIVO
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full text-green border border-green/40">
+              En vivo
             </span>
           )}
           {proximo && (
-            <span className="inline-flex items-center gap-1 font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-cyan border border-cyan/40">
-              PRÓXIMO
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full text-cyan border border-cyan/40">
+              Próximo
             </span>
           )}
           {cancha != null && (
-            <span className="inline-flex items-center font-condensed font-bold text-[8.5px] tracking-[0.12em] px-1.5 py-[2px] rounded-[4px] text-brand border border-brand/40">
-              CANCHA {cancha}
+            <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full text-brand border border-brand/40">
+              Cancha {cancha}
             </span>
           )}
         </div>
@@ -290,11 +293,11 @@ function BracketByeCard({ bye }) {
     <div className="bg-surface/40 border border-dashed border-border-mid rounded-lg p-3 opacity-75">
       <div className="flex items-center gap-1.5 py-1 px-1 min-w-0">
         <SeedChip seed={bye.seed} />
-        <PairName name={bye.pair_name ?? "—"} className="font-condensed font-semibold text-[12px] sm:text-[14px] text-soft" />
+        <PairName name={bye.pair_name ?? "—"} className="font-sans font-semibold text-[13px] text-soft" />
 
       </div>
-      <div className="mt-1.5 text-[9px] tracking-[2px] text-muted/60 font-mono text-center">
-        PASA DIRECTO
+      <div className="mt-1.5 text-[12px] text-secondary text-center">
+        Pasa directo
       </div>
     </div>
   );
@@ -338,7 +341,7 @@ function aplicarAlScore(bracketMatch, score, updater) {
 }
 
 // ── Card de partido jugado del bracket ────────────────────────────────────────
-function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchNum, phase }) {
+function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, phase }) {
   const win1  = match.winner_id === match.pair1_id;
   const court = courtLabel(tournament, match.court);
 
@@ -359,17 +362,14 @@ function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, matchN
   return (
     <div className="bg-surface border border-border-mid rounded-xl px-4 py-3">
       <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-        {matchNum != null && <span className="text-[11.5px] text-muted font-mono tabular-nums">#{matchNum}</span>}
-        <span className="font-condensed font-bold text-[9px] tracking-[0.12em] text-brand border border-brand/40 px-2 py-[3px] rounded-[5px]">
-          {phase ? (PHASE_TITLE[phase] ?? phase) : 'CUADRO'}
+        <span className="text-[12px] font-semibold text-brand">
+          {sentence(phase ? (PHASE_TITLE[phase] ?? phase) : 'Cuadro')}
         </span>
         {court != null && court !== '-' && (
-          <span className="font-condensed font-bold text-[9px] tracking-[0.12em] text-brand border border-brand/40 px-2 py-[3px] rounded-[5px]">
-            CANCHA {court}
-          </span>
+          <span className="text-[12px] text-secondary">· Cancha {court}</span>
         )}
         {match.walkover && (
-          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="font-condensed font-bold text-[9px] tracking-[0.12em] text-muted border border-border-strong px-2 py-[3px] rounded-[5px]">
+          <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="text-[12px] font-semibold text-muted border border-border-strong px-2 py-0.5 rounded-full">
             W.O.
           </span>
         )}
@@ -644,7 +644,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       const missing = AMERICANO_MIN_PAIRS - pairCount;
       return (
         <div>
-          <div className="font-condensed font-bold text-[14px] tracking-[3px] text-muted mb-4">CUADRO</div>
+          <h2 className="m-0 mb-4 font-condensed font-semibold text-[15px] text-white">Cuadro</h2>
           <div className="bg-surface border border-brand/30 rounded-lg p-4">
             <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1.5">BORRADOR</div>
             <p className="text-soft font-sans text-[13px] leading-relaxed">
@@ -658,7 +658,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     }
     return (
       <div>
-        <div className="font-condensed font-bold text-[14px] tracking-[3px] text-muted mb-4">CUADRO</div>
+        <h2 className="m-0 mb-4 font-condensed font-semibold text-[15px] text-white">Cuadro</h2>
         {isOwner && previaCompleta ? (
           <>
             <p className="text-muted font-mono text-[12px] mb-4">
@@ -765,7 +765,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     <div>
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <div className="font-condensed font-bold text-[14px] tracking-[3px] text-muted">CUADRO</div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Cuadro</h2>
         {!editMode && (
           <div className="flex gap-2">
             <ShareStoryButton onClick={() => setShowStory(true)} />
@@ -817,7 +817,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
       {/* Aviso previo: el cuadro sólo se puede reorganizar mientras no haya resultados. */}
       {isOwner && !editMode && !hasResults && (
-        <div className="flex items-start gap-2 text-[11px] text-muted font-mono mb-4 leading-relaxed">
+        <div className="flex items-start gap-2 text-[12px] text-secondary mb-4 leading-relaxed">
           <Info size={13} className="shrink-0 mt-px" />
           <span>Podés reorganizar los cruces con el lápiz hasta que cargues el primer resultado.</span>
         </div>
@@ -829,32 +829,23 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
         const wp1 = winnerPair ? tournament.players.find((p) => p.id === winnerPair.p1) : null;
         const wp2 = winnerPair ? tournament.players.find((p) => p.id === winnerPair.p2) : null;
         return (
-        <div className="relative mb-6 overflow-hidden rounded-lg border border-amber-400/40 bg-gradient-to-b from-amber-400/15 via-amber-400/5 to-transparent p-6 text-center">
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-400/60 to-transparent" />
-          <Trophy size={36} className="mx-auto mb-2 text-amber-400" />
-          <div className="font-mono text-[10px] tracking-[4px] text-amber-400/70 mb-1.5">CAMPEONES</div>
+        <section aria-label="Campeones" className="mb-5 flex items-center gap-3 rounded-xl border border-brand/35 bg-brand/5 px-4 py-3">
+          <Trophy size={28} className="shrink-0 text-brand" aria-hidden="true" />
           {winnerPair && (
-            <div className="flex justify-center mb-2">
-              <PairAvatar
-                name1={wp1?.name ?? "?"}
-                name2={wp2?.name ?? "?"}
-                src1={wp1?.linked_avatar_url ?? null}
-                src2={wp2?.linked_avatar_url ?? null}
-                size={56}
-              />
-            </div>
+            <span className="hidden sm:block shrink-0">
+              <PairAvatar name1={wp1?.name ?? "?"} name2={wp2?.name ?? "?"} src1={wp1?.linked_avatar_url ?? null} src2={wp2?.linked_avatar_url ?? null} size={36} />
+            </span>
           )}
-          <div className="font-condensed font-black text-[24px] text-white leading-tight">
-            {bracket.final.winner_name}
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[12px] font-semibold text-brand">Campeones</span>
+            <span className="text-[16px] sm:text-[18px] font-bold text-white leading-snug">{bracket.final.winner_name}</span>
+            {bracket.final.score1 != null && bracket.final.score2 != null && (
+              <span className="text-[13px] text-soft">
+                Final {Math.max(bracket.final.score1, bracket.final.score2)}–{Math.min(bracket.final.score1, bracket.final.score2)}
+              </span>
+            )}
           </div>
-          {bracket.final.score1 != null && bracket.final.score2 != null && (
-            <div className="mt-2 font-mono text-[11px] text-muted">
-              Final: {Math.max(bracket.final.score1, bracket.final.score2)}
-              <span className="text-border-strong mx-1.5">—</span>
-              {Math.min(bracket.final.score1, bracket.final.score2)}
-            </div>
-          )}
-        </div>
+        </section>
         );
       })()}
 
@@ -921,8 +912,8 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
             return (
               <div key={phase.key} className={`flex flex-col flex-1 ${editMode ? "min-w-60 max-w-72 lg:max-w-none" : "min-w-60 max-w-68 lg:max-w-none"}`}>
-                <div className="sticky top-0 z-10 bg-base text-[10px] tracking-[2px] text-brand font-mono text-center pt-1 pb-3">
-                  {phase.label}
+                <div className="sticky top-0 z-10 bg-base text-[12px] font-semibold text-brand text-center pt-1 pb-3">
+                  {sentence(phase.label)}
                 </div>
                 {shouldPair ? (
                   <div className="flex flex-col flex-1 justify-around">
@@ -956,7 +947,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       {/* Cards EN VIVO (debajo del cuadro) — sólo para el owner */}
       {isOwner && liveMatches.length > 0 && (
         <div className="mt-6">
-          <div className="font-condensed font-bold text-[12px] tracking-[3px] text-muted mb-3">PARTIDOS ANUNCIADOS</div>
+          <h3 className="m-0 mb-3 font-condensed font-semibold text-[15px] text-white">Partidos anunciados</h3>
           {liveMatches.map(lm => {
             const result = findBracketMatchWithPhase(lm.matchId);
             if (!result) return null;
@@ -984,10 +975,9 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
           el torneo, cuando isOwner pasa a false); la edición queda gateada por isOwner. */}
       {playedBracketMatches.length > 0 && (
         <div className="mt-6">
-          <div className="font-condensed font-bold text-[12px] tracking-[3px] text-muted mb-3">RESULTADOS</div>
+          <h3 className="m-0 mb-3 font-condensed font-semibold text-[15px] text-white">Resultados</h3>
           <div className="flex flex-col gap-2.5">
-            {[...playedBracketMatches].reverse().map((m, i) => {
-              const matchNum = playedBracketMatches.length - i;
+            {[...playedBracketMatches].reverse().map((m) => {
               return editMatchId === m.id ? (
                 <MatchForm
                   key={m.id}
@@ -1002,7 +992,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                   onCancel={() => setEditMatchId(null)}
                 />
               ) : (
-                <BracketPlayedCard key={m.id} match={m} tournament={tournament} isOwner={isOwner} onEdit={() => handleOpenEdit(m)} onClear={() => setClearTarget(m)} matchNum={matchNum} phase={m.phase} />
+                <BracketPlayedCard key={m.id} match={m} tournament={tournament} isOwner={isOwner} onEdit={() => handleOpenEdit(m)} onClear={() => setClearTarget(m)} phase={m.phase} />
               );
             })}
           </div>

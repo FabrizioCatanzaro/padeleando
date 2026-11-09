@@ -1,5 +1,6 @@
 import { Clock, Pencil, Trash2, Play, Radio } from 'lucide-react';
 import { getPairLabel, courtLabel, fmtHora } from '../../utils/helpers';
+import { TeamName } from './MatchCard';
 
 /**
  * Un partido del fixture: equipos, cancha y hora, todavía sin resultado.
@@ -43,24 +44,24 @@ export default function ScheduledCard({
     >
       <div className="flex items-center gap-2 mb-2.5 flex-wrap">
         {enVivo && (
-          <span className="inline-flex items-center gap-1.5 font-condensed font-bold text-[9px] tracking-[0.12em] px-2 py-[3px] rounded-[5px] text-green border border-green/40">
-            <Radio size={9} /> EN VIVO
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-green">
+            <Radio size={12} /> En juego
           </span>
         )}
         {hora && (
-          <span className="inline-flex items-center gap-1.5 font-condensed font-bold text-[9px] tracking-[0.12em] px-2 py-[3px] rounded-[5px] text-cyan border border-cyan/40">
-            <Clock size={9} /> {hora}
+          <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-cyan">
+            <Clock size={12} /> {hora}
           </span>
         )}
         {cancha != null && (
-          <span className="inline-flex items-center font-condensed font-bold text-[9px] tracking-[0.12em] px-2 py-[3px] rounded-[5px] text-brand border border-brand/40">
-            CANCHA {cancha}
+          <span className="text-[12px] text-secondary">
+            Cancha {cancha}
           </span>
         )}
         {/* Lo que el fixture le resuelve al que viene a jugar: cuál es el suyo. */}
         {esMio && !isOwner && (
-          <span className="inline-flex items-center font-condensed font-bold text-[9px] tracking-[0.12em] px-2 py-[3px] rounded-[5px] bg-brand text-base">
-            JUGÁS VOS
+          <span className="inline-flex items-center text-[12px] font-bold px-2 py-0.5 rounded-full bg-brand text-base">
+            Jugás vos
           </span>
         )}
         <span className="flex-1" />
@@ -85,10 +86,10 @@ export default function ScheduledCard({
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
-        <div className="min-w-0 basis-[190px] grow font-condensed font-semibold text-[16px] text-white leading-tight">
-          {getLabel(match.team1)}
-          <span className="text-muted font-sans font-normal text-[13px]"> vs </span>
-          {getLabel(match.team2)}
+        <div className="min-w-0 basis-[190px] grow flex flex-col gap-1.5 font-sans font-semibold text-[15px] text-white leading-snug">
+          <TeamName label={getLabel(match.team1)} />
+          <span className="text-secondary font-normal text-[12px]">contra</span>
+          <TeamName label={getLabel(match.team2)} />
         </div>
         {isOwner && (
           <span className="flex gap-1.5 shrink-0">

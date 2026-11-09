@@ -1239,9 +1239,9 @@ export function ReadonlyMatches({ tournament, groupName }) {
           onClick={() => setShareFixture(true)}
           title="Compartir partidos"
           aria-label="Compartir partidos"
-          className="inline-flex items-center gap-2 bg-transparent text-muted border border-border-strong px-3 py-2 font-condensed font-bold text-[12px] tracking-wide cursor-pointer rounded-sm hover:text-white transition-colors"
+          className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3 py-2 font-sans text-[13px] cursor-pointer rounded-sm hover:text-white transition-colors"
         >
-          <Share2 size={14} /> COMPARTIR
+          <Share2 size={14} /> Compartir partidos
         </button>
       </div>
       <div className="flex flex-col gap-2.5">
