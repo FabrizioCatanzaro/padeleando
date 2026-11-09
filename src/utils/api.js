@@ -292,5 +292,9 @@ export const api = {
     updateCaption: (tournamentId, photoId, caption)     => req('PATCH',  `/tournaments/${tournamentId}/photos/${photoId}`, { caption }),
     setCover:      (tournamentId, photoId)              => req('PATCH',  `/tournaments/${tournamentId}/photos/${photoId}/cover`),
     delete:        (tournamentId, photoId)              => req('DELETE', `/tournaments/${tournamentId}/photos/${photoId}`),
+    // Posts de Instagram embebidos en la galería
+    instagram:       (tournamentId)                     => req('GET',    `/tournaments/${tournamentId}/photos/instagram`),
+    addInstagram:    (tournamentId, url)                => req('POST',   `/tournaments/${tournamentId}/photos/instagram`, { url }),
+    deleteInstagram: (tournamentId, postId)             => req('DELETE', `/tournaments/${tournamentId}/photos/instagram/${postId}`),
   },
 }

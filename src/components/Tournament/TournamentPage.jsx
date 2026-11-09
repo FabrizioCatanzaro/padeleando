@@ -17,6 +17,7 @@ import Management from "../Management/Management";
 import Previa from "../Americano/Previa";
 import Bracket from "../Americano/Bracket";
 import PhotoGallery from "../Photos/PhotoGallery";
+import InstagramPosts from "../Photos/InstagramPosts";
 import Btn from "../shared/Btn";
 import ShareModal from "../shared/ShareModal";
 import QrModal from "../shared/QrModal";
@@ -422,6 +423,9 @@ export default function TournamentPage({
           isPremium={groupOwnerIsPremium}
           canUpload={puedeGestionar}
         />}
+        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && (
+          <InstagramPosts tournamentId={tournament.id} isOwner={puedeGestionar} isPremium={groupOwnerIsPremium} />
+        )}
       </div>
 
       {tvMode && (
