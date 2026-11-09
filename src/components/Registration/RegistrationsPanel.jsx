@@ -157,7 +157,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
   };
 
   return (
-    <div className="flex flex-col gap-4 max-w-xl">
+    <div className="flex flex-col gap-4 w-full max-w-xl mx-auto">
       <div className="bg-surface border border-border rounded-xl px-3.5 py-3 flex flex-col gap-2">
         <div className="flex justify-between gap-2 text-[13px] flex-wrap">
           <span className="text-white font-semibold">{cupo ? cupo.texto : 'Sin cupo'}{signup.level ? ` · ${levelLabel(signup.level)}` : ''} · {summary.paid} {summary.paid === 1 ? 'pagada' : 'pagadas'}</span>
@@ -173,7 +173,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
         </button>
       </div>
 
-      <div role="group" aria-label="Filtro" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div role="group" aria-label="Filtro" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
         {FILTROS.map((f) => {
           const n = grupos[f.id].length;
           const on = filtro === f.id;

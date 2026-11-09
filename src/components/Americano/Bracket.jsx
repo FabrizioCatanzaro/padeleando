@@ -876,28 +876,50 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                 );
               })}
             </div>
-            <div className="flex flex-col gap-3">
-              {(sel?.items ?? []).map((item, idx) => (
-                item.type === 'match' ? (
-                  <BracketMatchCard
-                    key={item.data.id}
-                    match={item.data}
-                    phase={sel.key}
-                    isOwner={isOwner}
-                    standings={standings}
-                    tournament={tournament}
-                    editMode={false}
-                    draftMatch={getDraftMatch(sel.key, item.data.id)}
-                    allPairs={standings}
-                    onPairChange={updateDraftPair}
-                    pairLocations={pairLocations}
-                    anuncio={anuncioDelCruce(item.data, sel.key)}
-                    onToggleLive={() => handleToggleLive(item.data.id)}
-                  />
-                ) : (
-                  <BracketByeCard key={`bye-${sel.key}-${idx}`} bye={item.data} />
-                )
-              ))}
+            <div className="flex flex-col gap-4">
+              {(sel?.items ?? []).map((item, idx) => {
+                // Hilo del cuadro en celular: cada cruce con su número, de dónde
+                // vienen sus parejas y adónde va el ganador. En escritorio lo
+                // dicen las líneas del árbol (pedido de Fabri, 2026-11-09).
+                const pi = phases.indexOf(sel);
+                const prev = phases[pi - 1];
+                const next = phases[pi + 1];
+                const nombre = (ph) => sentence(ph.key === 'cuartos' ? 'CUARTOS' : ph.key === 'semis' ? 'SEMIS' : ph.label);
+                const conPrev = prev && prev.items.length === 2 * sel.items.length;
+                const conNext = next && sel.items.length === 2 * next.items.length;
+                const titulo = sel.items.length > 1 ? `${nombre(sel)} ${idx + 1}` : nombre(sel);
+                const pista = [
+                  conPrev ? `Ganadores de ${nombre(prev)} ${2 * idx + 1} y ${2 * idx + 2}` : null,
+                  conNext ? `El ganador va a ${nombre(next)}${next.items.length > 1 ? ` ${Math.floor(idx / 2) + 1}` : ''}` : null,
+                ].filter(Boolean).join(' · ');
+                const key = item.type === 'match' ? item.data.id : `bye-${sel.key}-${idx}`;
+                return (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <div className="flex items-baseline gap-2 flex-wrap">
+                      <span className="text-[13px] font-bold text-white">{titulo}</span>
+                      {pista && <span className="text-[12px] text-secondary">{pista}</span>}
+                    </div>
+                    {item.type === 'match' ? (
+                      <BracketMatchCard
+                        match={item.data}
+                        phase={sel.key}
+                        isOwner={isOwner}
+                        standings={standings}
+                        tournament={tournament}
+                        editMode={false}
+                        draftMatch={getDraftMatch(sel.key, item.data.id)}
+                        allPairs={standings}
+                        onPairChange={updateDraftPair}
+                        pairLocations={pairLocations}
+                        anuncio={anuncioDelCruce(item.data, sel.key)}
+                        onToggleLive={() => handleToggleLive(item.data.id)}
+                      />
+                    ) : (
+                      <BracketByeCard bye={item.data} />
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
         );

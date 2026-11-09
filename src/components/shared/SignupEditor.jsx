@@ -17,7 +17,10 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
   const set = (patch) => onChange({ ...value, ...patch });
   const contacts = value.contacts ?? [];
   const usedTypes = new Set(contacts.map((c) => c.type));
-  const freeType  = CONTACT_TYPES.find((t) => !usedTypes.has(t));
+  // Un contacto nuevo arranca en un canal que no esté cargado ni venga del
+  // perfil: antes tomaba el primero libre, y si era uno del perfil lo pisaba.
+  const profileTypes = new Set(profile.map((p) => p.type));
+  const freeType  = CONTACT_TYPES.find((t) => !usedTypes.has(t) && !profileTypes.has(t));
   // Los del perfil se muestran solos; cargar el mismo canal a mano los reemplaza.
   const fromProfile = profile.filter((p) => !usedTypes.has(p.type));
 
@@ -152,7 +155,7 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
                     >
                       {CONTACT_TYPES.map((t) => (
                         <option key={t} value={t} disabled={t !== c.type && usedTypes.has(t)}>
-                          {CONTACT_META[t].label}
+                          {CONTACT_META[t].label}{t !== c.type && profileTypes.has(t) && !usedTypes.has(t) ? ' (reemplaza el de tu perfil)' : ''}
                         </option>
                       ))}
                     </select>
