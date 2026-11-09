@@ -155,6 +155,11 @@ export const api = {
       manage:       (clubId)           => req('GET',   `/clubs/${clubId}/bookings/manage`),
       decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
     },
+    // Vincular Mercado Pago del club (Premium): connect devuelve la URL de MP a la que redirigir.
+    mercadopago: {
+      connect:    (clubId) => req('GET',    `/clubs/${clubId}/mercadopago/connect`),
+      disconnect: (clubId) => req('DELETE', `/clubs/${clubId}/mercadopago`),
+    },
   },
   // "Mis reservas" cruza todos los clubes: no vive bajo /clubs/:id
   bookings: {

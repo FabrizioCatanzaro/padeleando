@@ -25,15 +25,17 @@ export const PRO_FEATURES = [
   'Torneos ilimitados',
   'Estadísticas avanzadas',
   'Álbum de fotos',
+  'Cobrar reservas de tu club con Mercado Pago',
   'Ícono premium en el perfil',
   'Soporte prioritario',
 ];
 
 export const PLAN_COMPARISON = [
-  { feature: 'Categorías',     free: '2 máx.', pro: 'Ilimitadas' },
-  { feature: 'Torneos',        free: '2/mes',  pro: 'Ilimitados' },
-  { feature: 'Estadísticas',   free: 'Básicas', pro: 'Avanzadas' },
-  { feature: 'Álbum de fotos', free: false,    pro: true },
-  { feature: 'Ícono premium',  free: false,    pro: true },
-  { feature: 'Soporte',        free: 'Básico', pro: 'Prioritario' },
+  { feature: 'Categorías',            free: '2 máx.', pro: 'Ilimitadas' },
+  { feature: 'Torneos',               free: '2/mes',  pro: 'Ilimitados' },
+  { feature: 'Estadísticas',          free: 'Básicas', pro: 'Avanzadas' },
+  { feature: 'Álbum de fotos',        free: false,    pro: true },
+  { feature: 'Cobro de reservas',     free: false,    pro: true },
+  { feature: 'Ícono premium',         free: false,    pro: true },
+  { feature: 'Soporte',               free: 'Básico', pro: 'Prioritario' },
 ];

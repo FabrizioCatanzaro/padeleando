@@ -37,12 +37,14 @@ export default function BookingFormModal({ club, courtId, courtName, date, slots
     setError(null)
     setSaving(true)
     try {
-      const created = await api.clubs.bookings.create(club.id, {
+      const { bookings: created, checkout_url } = await api.clubs.bookings.create(club.id, {
         court_id: courtId, date, slots,
         guest_name: name.trim(), guest_contact: contact.trim(),
       })
-      setDone(true)
       onBooked?.(created)
+      // El club cobra online: se va directo a pagar, no hay pantalla de "pendiente"
+      if (checkout_url) { window.location.href = checkout_url; return }
+      setDone(true)
     } catch (e) {
       setError(e.message)
     } finally {
@@ -79,6 +81,11 @@ export default function BookingFormModal({ club, courtId, courtName, date, slots
               {contested && (
                 <p className="text-[11px] font-mono text-premium mb-3 leading-relaxed">
                   ⚠ Ya hay otra persona esperando este mismo horario. Tu reserva también queda pendiente -- el club decide a quién confirmar.
+                </p>
+              )}
+              {club.mp_connected && totalPrice != null && (
+                <p className="text-[11px] font-mono text-brand mb-3 leading-relaxed">
+                  Este club cobra los turnos online. Al reservar vas a pagar por Mercado Pago y el turno se confirma solo.
                 </p>
               )}
               <div className="flex flex-col gap-3">

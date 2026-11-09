@@ -6,6 +6,7 @@ import {
 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
+import { useToast } from '../../context/useToast'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { whatsappLink, socialUrl } from './clubForm'
 import { categoryRows, organizerRows, missingFields, eventDate } from '../../utils/clubPage'
@@ -21,6 +22,7 @@ import ClubBooking from './ClubBooking'
 import ClubBookingManage from './ClubBookingManage'
 import ClubCategories from './ClubCategories'
 import ClubInfo from './ClubInfo'
+import PremiumModal from '../shared/PremiumModal'
 
 const SOCIAL_ICON = { instagram: Instagram, facebook: Facebook, website: Globe }
 const SOCIAL_LABEL = { instagram: 'Instagram', facebook: 'Facebook', website: 'Sitio web' }
@@ -55,6 +57,7 @@ export default function ClubProfileView() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { isLoggedIn, user } = useAuth()
+  const { showToast } = useToast()
   const isAdmin = user?.role === 'admin'
   const [club, setClub]     = useState(null)
   const [events, setEvents] = useState({ upcoming: [], ongoing: [], past: [] })
@@ -65,6 +68,7 @@ export default function ClubProfileView() {
   const [showEditClub, setShowEditClub] = useState(false)
   const [showClaim, setShowClaim] = useState(false)
   const [showCourtsManager, setShowCourtsManager] = useState(false)
+  const [showMpPremium, setShowMpPremium] = useState(false)
 
   // Referencia estable: una arrow inline volvería a disparar el fetch de ClubCourtsManager
   const handleCourtsChange = useCallback((courts_list) => {
@@ -116,6 +120,42 @@ export default function ClubProfileView() {
     prevViewer.current = viewerKey
     fetchData(id, { silent: true })
   }, [viewerKey, id, fetchData])
+
+  // Vuelta de Mercado Pago: OAuth Connect (?mp=) o pago de una reserva (?pago=).
+  // Se limpia el query param para no repetir el toast si recargan la página.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const mp = params.get('mp')
+    const pago = params.get('pago')
+    if (!mp && !pago) return
+    if (mp === 'connected') { showToast('Mercado Pago vinculado'); fetchData(id, { silent: true }) }
+    else if (mp === 'error') showToast('No se pudo vincular Mercado Pago. Probá de nuevo.', 'error')
+    else if (pago === 'exito') showToast('Pago recibido. Tu turno se confirma en cuanto Mercado Pago lo acredite.')
+    else if (pago === 'pendiente') showToast('Tu pago quedó pendiente en Mercado Pago.')
+    else if (pago === 'error') showToast('El pago no se pudo completar.', 'error')
+    navigate(`/club/${id}`, { replace: true })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  async function handleConectarMp() {
+    try {
+      const { authorize_url } = await api.clubs.mercadopago.connect(club.id)
+      window.location.href = authorize_url
+    } catch (e) {
+      if (e.data?.code === 'plan_limit') setShowMpPremium(true)
+      else showToast(e.message, 'error')
+    }
+  }
+
+  async function handleDesconectarMp() {
+    try {
+      await api.clubs.mercadopago.disconnect(club.id)
+      setClub((c) => (c ? { ...c, mp_connected: false } : c))
+      showToast('Mercado Pago desvinculado')
+    } catch (e) {
+      showToast(e.message, 'error')
+    }
+  }
 
   useDocumentTitle(error === 'notfound' ? 'Club no encontrado' : club?.name)
 
@@ -362,7 +402,11 @@ export default function ClubProfileView() {
         {tab === 'gestion'  && canManageBookings && <ClubBookingManage club={club} onPendingCountChange={handlePendingBookingsChange} />}
         {tab === 'cats'     && <ClubCategories categorias={categorias} organizadores={organizadores} />}
         {tab === 'info'   && (
-          <ClubInfo club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage} onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)} />
+          <ClubInfo
+            club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage}
+            onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)}
+            onConectarMp={handleConectarMp} onDesconectarMp={handleDesconectarMp} onPedirPremiumMp={() => setShowMpPremium(true)}
+          />
         )}
       </div>
 
@@ -388,6 +432,10 @@ export default function ClubProfileView() {
           onClose={() => setShowClaim(false)}
           onSubmitted={() => fetchData(id)}
         />
+      )}
+
+      {showMpPremium && (
+        <PremiumModal reason="Vincular Mercado Pago" onClose={() => setShowMpPremium(false)} />
       )}
     </div>
   )

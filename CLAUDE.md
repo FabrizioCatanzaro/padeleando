@@ -32,7 +32,7 @@ Both repos are independent — they are **not** a monorepo.
 - Bcrypt for password hashing
 - Resend for transactional email (password reset, email verification)
 - Cloudinary for image uploads (avatars, tournament photos)
-- Mercado Pago for subscriptions (routes live; list prices not final yet)
+- Mercado Pago for subscriptions (routes live; list prices not final yet), plus OAuth Connect so a Premium club owner can link their own MP account and collect booking payments in-app
 
 ---
 
@@ -180,6 +180,7 @@ Rules that keep the three from drifting:
 - **Plan/premium gates key off the category owner**, never the acting user: a premium co-organizer does not bypass a basic owner's limits (e.g. the free monthly-tournament cap, photo uploads).
 - **Plan quotas live in `lib/plan.js` (API) and mirror in `src/utils/plan.js` (web).** Free allows 2 categories and 2 jornadas per month *per category* (counted on `created_at` of the current calendar month). Both are enforced in `POST /groups` and `POST /tournaments`, which answer `403 { code: 'plan_limit' }` — the frontend checks are only there to save the round-trip.
 - **A downgrade never touches what already exists.** A premium user who created 5 categories keeps all 5 fully working when they fall back to free; the quota is compared against the current total, so it just blocks creating a new one. Same for jornadas (the cap resets on the 1st) and for photos already uploaded — the album stays public, only the upload button closes. This is what the `PremiumModal` FAQ promises, so don't make a downgrade archive, hide, or freeze anything.
+- **Booking management is free for every club owner.** Only linking Mercado Pago (`ClubInfo`'s COBROS block, gated by `club.owner_is_premium`) to collect payment automatically is Premium — approving/rejecting/blocking turns by hand never was and still isn't.
 - Invites (co-organizer and ownership transfer) go by `@username`/email (in-app notification) or by shareable link (`/invitacion/:token`). Ownership transfer is irreversible and only completes when the recipient accepts; the previous owner becomes a co-organizer. See `routes/collaborators.js`.
 
 ### Tailwind CSS
