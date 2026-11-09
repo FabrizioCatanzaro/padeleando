@@ -89,7 +89,7 @@ function ShareMenu({ isOwner, onShare, onQr, onTv, onSpectator }) {
 export default function TournamentHero({
   tournament, groupId, groupName, groupIsPublic = true, owner = null,
   isOwner, playedCount, scheduledCount = 0, statusMeta,
-  isPairs, signup, tvActivo = false, draft = null,
+  isPairs, signup, tvActivo = false, draft = null, miEstado = null,
   onEditName, onShare, onQr, onTv, onSpectator, onManage,
 }) {
   const navigate = useNavigate();
@@ -163,6 +163,13 @@ export default function TournamentHero({
             {statusMeta.label}
           </Badge>
           <span className="text-[13px] text-soft">{formato}</span>
+          {miEstado && (
+            <span className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border ${
+              miEstado.tone === 'green' ? 'text-green border-green/40 bg-green/10'
+                : miEstado.tone === 'amber' ? 'text-amber-300 border-amber-500/45 bg-amber-500/15'
+                : 'text-cyan border-cyan/40 bg-cyan/10'
+            }`}>{miEstado.label}</span>
+          )}
         </div>
         <div className="flex items-start gap-2.5">
           <h1 className="font-condensed font-black text-[26px] sm:text-[31px] text-white leading-tight m-0 min-w-0">

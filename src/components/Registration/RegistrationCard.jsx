@@ -13,7 +13,7 @@ import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
 // Sin sesión muestra precio y contactos e invita a entrar; con sesión trae el
 // estado de su inscripción (GET /registrations/mine) y abre el formulario.
-export default function RegistrationCard({ tournament, groupName = null, signup: signupBase }) {
+export default function RegistrationCard({ tournament, groupName = null, signup: signupBase, onEstado }) {
   const { isLoggedIn, user } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
@@ -25,8 +25,12 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
 
   const load = useCallback(() => {
     if (!isLoggedIn) return;
-    api.registrations.mine(tournament.id).then(setData).catch(() => {});
-  }, [isLoggedIn, tournament.id]);
+    api.registrations.mine(tournament.id).then((d) => {
+      setData(d);
+      // El encabezado muestra un chip con el estado (auditoría UI).
+      onEstado?.({ status: d?.registration?.status ?? null, inTournament: !!d?.in_tournament });
+    }).catch(() => {});
+  }, [isLoggedIn, tournament.id, onEstado]);
 
   useEffect(() => { load(); }, [load]);
 

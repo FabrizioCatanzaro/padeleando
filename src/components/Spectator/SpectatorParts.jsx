@@ -22,7 +22,9 @@ import MatchCard from "../Matches/MatchCard";
 import Bracket from "../Americano/Bracket";
 import PhotoGallery from "../Photos/PhotoGallery";
 import PlayerAvatar, { PairAvatar } from "../shared/PlayerAvatar";
-import { AuthContext } from '../../context/useAuth';
+import { AuthContext, useAuth } from '../../context/useAuth';
+import { myPlayerIds, isMyMatch } from '../../utils/helpers';
+import { categoryLabel } from '../../utils/category';
 import SignupPricePill from '../shared/SignupPricePill';
 import { ChartNoAxesCombined, ChevronLeft, ChevronRight, Eye, Flame, Lock, Share2, QrCode, Split, List, Trophy, User, Users, Building2, Zap, Tv, Pause, Play, Volume2, VolumeX, Maximize, Minimize, Clock, X, Calendar, MapPin, Hourglass, Timer } from "lucide-react";
 import courtSvg from "../../assets/padel-court.svg";
@@ -1216,14 +1218,19 @@ export function SpectatorLive({ tournament, isAmericano, scope }) {
 }
 
 export function ReadonlyMatches({ tournament, groupName }) {
+  const { user } = useAuth() ?? {};
   const [shareFixture, setShareFixture] = useState(false);
-  // Más nuevo primero, igual que en la vista del organizador: así el #1 (played.length - i)
-  // le toca al primer partido jugado.
+  const [soloMios, setSoloMios] = useState(false);
+  // Más nuevo primero, igual que en la vista del organizador.
   const played = tournament.matches
     .filter((m) => m.score1 !== "" && m.score2 !== "")
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  // "Mis partidos": sólo si el usuario juega el torneo (auditoría UI).
+  const mios = myPlayerIds(tournament, user?.username);
+  const misPartidos = played.filter((m) => isMyMatch(m, mios));
+  const lista = soloMios ? misPartidos : played;
   if (played.length === 0)
-    return <div className="text-center text-dim py-10 font-sans">No hay partidos jugados todavía.</div>;
+    return <div className="text-center text-secondary py-10 font-sans text-[14px]">Todavía no hay partidos jugados.</div>;
   return (
     <div>
       {shareFixture && (
@@ -1234,92 +1241,124 @@ export function ReadonlyMatches({ tournament, groupName }) {
           onClose={() => setShareFixture(false)}
         />
       )}
-      <div className="flex justify-end mb-3">
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-3">
+        {mios.size > 0 ? (
+          <div role="group" aria-label="Filtro de partidos" className="flex gap-2">
+            {[[false, 'Todos', played.length], [true, 'Mis partidos', misPartidos.length]].map(([v, label, n]) => (
+              <button
+                key={label}
+                type="button"
+                aria-pressed={soloMios === v}
+                onClick={() => setSoloMios(v)}
+                className={`h-9 px-3.5 rounded-full font-sans text-[13px] cursor-pointer ${soloMios === v ? 'bg-brand text-black font-bold border-0' : 'bg-transparent text-content border border-border-strong'}`}
+              >
+                {label} · {n}
+              </button>
+            ))}
+          </div>
+        ) : <span />}
         <button
           onClick={() => setShareFixture(true)}
-          title="Compartir partidos"
-          aria-label="Compartir partidos"
           className="inline-flex items-center gap-2 bg-transparent text-content border border-border-strong px-3 py-2 font-sans text-[13px] cursor-pointer rounded-sm hover:text-white transition-colors"
         >
-          <Share2 size={14} /> Compartir partidos
+          <Share2 size={14} /> Compartir
         </button>
       </div>
-      <div className="flex flex-col gap-2.5">
-        {played.map((m, i) => (
-          <MatchCard key={m.id} match={m} tournament={tournament} isOwner={false} matchNum={played.length - i} />
-        ))}
-      </div>
+      {lista.length === 0 ? (
+        <p className="m-0 text-[14px] text-secondary py-6 text-center">Todavía no jugaste partidos en este torneo.</p>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          {lista.map((m) => (
+            <MatchCard key={m.id} match={m} tournament={tournament} isOwner={false} />
+          ))}
+        </div>
+      )}
     </div>
+  );
+}
+
+// Una fila de jugador: avatar, nombre, categoría y @usuario.
+function JugadorFila({ p, onPerfil }) {
+  const username = p?.linked_username ?? null;
+  const cat = categoryLabel(p?.linked_category);
+  const Tag = username ? 'button' : 'div';
+  return (
+    <Tag
+      type={username ? 'button' : undefined}
+      onClick={username ? () => onPerfil(username) : undefined}
+      className={`w-full flex items-center gap-3 bg-transparent border-0 p-0 text-left ${username ? 'cursor-pointer group' : ''}`}
+    >
+      <PlayerAvatar name={p?.name ?? '?'} src={p?.linked_avatar_url ?? null} size={30} premium={p?.is_premium ?? false} />
+      <span className="flex flex-col min-w-0">
+        <span className={`text-[15px] font-semibold text-white leading-snug ${username ? 'group-hover:text-brand' : ''}`}>{p?.name ?? '?'}</span>
+        {username && <span className="text-[12px] text-secondary">@{username}</span>}
+      </span>
+      {cat && <span className="ml-auto shrink-0 text-[12px] font-bold text-brand border border-brand/40 px-2 py-0.5 rounded-full">{cat}</span>}
+    </Tag>
   );
 }
 
 export function ReadonlyPlayers({ tournament }) {
   const navigate = useNavigate();
   const { players, pairs, mode } = tournament;
+  const activos = players.filter((p) => !p.removed);
+  const porId = Object.fromEntries(players.map((p) => [String(p.id), p]));
+  const irAPerfil = (u) => navigate(`/u/${u}`);
 
   if (tournament.roster_hidden) {
     return (
       <div className="flex flex-col gap-2 bg-surface border border-border-mid rounded-xl p-4 max-w-xl">
-        <div className="font-condensed font-bold text-[14px] tracking-[2px] text-muted">JUGADORES</div>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Jugadores</h2>
         <p className="m-0 text-[13px] text-soft leading-relaxed">La lista se publica cuando empieza el torneo.</p>
       </div>
     );
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted mb-3">JUGADORES</div>
-        {players.length === 0
-          ? <div className="text-dim font-sans text-sm">No hay jugadores registrados.</div>
-          : (
-            <div className="flex flex-col gap-2">
-              {players.map((p, i) => {
-                const username = p.linked_username ?? null;
-                return (
-                  <div
-                    key={p.id}
-                    className={`flex items-center gap-3 bg-surface border border-border-mid rounded-md px-3.5 py-2.5 ${username ? 'cursor-pointer hover:border-border-strong transition-colors' : ''}`}
-                    onClick={() => username && navigate(`/u/${username}`)}
-                  >
-                    <div className="min-w-6 text-muted font-mono font-bold text-[13px]">{i + 1}</div>
-                    <PlayerAvatar name={p.name} src={p.linked_avatar_url ?? null} size={28} premium={p.is_premium ?? false} />
-                    <div className={`font-semibold ${username ? 'text-white' : 'text-white'}`}>{p.name}</div>
-                    {username && <div className="ml-auto text-[11px] font-mono text-dim">@{username}</div>}
-                  </div>
-                );
-              })}
-            </div>
-          )
-        }
+  // Por parejas: cada pareja con sus dos jugadores y la categoría de cada uno
+  // (auditoría UI). Los que no tienen pareja van aparte.
+  if (mode === 'pairs' && pairs.length > 0) {
+    const enPareja = new Set(pairs.flatMap((pr) => [String(pr.p1), String(pr.p2)]));
+    const sueltos = activos.filter((p) => !enPareja.has(String(p.id)));
+    return (
+      <div className="flex flex-col gap-3 max-w-xl">
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">
+          Parejas <span className="font-sans font-normal text-[13px] text-secondary">{pairs.length}</span>
+        </h2>
+        {pairs.map((pair, i) => (
+          <article key={pair.id} className="bg-surface border border-border-mid rounded-xl px-3.5 py-3 flex flex-col gap-2.5">
+            <span className="text-[12px] font-semibold text-secondary">
+              Pareja {i + 1}{pair.status === 'withdrawn' ? ' · Se retiró' : ''}
+            </span>
+            <JugadorFila p={porId[String(pair.p1)]} onPerfil={irAPerfil} />
+            <JugadorFila p={porId[String(pair.p2)]} onPerfil={irAPerfil} />
+          </article>
+        ))}
+        {sueltos.length > 0 && (
+          <>
+            <h3 className="m-0 mt-2 text-[14px] font-bold text-white">Sin pareja</h3>
+            {sueltos.map((p) => (
+              <div key={p.id} className="bg-surface border border-border-mid rounded-xl px-3.5 py-3">
+                <JugadorFila p={p} onPerfil={irAPerfil} />
+              </div>
+            ))}
+          </>
+        )}
       </div>
+    );
+  }
 
-      {mode === "pairs" && pairs.length > 0 && (
-        <div>
-          <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted mb-3">PAREJAS</div>
-          <div className="flex flex-col gap-2">
-            {pairs.map((pair, i) => {
-              const player1 = players.find((p) => p.id === pair.p1);
-              const player2 = players.find((p) => p.id === pair.p2);
-              const p1 = player1?.name ?? "?";
-              const p2 = player2?.name ?? "?";
-              return (
-                <div key={pair.id} className="flex items-center gap-3 bg-surface border border-border-mid rounded-md px-3.5 py-2.5">
-                  <div className="min-w-6 text-muted font-mono font-bold text-[13px]">{i + 1}</div>
-                  <PairAvatar
-                    name1={p1}
-                    name2={p2}
-                    src1={player1?.linked_avatar_url ?? null}
-                    src2={player2?.linked_avatar_url ?? null}
-                    size={26}
-                  />
-                  <div className="text-white font-semibold">{p1} <span className="text-muted">&</span> {p2}</div>
-                </div>
-              );
-            })}
+  return (
+    <div className="flex flex-col gap-3 max-w-xl">
+      <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">
+        Jugadores <span className="font-sans font-normal text-[13px] text-secondary">{activos.length}</span>
+      </h2>
+      {activos.length === 0
+        ? <p className="m-0 text-[14px] text-secondary">Todavía no hay jugadores.</p>
+        : activos.map((p) => (
+          <div key={p.id} className="bg-surface border border-border-mid rounded-xl px-3.5 py-3">
+            <JugadorFila p={p} onPerfil={irAPerfil} />
           </div>
-        </div>
-      )}
+        ))}
     </div>
   );
 }

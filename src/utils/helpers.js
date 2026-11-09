@@ -732,3 +732,18 @@ export const emptyForm = () => ({
   sets: [],
   court: null,
 });
+
+// ── "Mis partidos" (auditoría UI, 2026-11-09) ──────────────────────────────
+/** Ids de los jugadores del torneo vinculados a la cuenta `username`. */
+export function myPlayerIds(tournament, username) {
+  if (!username) return new Set();
+  return new Set((tournament?.players ?? [])
+    .filter((p) => p.linked_username === username)
+    .map((p) => String(p.id)));
+}
+
+/** ¿Juega alguno de `ids` en el partido? */
+export function isMyMatch(match, ids) {
+  if (!ids?.size) return false;
+  return [...(match.team1 ?? []), ...(match.team2 ?? [])].some((id) => ids.has(String(id)));
+}

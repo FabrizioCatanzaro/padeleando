@@ -48,6 +48,16 @@ function WarningMark({ className = "", count }) {
 // Las solapas dependen del formato y de si podés gestionar. El que sólo mira no
 // tiene GESTIÓN; a cambio tiene JUGADORES, que al organizador le vive dentro de
 // gestión.
+// Chip junto al título con la relación del que mira con el torneo.
+function miEstadoDe(e) {
+  if (!e) return null;
+  if (e.status === 'approved') return { label: 'Inscripto', tone: 'green' };
+  if (e.status === 'pending')  return { label: 'Inscripción pendiente', tone: 'amber' };
+  if (e.status === 'waitlist') return { label: 'En lista de espera', tone: 'cyan' };
+  if (e.inTournament) return { label: 'Jugás este torneo', tone: 'green' };
+  return null;
+}
+
 // CUADRO aparece cuando hay cuadro o la previa ya terminó (para generarlo):
 // antes era una solapa vacía en la barra de abajo (auditoría UI).
 function tabsDe({ esAmericano, puedeGestionar, conCuadro }) {
@@ -104,6 +114,8 @@ export default function TournamentPage({
   const [tvMode, setTvMode] = useState(tvInicial);
   const [tvPaused, setTvPaused] = useState(false);
   const [tvStep, setTvStep] = useState(0);
+  // Estado de la inscripción del que mira: lo trae RegistrationCard.
+  const [miInscripcion, setMiInscripcion] = useState(null);
   // Inscripciones pendientes: la marca de la solapa INSCRIPCIONES.
   const [pendientes, setPendientes] = useState(0);
   useEffect(() => {
@@ -194,6 +206,7 @@ export default function TournamentPage({
         scheduledCount={scheduled.length}
         statusMeta={statusMeta}
         draft={draftText}
+        miEstado={miEstadoDe(miInscripcion)}
         isPairs={isPairs}
         signup={signup}
         tvActivo={tvMode}
@@ -245,7 +258,7 @@ export default function TournamentPage({
 
       {/* Inscripción: el que no organiza se inscribe desde acá. La tarjeta
           trae su propio estado; sin inscripción abierta no muestra nada. */}
-      {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} />}
+      {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} onEstado={setMiInscripcion} />}
       {espectador?.joinBanner}
       {espectador && enJuegoAhora && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
 
