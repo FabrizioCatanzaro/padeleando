@@ -6,7 +6,7 @@ import {
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
   tournamentDisplayStatus, TOURNAMENT_STATUS_META,
-  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS,
+  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete,
 } from "../../utils/helpers";
 import Standings from "../Standings/Standings";
 import Matches from "../Matches/Matches";
@@ -48,11 +48,13 @@ function WarningMark({ className = "", count }) {
 // Las solapas dependen del formato y de si podés gestionar. El que sólo mira no
 // tiene GESTIÓN; a cambio tiene JUGADORES, que al organizador le vive dentro de
 // gestión.
-function tabsDe({ esAmericano, puedeGestionar }) {
+// CUADRO aparece cuando hay cuadro o la previa ya terminó (para generarlo):
+// antes era una solapa vacía en la barra de abajo (auditoría UI).
+function tabsDe({ esAmericano, puedeGestionar, conCuadro }) {
   const tabs = [{ id: 'standings', label: 'TABLA', corto: 'Tabla', icon: Trophy }];
   if (esAmericano) {
     tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'Previa', icon: List });
-    tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
+    if (conCuadro) tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
   } else {
     tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
   }
@@ -113,7 +115,8 @@ export default function TournamentPage({
 
   const esAmericano = tournament.format === 'americano';
   const isPairs = esAmericano || tournament.mode === 'pairs';
-  const TABS = tabsDe({ esAmericano, puedeGestionar });
+  const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament));
+  const TABS = tabsDe({ esAmericano, puedeGestionar, conCuadro });
   // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
   const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : 'standings');
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
@@ -397,12 +400,14 @@ export default function TournamentPage({
           />
         )}
 
-        <PhotoGallery
+        {/* Fotos cuando el torneo arrancó: antes de que haya jugadores el botón
+            competía con la acción principal (auditoría UI). */}
+        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && <PhotoGallery
           tournamentId={tournament.id}
           isOwner={puedeGestionar}
           isPremium={groupOwnerIsPremium}
           canUpload={puedeGestionar}
-        />
+        />}
       </div>
 
       {tvMode && (

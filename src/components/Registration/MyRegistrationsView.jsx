@@ -112,7 +112,7 @@ function MyRegistrationCard({ r, onCancel }) {
           </div>
           <div className="text-[12px] text-secondary truncate">{r.group_name}</div>
         </Link>
-        <span className={`shrink-0 text-[10.5px] font-bold tracking-wide px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
+        <span className={`shrink-0 text-[12px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
       </div>
 
       <div className="flex items-center gap-2 flex-wrap font-mono text-[11.5px] text-muted">

@@ -428,6 +428,8 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
   const [saving,       setSaving]       = useState(null);
   const [generating,   setGenerating]   = useState(false);
   const [editMode,     setEditMode]     = useState(false);
+  // Celular: una ronda por vez (auditoría UI). null = la ronda que se está jugando.
+  const [faseMovil,    setFaseMovil]    = useState(null);
   const [draftBracket, setDraftBracket] = useState(null);
   const [savingLayout, setSavingLayout] = useState(false);
   const [editMatchId,  setEditMatchId]  = useState(null);
@@ -855,7 +857,53 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
           ejes, para que el sticky de los títulos de fase se pinnee al tope de la
           caja. Desktop (lg+): las columnas entran sin scroll horizontal y, al no
           ser scroll-container, el sticky se pinnea respecto de la página. */}
-      <div className="overflow-auto max-h-[75vh] lg:overflow-visible lg:max-h-none">
+      {/* Celular: selector de ronda y una columna a lo ancho. El árbol entero
+          obligaba a scrollear en dos ejes y la ronda siguiente quedaba cortada. */}
+      {!editMode && (() => {
+        const enJuego = phases.find((ph) => ph.items.some((it) => it.type === 'match'
+          && it.data.winner_id == null && it.data.pair1_name && it.data.pair2_name));
+        const sel = phases.find((ph) => ph.key === faseMovil) ?? enJuego ?? phases[phases.length - 1];
+        return (
+          <div className="sm:hidden">
+            <div role="tablist" aria-label="Rondas del cuadro" className="flex gap-2 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {phases.map((ph) => {
+                const on = ph.key === sel?.key;
+                return (
+                  <button key={ph.key} type="button" role="tab" aria-selected={on} onClick={() => setFaseMovil(ph.key)}
+                    className={`shrink-0 h-9 px-3.5 rounded-full font-sans text-[13px] cursor-pointer ${on ? 'bg-brand text-black font-bold border-0' : 'bg-transparent text-content border border-border-strong'}`}>
+                    {sentence(ph.key === 'cuartos' ? 'CUARTOS' : ph.label)}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="flex flex-col gap-3">
+              {(sel?.items ?? []).map((item, idx) => (
+                item.type === 'match' ? (
+                  <BracketMatchCard
+                    key={item.data.id}
+                    match={item.data}
+                    phase={sel.key}
+                    isOwner={isOwner}
+                    standings={standings}
+                    tournament={tournament}
+                    editMode={false}
+                    draftMatch={getDraftMatch(sel.key, item.data.id)}
+                    allPairs={standings}
+                    onPairChange={updateDraftPair}
+                    pairLocations={pairLocations}
+                    anuncio={anuncioDelCruce(item.data, sel.key)}
+                    onToggleLive={() => handleToggleLive(item.data.id)}
+                  />
+                ) : (
+                  <BracketByeCard key={`bye-${sel.key}-${idx}`} bye={item.data} />
+                )
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      <div className={`${editMode ? '' : 'hidden sm:block'} overflow-auto max-h-[75vh] lg:overflow-visible lg:max-h-none`}>
         <div
           className="flex gap-10 pb-4 items-stretch"
           style={{ minHeight: `${Math.max(...phases.map(p => p.items.length)) * 140}px` }}
@@ -974,7 +1022,9 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       {/* Partidos jugados del bracket — se muestran siempre (también tras finalizar
           el torneo, cuando isOwner pasa a false); la edición queda gateada por isOwner. */}
       {playedBracketMatches.length > 0 && (
-        <div className="mt-6">
+        // En celular el selector de rondas ya muestra cada resultado: la lista
+        // queda sólo para el organizador, que edita desde acá.
+        <div className={`mt-6 ${isOwner ? '' : 'hidden sm:block'}`}>
           <h3 className="m-0 mb-3 font-condensed font-semibold text-[15px] text-white">Resultados</h3>
           <div className="flex flex-col gap-2.5">
             {[...playedBracketMatches].reverse().map((m) => {

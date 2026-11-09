@@ -69,7 +69,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
     <>
     <CollapsibleSection
       storageKey="pd:mgmt:pairs"
-      title="PAREJAS"
+      title="Parejas"
       count={pairs.length}
       className="mb-4 mt-4"
       badge={warnings.length > 0 ? (
@@ -80,7 +80,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
           onClick={() => { if (showAdd || !noPairsLeft) { expand(); setShowAdd(!showAdd); } }}
           disabled={!showAdd && noPairsLeft}
           title={!showAdd && noPairsLeft ? "No quedan jugadores libres para armar otra pareja" : undefined}
-          className={`bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide rounded-sm whitespace-nowrap ${
+          className={`bg-brand text-base border-0 px-5 py-2.5 font-sans font-bold text-[14px] rounded-sm whitespace-nowrap ${
             !showAdd && noPairsLeft ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
           }`}
         >
@@ -89,7 +89,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
       ) : null}
     >
       {isOwner && !pairsFull && !showAdd && noPairsLeft && (
-        <p className="text-[10px] text-dim font-mono mb-3">
+        <p className="text-[12px] text-dim font-mono mb-3">
           {activePlayers.length === 0
             ? 'Agregá jugadores para poder armar parejas.'
             : freeToPair.length === 1
@@ -99,13 +99,12 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
       )}
 
       {isAmericano && missingPairs > 0 && (
-        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[12px] font-mono text-brand leading-relaxed">
+        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[13px] text-brand leading-relaxed">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <span>
-            Borrador — falta{missingPairs === 1 ? '' : 'n'} {missingPairs} {missingPairs === 1 ? 'pareja' : 'parejas'} para
-            llegar al mínimo de {AMERICANO_MIN_PAIRS}.
+            Falta{missingPairs === 1 ? '' : 'n'} {missingPairs} {missingPairs === 1 ? 'pareja' : 'parejas'}.
             <span className="block text-soft mt-0.5">
-              Hasta entonces no se pueden generar el calendario, los partidos ni el cuadro.
+              Con {AMERICANO_MIN_PAIRS} se arma el calendario.
             </span>
           </span>
         </div>
@@ -138,14 +137,14 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
               );
             })}
           </select>
-          <button onClick={handleAdd} className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap">
+          <button onClick={handleAdd} className="bg-brand text-base border-0 px-5 py-2.5 font-sans font-bold text-[14px] cursor-pointer rounded-sm whitespace-nowrap">
             Agregar
           </button>
         </div>
       )}
 
       {freePlayers.length > 0 && (
-        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[12px] font-mono text-brand leading-relaxed">
+        <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mb-3 text-[13px] text-brand leading-relaxed">
           <AlertTriangle size={14} className="shrink-0 mt-0.5" />
           <span>
             {freePlayers.length === 1
@@ -204,7 +203,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <span className="text-dim text-[11px] font-mono w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
+                <span className="text-dim text-[12px] font-mono w-4 shrink-0 text-right tabular-nums">{i + 1}</span>
                 {(() => {
                   const p1 = players.find((p) => p.id === pair.p1);
                   const p2 = players.find((p) => p.id === pair.p2);
@@ -222,7 +221,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
                   {getPairLabel(pair.id, pairs, players)}
                 </span>
                 {isWithdrawn(pair) && (
-                  <span className="shrink-0 font-mono text-[10px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
+                  <span className="shrink-0 font-mono text-[12px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
                     RETIRADA
                   </span>
                 )}

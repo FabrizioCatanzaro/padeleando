@@ -25,17 +25,17 @@ export default function CollapsibleSection({ storageKey, title, count, badge, ac
   }
 
   return (
-    <div className={`bg-surface border border-border-mid rounded-lg p-4 ${className}`}>
+    <div className={`bg-surface border border-border-mid rounded-xl p-4 ${className}`}>
       <div className={`flex justify-between items-center gap-2 ${collapsed ? '' : 'mb-3'}`}>
         <button
           type="button"
           onClick={toggle}
           aria-expanded={!collapsed}
-          className="flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer font-condensed font-bold text-[13px] tracking-[3px] text-muted hover:text-white transition-colors"
+          className="flex items-center gap-2 bg-transparent border-0 p-0 cursor-pointer text-[15px] font-bold text-white hover:text-brand transition-colors"
         >
           <ChevronDown size={15} className={`shrink-0 transition-transform ${collapsed ? '-rotate-90' : ''}`} />
           {title}
-          {count != null && <span className="text-brand">{count}</span>}
+          {count != null && <span className="text-brand font-semibold">{count}</span>}
           {collapsed && badge}
         </button>
         {typeof actions === 'function' ? actions(expand) : actions}

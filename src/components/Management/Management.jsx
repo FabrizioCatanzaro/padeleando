@@ -8,7 +8,7 @@ import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import Btn from "../shared/Btn";
 import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
-import { Play, RotateCcw, TicketCheck, Trash2, Check } from "lucide-react";
+import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
 
 function ClubEventEditor({ tournament, onSave }) {
   const [club, setClub]   = useState(() => entityClub(tournament));
@@ -37,16 +37,16 @@ function ClubEventEditor({ tournament, onSave }) {
   }
 
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-4 mb-4">
-      <div className="font-condensed font-bold text-[11px] tracking-[2px] text-muted mb-3">CLUB Y FECHA</div>
+    <div className="py-4 border-b border-border">
+      <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Club y fecha</h4>
       <div className="flex flex-col gap-3">
         <div>
-          <label className="block text-[10px] font-mono tracking-widest text-muted mb-1.5">CLUB</label>
+          <label className="block text-[12px] font-semibold text-soft mb-1.5">Club</label>
           <ClubSelector value={club} onChange={setClub} />
         </div>
         <div className="flex gap-3">
           <div className="flex-1 min-w-0">
-            <label className="block text-[10px] font-mono tracking-widest text-muted mb-1.5">FECHA DEL EVENTO</label>
+            <label className="block text-[12px] font-semibold text-soft mb-1.5">Fecha</label>
             <input
               type="date"
               value={date}
@@ -57,7 +57,7 @@ function ClubEventEditor({ tournament, onSave }) {
             />
           </div>
           <div className="w-28 shrink-0">
-            <label className="block text-[10px] font-mono tracking-widest text-muted mb-1.5">HORA</label>
+            <label className="block text-[12px] font-semibold text-soft mb-1.5">Hora</label>
             <input
               type="time"
               value={time}
@@ -66,7 +66,7 @@ function ClubEventEditor({ tournament, onSave }) {
             />
           </div>
         </div>
-        <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} disabled={!dirty}>GUARDAR</Btn>
+        <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} disabled={!dirty}>Guardar club y fecha</Btn>
       </div>
     </div>
   );
@@ -102,15 +102,15 @@ function SignupSection({ tournament, onSave }) {
   }
 
   return (
-    <div className="bg-surface border border-border-mid rounded-lg p-4 mb-4">
-      <div className="font-condensed font-bold text-[11px] tracking-[2px] text-muted mb-3">INSCRIPCIÓN</div>
+    <div className="pt-4">
+      <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Inscripción</h4>
       <SignupEditor
         value={value}
         onChange={setValue}
         inherited={inherited}
         profile={profileContacts(tournament.owner_social_links)}
       />
-      <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} className="mt-4">GUARDAR</Btn>
+      <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} className="mt-4">Guardar inscripción</Btn>
     </div>
   );
 }
@@ -132,14 +132,37 @@ export default function Management({
   const showModeToggle = tournament.format === 'liga' && activePlayers >= 4;
   const canPickPairs   = activePlayers % 2 === 0;
 
+  const hasMatches = (tournament.matches?.length ?? 0) > 0;
+  // Resumen de una línea de "Datos del torneo", para no abrirlo de gusto.
+  const resumen = [
+    tournament.club_name ?? 'Sin club',
+    tournament.event_date
+      ? `${String(tournament.event_date).slice(8, 10)}/${String(tournament.event_date).slice(5, 7)}${tournament.event_time ? ` ${fmtHora(tournament.event_time)}` : ''}`
+      : 'Fecha a confirmar',
+    (tournament.signup_open ?? tournament.group_signup_open) ? 'Inscripción abierta' : 'Inscripción cerrada',
+  ].join(' · ');
+
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4">
-        <div className="font-condensed font-bold text-[16px] tracking-[3px] text-muted">GESTIÓN DEL TORNEO</div>
-      </div>
+      <h2 className="m-0 mb-4 font-condensed font-semibold text-[15px] text-white">Gestión</h2>
 
-      {isOwner && <ClubEventEditor tournament={tournament} onSave={onUpdateClubEvent} />}
-      {isOwner && <SignupSection tournament={tournament} onSave={onUpdateSignup} />}
+      {/* Cerrar el torneo es la acción principal cuando ya hay partidos; antes
+          estaba en la zona de peligro, al lado de Eliminar (auditoría UI). */}
+      {isOwner && (hasMatches || tournament.status === 'finished') && (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-surface border border-border-mid rounded-xl px-4 py-3 mb-5">
+          <span className="text-[14px] text-content">
+            {tournament.status === 'active' ? 'Cuando se jueguen todos los partidos, cerrá el torneo.' : 'El torneo está terminado.'}
+          </span>
+          <Btn
+            variant={tournament.status === 'active' ? 'primary' : 'secondary'}
+            size="sm"
+            icon={tournament.status === 'active' ? TicketCheck : Play}
+            onClick={() => tournament.status === 'active' ? setFinishModal(true) : onToggleStatus()}
+          >
+            {tournament.status === 'active' ? 'Finalizar torneo' : 'Reanudar torneo'}
+          </Btn>
+        </div>
+      )}
 
       <PlayerManager
         tournament={tournament}
@@ -151,33 +174,33 @@ export default function Management({
       />
 
       {showModeToggle && isOwner && (
-        <div className="bg-surface border border-border-mid rounded-lg p-4 mt-6">
-          <div className="font-condensed font-bold text-[11px] tracking-[2px] text-muted mb-3">MODO DE JUEGO</div>
+        <div className="bg-surface border border-border-mid rounded-xl p-4 mt-6">
+          <h3 className="m-0 mb-3 text-[14px] font-bold text-white">Modo de juego</h3>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => tournament.mode !== 'free' && onUpdateMode('free')}
-              className={`flex-1 py-2.5 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition cursor-pointer ${tournament.mode === 'free' ? 'bg-brand/15 border-brand text-brand' : 'bg-surface-alt border-border-mid text-muted hover:border-border-strong'}`}
+              className={`flex-1 py-2.5 text-[14px] font-semibold rounded-sm border transition cursor-pointer ${tournament.mode === 'free' ? 'bg-brand/15 border-brand text-brand' : 'bg-surface-alt border-border-mid text-content hover:border-border-strong'}`}
             >
-              EQUIPOS LIBRES
+              Equipos libres
             </button>
             <button
               type="button"
               onClick={() => { if (canPickPairs && tournament.mode !== 'pairs') onUpdateMode('pairs'); }}
               disabled={!canPickPairs}
-              className={`flex-1 py-2.5 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition ${
+              className={`flex-1 py-2.5 text-[14px] font-semibold rounded-sm border transition ${
                 !canPickPairs
-                  ? 'border-border-mid text-dim cursor-not-allowed opacity-40'
+                  ? 'border-border-mid text-muted cursor-not-allowed opacity-50'
                   : tournament.mode === 'pairs'
                     ? 'bg-brand/15 border-brand text-brand cursor-pointer'
-                    : 'bg-surface-alt border-border-mid text-muted hover:border-border-strong cursor-pointer'
+                    : 'bg-surface-alt border-border-mid text-content hover:border-border-strong cursor-pointer'
               }`}
             >
-              PAREJAS FIJAS
+              Parejas fijas
             </button>
           </div>
           {!canPickPairs && (
-            <p className="text-[10px] text-dim font-mono mt-1.5">Número impar de jugadores — parejas fijas no disponible.</p>
+            <p className="m-0 text-[12px] text-secondary mt-2">Con un número impar de jugadores no se pueden armar parejas fijas.</p>
           )}
         </div>
       )}
@@ -193,24 +216,34 @@ export default function Management({
         />
       )}
 
+      {/* Datos del torneo: se configuran una vez. Plegados, con un resumen. */}
       {isOwner && (
-        <div className="bg-[#0d0a0a] border border-danger/13 rounded-lg p-4 mt-6">
-          <div className="font-condensed font-bold text-[13px] tracking-[3px] text-danger/40 mb-4">
-            ZONA DE PELIGRO
+        <details className="group bg-surface border border-border-mid rounded-xl mt-6">
+          <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[15px] font-bold text-white">Datos del torneo</span>
+              <span className="text-[13px] text-secondary truncate">{resumen}</span>
+            </span>
+            <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="px-4 pb-4 border-t border-border">
+            <ClubEventEditor tournament={tournament} onSave={onUpdateClubEvent} />
+            <SignupSection tournament={tournament} onSave={onUpdateSignup} />
           </div>
+        </details>
+      )}
+
+      {/* Zona roja: sólo lo que no se puede deshacer, al final y aparte. */}
+      {isOwner && (
+        <div className="border border-danger/30 rounded-xl p-4 mt-8">
+          <h3 className="m-0 mb-1 text-[14px] font-bold text-danger">Zona de peligro</h3>
+          <p className="m-0 mb-3 text-[13px] text-secondary">Estas acciones no se pueden deshacer.</p>
           <div className="flex gap-3 flex-wrap">
             <Btn variant="danger" icon={RotateCcw} onClick={() => { setResetModal(true); setResetInput(''); }}>
               Reiniciar puntos
             </Btn>
             <Btn variant="danger" icon={Trash2} onClick={() => { setDeleteModal(true); setDeleteInput(''); }}>
               Eliminar torneo
-            </Btn>
-            <Btn
-              icon={tournament.status === 'active' ? TicketCheck : Play}
-              onClick={() => tournament.status === 'active' ? setFinishModal(true) : onToggleStatus()}
-              className={tournament.status === 'active' ? 'text-brand border-brand/40' : 'text-green border-green/40'}
-            >
-              {tournament.status === 'active' ? 'Finalizar torneo' : 'Reanudar torneo'}
             </Btn>
           </div>
         </div>

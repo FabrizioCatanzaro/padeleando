@@ -93,7 +93,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
       <section aria-label="Tu inscripción" className="mx-5 sm:mx-6 mt-4 bg-surface border border-border-mid rounded-xl p-4 flex flex-col gap-3 max-w-xl">
         <div className="flex items-center justify-between gap-2">
           <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-white">TU INSCRIPCIÓN</span>
-          <span className={`text-[11px] font-bold tracking-wide px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
+          <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
         </div>
         <div className="text-[16px] text-white font-bold">{pareja}</div>
         <p className="m-0 text-[13px] text-soft leading-relaxed">

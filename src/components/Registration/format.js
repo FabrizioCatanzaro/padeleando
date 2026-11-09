@@ -32,9 +32,9 @@ export const DISPONIBILIDAD = {
 };
 
 export const ESTADO_META = {
-  pending:   { label: 'PENDIENTE',      color: 'text-amber-300 border-amber-500/45 bg-amber-500/15' },
-  approved:  { label: 'APROBADA',       color: 'text-green border-green/40 bg-green/10' },
-  waitlist:  { label: 'EN ESPERA',      color: 'text-cyan border-cyan/40 bg-cyan/10' },
-  rejected:  { label: 'RECHAZADA',      color: 'text-danger border-danger/40 bg-danger/10' },
-  cancelled: { label: 'CANCELADA',      color: 'text-muted border-border-strong bg-surface-alt' },
+  pending:   { label: 'Pendiente',      color: 'text-amber-300 border-amber-500/45 bg-amber-500/15' },
+  approved:  { label: 'Aprobada',       color: 'text-green border-green/40 bg-green/10' },
+  waitlist:  { label: 'En espera',      color: 'text-cyan border-cyan/40 bg-cyan/10' },
+  rejected:  { label: 'Rechazada',      color: 'text-danger border-danger/40 bg-danger/10' },
+  cancelled: { label: 'Cancelada',      color: 'text-muted border-border-strong bg-surface-alt' },
 };
