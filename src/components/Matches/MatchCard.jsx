@@ -46,7 +46,7 @@ export function ScoreRow({ label, cells, win, color, prefix = null, compacto = f
 }
 
 // matchNum ya no se muestra: al jugador no le dice nada (auditoría UI).
-export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete }) {
+export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete, hideDate = false }) {
   const { team1, team2, score1, score2, date, createdAt, sets = [], sets_format } = match;
   const { players, pairs, mode } = tournament;
 
@@ -82,9 +82,12 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
 
   return (
     <div className="bg-surface border border-border-mid rounded-xl px-4 py-3">
+      {/* Sin fecha ni datos que mostrar, la fila de arriba no ocupa lugar. */}
+      {(!hideDate || cancha != null || match.walkover || dur || isOwner) && (
       <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-        <span className="text-[12px] text-secondary">{fmt(date || createdAt)}</span>
-        {cancha != null && <span className="text-[12px] text-secondary">· Cancha {cancha}</span>}
+        {/* En una lista agrupada por día la fecha ya está en el título. */}
+        {!hideDate && <span className="text-[12px] text-secondary">{fmt(date || createdAt)}</span>}
+        {cancha != null && <span className="text-[12px] text-secondary">{hideDate ? '' : '· '}Cancha {cancha}</span>}
         {match.walkover && (
           <span title="La pareja rival se retiró: se le dio por perdido 6-0" className="text-[12px] font-semibold text-muted border border-border-strong px-2 py-0.5 rounded-full">
             W.O.
@@ -123,6 +126,7 @@ export default function MatchCard({ match, tournament, isOwner, onEdit, onDelete
           </span>
         )}
       </div>
+      )}
 
       <div className="flex flex-col gap-2">
         <ScoreRow

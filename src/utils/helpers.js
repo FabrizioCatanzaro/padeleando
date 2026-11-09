@@ -747,3 +747,31 @@ export function isMyMatch(match, ids) {
   if (!ids?.size) return false;
   return [...(match.team1 ?? []), ...(match.team2 ?? [])].some((id) => ids.has(String(id)));
 }
+
+// ── Partidos agrupados por fecha (auditoría UI, 2026-11-09) ────────────────
+const DIAS_LARGOS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+/** '2026-08-12' o ISO → 'Martes 12/8'. */
+export function fechaLarga(d) {
+  if (!d) return 'Sin fecha';
+  const str = String(d);
+  const date = new Date(str.length === 10 ? `${str}T00:00` : str);
+  if (Number.isNaN(date.getTime())) return 'Sin fecha';
+  return `${DIAS_LARGOS[date.getDay()]} ${date.getDate()}/${date.getMonth() + 1}`;
+}
+
+/**
+ * Agrupa partidos por día manteniendo el orden en que llegan.
+ * @returns {{ key: string, label: string, items: object[] }[]}
+ */
+export function groupMatchesByDate(matches = []) {
+  const groups = [];
+  for (const m of matches) {
+    const raw = m.date || m.createdAt || m.created_at || null;
+    const label = fechaLarga(raw);
+    const last = groups[groups.length - 1];
+    if (last && last.label === label) last.items.push(m);
+    else groups.push({ key: `${label}-${groups.length}`, label, items: [m] });
+  }
+  return groups;
+}

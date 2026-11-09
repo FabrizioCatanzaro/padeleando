@@ -288,7 +288,7 @@ function BracketMatchCard({
 }
 
 // ── Tarjeta "BYE" para parejas que pasan directo a cuartos ────────────────────
-function BracketByeCard({ bye }) {
+function BracketByeCard({ bye, next = null }) {
   return (
     <div className="bg-surface/40 border border-dashed border-border-mid rounded-lg p-3 opacity-75">
       <div className="flex items-center gap-1.5 py-1 px-1 min-w-0">
@@ -297,7 +297,7 @@ function BracketByeCard({ bye }) {
 
       </div>
       <div className="mt-1.5 text-[12px] text-secondary text-center">
-        Pasa directo
+        {next ? `Pasa directo a ${next}` : 'Pasa directo'}
       </div>
     </div>
   );
@@ -915,7 +915,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                         onToggleLive={() => handleToggleLive(item.data.id)}
                       />
                     ) : (
-                      <BracketByeCard bye={item.data} />
+                      <BracketByeCard bye={item.data} next={next ? nombre(next).toLowerCase() : null} />
                     )}
                   </div>
                 );
@@ -958,7 +958,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                       onToggleLive={() => handleToggleLive(item.data.id)}
                     />
                   ) : (
-                    <BracketByeCard bye={item.data} />
+                    <BracketByeCard bye={item.data} next={phases[phaseIdx + 1] ? sentence(phases[phaseIdx + 1].key === 'cuartos' ? 'CUARTOS' : phases[phaseIdx + 1].label).toLowerCase() : null} />
                   )}
                 </div>
               );

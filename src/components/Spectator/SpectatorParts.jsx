@@ -23,7 +23,7 @@ import Bracket from "../Americano/Bracket";
 import PhotoGallery from "../Photos/PhotoGallery";
 import PlayerAvatar, { PairAvatar } from "../shared/PlayerAvatar";
 import { AuthContext, useAuth } from '../../context/useAuth';
-import { myPlayerIds, isMyMatch } from '../../utils/helpers';
+import { myPlayerIds, isMyMatch, groupMatchesByDate } from '../../utils/helpers';
 import { categoryLabel } from '../../utils/category';
 import SignupPricePill from '../shared/SignupPricePill';
 import { ChartNoAxesCombined, ChevronLeft, ChevronRight, Eye, Flame, Lock, Share2, QrCode, Split, List, Trophy, User, Users, Building2, Zap, Tv, Pause, Play, Volume2, VolumeX, Maximize, Minimize, Clock, X, Calendar, MapPin, Hourglass, Timer } from "lucide-react";
@@ -1267,9 +1267,14 @@ export function ReadonlyMatches({ tournament, groupName }) {
       {lista.length === 0 ? (
         <p className="m-0 text-[14px] text-secondary py-6 text-center">Todavía no jugaste partidos en este torneo.</p>
       ) : (
-        <div className="flex flex-col gap-2.5">
-          {lista.map((m) => (
-            <MatchCard key={m.id} match={m} tournament={tournament} isOwner={false} />
+        <div className="flex flex-col gap-5">
+          {groupMatchesByDate(lista).map((g) => (
+            <section key={g.key} className="flex flex-col gap-2.5">
+              <h3 className="m-0 text-[13px] font-bold text-white">{g.label}</h3>
+              {g.items.map((m) => (
+                <MatchCard key={m.id} match={m} tournament={tournament} isOwner={false} hideDate />
+              ))}
+            </section>
           ))}
         </div>
       )}
