@@ -451,8 +451,9 @@ export default function Previa({
         </div>
       </div>
 
-      {/* Aviso de borrador — sin el mínimo de parejas no se puede jugar */}
-      {isDraft && (
+      {/* Aviso de borrador para el jugador. El organizador lo ve arriba, en el
+          encabezado, con el botón para cargar parejas. */}
+      {isDraft && !isOwner && (
         <div className="bg-surface border border-brand/30 rounded-lg p-4 mb-5">
           <p className="m-0 text-white font-sans text-[15px] font-semibold leading-relaxed">
             Falta{missingPairs === 1 ? '' : 'n'} {missingPairs} {missingPairs === 1 ? 'pareja' : 'parejas'} para arrancar.

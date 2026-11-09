@@ -5,7 +5,8 @@ import {
 } from "lucide-react";
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
-  tournamentDisplayStatus, TOURNAMENT_STATUS_META, winnerLabelOf,
+  tournamentDisplayStatus, TOURNAMENT_STATUS_META,
+  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS,
 } from "../../utils/helpers";
 import Standings from "../Standings/Standings";
 import Matches from "../Matches/Matches";
@@ -132,7 +133,15 @@ export default function TournamentPage({
   const statusMeta = TOURNAMENT_STATUS_META[tournamentDisplayStatus({
     status: tournament.status, hasLiveMatch: isLive(tournament), hasPlayed: playedCount > 0, isDraft,
   })];
-  const winnerLabel = winnerLabelOf(tournament);
+  // Borrador: qué falta para arrancar, en una frase (auditoría UI).
+  const activos = tournament.players.filter((p) => !p.removed).length;
+  const faltan = esAmericano ? AMERICANO_MIN_PAIRS - tournament.pairs.length : LIGA_MIN_PLAYERS - activos;
+  const draftText = isDraft && faltan > 0
+    ? `Falta${faltan === 1 ? '' : 'n'} ${faltan} ${esAmericano ? (faltan === 1 ? 'pareja' : 'parejas') : (faltan === 1 ? 'jugador' : 'jugadores')} para arrancar`
+    : null;
+  // La cinta y la barra de "Actualizado" sólo sirven con el torneo en curso.
+  const enJuegoAhora = (Array.isArray(tournament.live_match) ? tournament.live_match : []).some((m) => m?.startedAt != null);
+  const enCurso = tournament.status !== 'finished';
 
   // El torneo puede traer la inscripción ya resuelta (la resuelve el servidor);
   // si no, se arma acá con lo de la categoría.
@@ -181,7 +190,7 @@ export default function TournamentPage({
         playedCount={playedCount}
         scheduledCount={scheduled.length}
         statusMeta={statusMeta}
-        winnerLabel={winnerLabel}
+        draft={draftText}
         isPairs={isPairs}
         signup={signup}
         tvActivo={tvMode}
@@ -215,7 +224,7 @@ export default function TournamentPage({
 
       {/* Barra del espectador: cuándo se actualizó y cuánto falta para el próximo
           refresco. El organizador no la necesita — sus cambios son suyos. */}
-      {espectador && (
+      {espectador && enCurso && (
         <div className="bg-cyan/5 border-b border-cyan/15">
           <div className="h-1 bg-cyan/10 overflow-hidden">
             <div
@@ -235,7 +244,7 @@ export default function TournamentPage({
           trae su propio estado; sin inscripción abierta no muestra nada. */}
       {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} />}
       {espectador?.joinBanner}
-      {espectador && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
+      {espectador && enJuegoAhora && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
 
       {puedeGestionar && esAmericano && tournament.status === 'active' && tournament.bracket?.final?.winner_id && (
         <div className="px-6 py-3 border-b border-border bg-surface-alt flex items-center justify-between gap-3">

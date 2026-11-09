@@ -61,7 +61,7 @@ export function UltimaActualizacion() {
     return () => clearInterval(iv);
   }, []);
   return (
-    <span className="text-[11px] font-mono text-cyan/70">
+    <span className="text-[12px] text-cyan">
       Actualizado hace {secs} {secs === 1 ? "segundo" : "segundos"}
     </span>
   );
