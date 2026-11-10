@@ -13,7 +13,7 @@ export default function FinishTournamentModal({ tournament, onConfirm, onCancel 
     >
       <p className="text-secondary text-sm leading-relaxed">
         Se cierra el torneo y sus resultados quedan congelados en la tabla de posiciones.
-        No vas a poder cargar ni editar partidos hasta reanudarla.
+        No vas a poder cargar ni editar partidos hasta reanudarlo.
       </p>
       {pending > 0 && (
         <div className="flex items-start gap-2 bg-brand/10 border border-brand/30 rounded-md px-3.5 py-2.5 mt-3 text-[12px] font-mono text-brand leading-relaxed">
@@ -27,7 +27,7 @@ export default function FinishTournamentModal({ tournament, onConfirm, onCancel 
         </div>
       )}
       <p className="text-dim text-[12px] font-mono mt-3">
-        Podés reanudarla cuando quieras desde la gestión del torneo.
+        Podés reanudarlo cuando quieras desde la gestión del torneo.
       </p>
     </Modal>
   );
