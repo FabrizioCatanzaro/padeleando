@@ -12,7 +12,7 @@ export default function FinishTournamentModal({ tournament, onConfirm, onCancel 
       onCancel={onCancel}
     >
       <p className="text-secondary text-sm leading-relaxed">
-        Se cierra la jornada y sus resultados quedan congelados en la tabla de posiciones.
+        Se cierra el torneo y sus resultados quedan congelados en la tabla de posiciones.
         No vas a poder cargar ni editar partidos hasta reanudarla.
       </p>
       {pending > 0 && (
