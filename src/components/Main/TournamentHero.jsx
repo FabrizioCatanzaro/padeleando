@@ -10,6 +10,8 @@ import Btn from '../shared/Btn';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import SignupPricePill from '../shared/SignupPricePill';
 import RulesModal from '../shared/RulesModal';
+import FlyerViewer from '../shared/FlyerViewer';
+import { flyerSrc } from '../../utils/flyer';
 
 // Reloj del partido en curso. Vive acá y no adentro del formulario: el que mira
 // no tiene ningún formulario abierto, y el organizador puede cerrar el suyo sin
@@ -96,6 +98,8 @@ export default function TournamentHero({
 }) {
   const navigate = useNavigate();
   const [verReglamento, setVerReglamento] = useState(false);
+  const [verFlyer, setVerFlyer] = useState(false);
+  const flyer = tournament.flyer_url ?? null;
   // En un club con varias canchas se juegan varios partidos a la vez: el
   // encabezado los muestra todos. Los que ya arrancaron van primero.
   const live = (Array.isArray(tournament.live_match) ? tournament.live_match : [])
@@ -162,8 +166,16 @@ export default function TournamentHero({
         </div>
       </div>
 
-      {/* Identidad */}
-      <div className="px-5 sm:px-6 pt-4 pb-4 flex flex-col gap-2 border-b border-border">
+      {/* Identidad; el flyer va arriba a la derecha y el texto le deja lugar. */}
+      <div className={`relative px-5 sm:px-6 pt-4 pb-4 flex flex-col gap-2 border-b border-border ${flyer ? 'pr-[104px] sm:pr-[136px] min-h-[160px] sm:min-h-[204px]' : ''}`}>
+        {flyer && (
+          <button
+            type="button" onClick={() => setVerFlyer(true)} aria-label="Ver el flyer del torneo"
+            className="absolute top-4 right-5 sm:right-6 w-[72px] sm:w-[96px] aspect-[9/16] p-0 rounded-lg overflow-hidden border border-border-strong bg-surface-alt cursor-pointer hover:border-brand transition-colors"
+          >
+            <img src={flyerSrc(flyer, 288)} alt="" width={96} height={171} className="w-full h-full object-cover" />
+          </button>
+        )}
         <div className="flex items-center gap-2.5 flex-wrap">
           <Badge variant="status" color={statusMeta.color} icon={statusMeta.icon} pulse={statusMeta.pulse}>
             {statusMeta.label}
@@ -323,6 +335,7 @@ export default function TournamentHero({
           </div>
         </div>
       )}
+      {verFlyer && <FlyerViewer url={flyer} tournamentName={tournament.name} onClose={() => setVerFlyer(false)} />}
       {verReglamento && <RulesModal rules={signup.rules} tournamentName={tournament.name} onClose={() => setVerReglamento(false)} />}
     </div>
   );

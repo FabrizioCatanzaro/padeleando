@@ -413,6 +413,8 @@ export default function TournamentPage({
             onDeletePair={acciones.onDeletePair}
             onGeneratePlayoffs={async () => { if (await acciones.onGeneratePlayoffs()) irATab('bracket'); }}
             onUpdateLiga={acciones.onUpdateLiga}
+            onUploadFlyer={acciones.onUploadFlyer}
+            onDeleteFlyer={acciones.onDeleteFlyer}
             onWithdrawPair={acciones.onWithdrawPair}
             onResetScores={acciones.onResetScores}
             onDeleteTournament={async () => {

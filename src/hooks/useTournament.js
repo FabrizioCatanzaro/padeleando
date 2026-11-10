@@ -396,6 +396,19 @@ export function useTournament(groupId, tournamentId) {
     showToast('Datos del torneo guardados');
   }
 
+  // Los errores los muestra la tarjeta del flyer.
+  async function handleUploadFlyer(file) {
+    const { flyer_url } = await api.tournaments.uploadFlyer(tournament.id, file);
+    setTournament((prev) => (prev ? { ...prev, flyer_url } : prev));
+    showToast('Flyer guardado');
+  }
+
+  async function handleDeleteFlyer() {
+    await api.tournaments.deleteFlyer(tournament.id);
+    setTournament((prev) => (prev ? { ...prev, flyer_url: null } : prev));
+    showToast('Flyer quitado');
+  }
+
   async function handleUpdateLiga(body) {
     try {
       await api.tournaments.update(tournament.id, body);
@@ -535,7 +548,7 @@ export function useTournament(groupId, tournamentId) {
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
-    handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs,
+    handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer,
     refresh: () => reload(true),
   };
 }

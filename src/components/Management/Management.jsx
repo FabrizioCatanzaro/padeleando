@@ -8,6 +8,7 @@ import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import Btn from "../shared/Btn";
 import LigaOpciones from "../shared/LigaOpciones";
+import FlyerCard from "./FlyerCard";
 import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
 
@@ -181,7 +182,7 @@ export default function Management({
   onAddPlayer, onEditPlayer, onDeletePlayer,
   onAddPair, onEditPair, onDeletePair, onWithdrawPair,
   onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos, onUpdateLiga, onGeneratePlayoffs,
-  onRefresh,
+  onUploadFlyer, onDeleteFlyer, onRefresh,
 }) {
   const [resetModal, setResetModal]   = useState(false);
   const [resetInput, setResetInput]   = useState('');
@@ -312,6 +313,8 @@ export default function Management({
           </div>
         </details>
       )}
+
+      {isOwner && <FlyerCard tournament={tournament} onUpload={onUploadFlyer} onDelete={onDeleteFlyer} />}
 
       {/* Datos del torneo: se configuran una vez. Plegados, con un resumen. */}
       {isOwner && (
