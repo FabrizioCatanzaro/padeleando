@@ -170,7 +170,7 @@ function CurrentStats({ tournament }) {
   // ── Highlights para la historia exportable ──────────────────────────────────
   // La historia lleva todas las tarjetas disponibles en la grilla: el hero es la
   // primera que aplica y las demás bajan a `storyItems` en el mismo orden.
-  const heroKind = isAmericano && tournament.bracket?.final?.winner_id ? "campeones"
+  const heroKind = tournament.bracket?.final?.winner_id ? "campeones"
     : isPairs && topPairLabel ? "pareja"
     : leaders.length > 0 ? "mvp"
     : null;
@@ -228,7 +228,7 @@ function CurrentStats({ tournament }) {
       <StatSlabs className="mb-6">
         <StatSlab label="Partidos jugados" value={played.length} tone="secondary" icon={Swords} />
 
-        {isAmericano && tournament.bracket?.final?.winner_id && (
+        {tournament.bracket?.final?.winner_id && (
           <StatSlab
             label="Campeones"
             value={tournament.bracket.final.winner_name}

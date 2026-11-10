@@ -1008,7 +1008,7 @@ export function LiveTicker({ tournament, isAmericano }) {
     });
 
   // Los resultados del cuadro son más recientes que los de la previa → primero.
-  const recentItems = [...(isAmericano ? bracketRecentItems(tournament) : []), ...previaItems].slice(0, 10);
+  const recentItems = [...(tournament.bracket ? bracketRecentItems(tournament) : []), ...previaItems].slice(0, 10);
 
   // Deduplicar por contenido (por si live_match trae entradas repetidas).
   const seen = new Set();

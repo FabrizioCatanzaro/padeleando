@@ -459,6 +459,19 @@ export function useTournament(groupId, tournamentId) {
     }
   }
 
+  async function handleGeneratePlayoffs() {
+    try {
+      const res = await api.tournaments.playoffs(tournament.id);
+      applyBracket(res.bracket);
+      showToast('Playoffs armados');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return false;
+    }
+  }
+
   // Los tres endpoints del cuadro devuelven el bracket ya actualizado: se aplica al
   // estado local como con los partidos de la previa, sin volver a pedir el torneo
   // (eso disparaba el skeleton y hacía "parpadear" toda la página tras cada carga).
@@ -519,7 +532,7 @@ export function useTournament(groupId, tournamentId) {
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
-    handleUpdateMode, handleUpdateLiga,
+    handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs,
     refresh: () => reload(true),
   };
 }

@@ -152,11 +152,11 @@ export function pairRowStats(tournament, pair, individualRows) {
  * posiciones no (ahí el W.O. sí suma, 6-0).
  */
 export function getAllMatches(tournament) {
-  const { format, bracket, pairs: tournamentPairs } = tournament;
+  const { bracket, pairs: tournamentPairs } = tournament;
   // Un W.O. no se jugó: cuenta en la tabla y en el cuadro, pero no en ninguna
   // estadística (decisión de Fabri, 2026-11-08).
   const previaMatches = (tournament.matches ?? []).filter((m) => !m.walkover);
-  if (format !== 'americano' || !bracket || !tournamentPairs?.length) return previaMatches;
+  if (!bracket || !tournamentPairs?.length) return previaMatches;
   const bracketMatches = [];
   [
     ...(bracket.octavos ?? []),
@@ -330,7 +330,8 @@ export function tournamentDate(t) {
 export function getTournamentWinners(t) {
   const nameOf = (id) => t.players.find((p) => p.id === id)?.name ?? '?';
 
-  if (t.format === 'americano') {
+  // Con cuadro (americano o liga con playoffs) el campeón es el de la final.
+  if (t.format === 'americano' || t.bracket) {
     const winnerId = t.bracket?.final?.winner_id;
     if (!winnerId) return [];
     const pair = t.pairs?.find((p) => p.id === winnerId);
@@ -543,7 +544,7 @@ export function adaptScheduled(m) {
 
 export function winnerLabelOf(tournament) {
   if (!tournament || tournament.status !== 'finished') return null;
-  if (tournament.format === 'americano') {
+  if (tournament.format === 'americano' || tournament.bracket) {
     return tournament.bracket?.final?.winner_name ?? null;
   }
   const standings = calcStandings(tournament.players, tournament.matches);
@@ -563,7 +564,7 @@ export function winnerLabelOf(tournament) {
 
 export function countPlayed(t) {
   if (!t) return 0;
-  const bracketPlayed = t.format === 'americano'
+  const bracketPlayed = t.bracket
     ? [...(t.bracket?.octavos ?? []), ...(t.bracket?.cuartos ?? []),
        ...(t.bracket?.semis ?? []), ...(t.bracket?.final ? [t.bracket.final] : [])]
       .filter((m) => m.winner_id != null).length

@@ -103,7 +103,8 @@ export default function Standings({ tournament }) {
   const hasTie  = leaders.length > 1;
   const isTop   = (r) => !hasTie && leaders[0]?.id === r.id;
 
-  const champions = tournament.status === 'finished' && tournament.format !== 'americano'
+  // Con cuadro (americano o playoffs) el campeón sale de la final, no de la tabla.
+  const champions = tournament.status === 'finished' && tournament.format !== 'americano' && !tournament.bracket
     ? leaders
     : [];
   const championsCount = hasPairs ? champions.length * 2 : champions.length;

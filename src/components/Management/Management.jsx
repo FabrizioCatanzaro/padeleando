@@ -176,7 +176,7 @@ export default function Management({
   tournament, isOwner,
   onAddPlayer, onEditPlayer, onDeletePlayer,
   onAddPair, onEditPair, onDeletePair, onWithdrawPair,
-  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos, onUpdateLiga,
+  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos, onUpdateLiga, onGeneratePlayoffs,
   onRefresh,
 }) {
   const [resetModal, setResetModal]   = useState(false);
@@ -184,12 +184,18 @@ export default function Management({
   const [deleteModal, setDeleteModal] = useState(false);
   const [deleteInput, setDeleteInput] = useState('');
   const [finishModal, setFinishModal] = useState(false);
+  const [playoffsModal, setPlayoffsModal] = useState(false);
 
   const activePlayers = tournament.players.filter((p) => !p.removed).length;
   const showModeToggle = tournament.format === 'liga' && tournament.liga_mode !== 'temporada' && activePlayers >= 4;
   const canPickPairs   = activePlayers % 2 === 0;
 
   const hasMatches = (tournament.matches?.length ?? 0) > 0;
+  // Liga con playoffs: primero se arman los playoffs; se finaliza con la final jugada.
+  const conPlayoffs = tournament.format === 'liga' && tournament.winner_format === 'playoffs';
+  const playoffsPendientes = conPlayoffs && tournament.status === 'active' && !tournament.bracket;
+  const playoffsEnJuego = conPlayoffs && tournament.status === 'active' && !!tournament.bracket && !tournament.bracket.final?.winner_id;
+  const sinJugar = (tournament.scheduled_matches ?? []).length;
   // Resumen de una línea de "Datos del torneo", para no abrirlo de gusto.
   const resumen = [
     tournament.club_name ?? 'Sin club',
@@ -205,7 +211,22 @@ export default function Management({
 
       {/* Cerrar el torneo es la acción principal cuando ya hay partidos; antes
           estaba en la zona de peligro, al lado de Eliminar (auditoría UI). */}
-      {isOwner && (hasMatches || tournament.status === 'finished') && (
+      {isOwner && playoffsPendientes && hasMatches && (
+        <div className="flex items-center justify-between gap-3 flex-wrap bg-surface border border-border-mid rounded-xl px-4 py-3 mb-5">
+          <span className="text-[14px] text-content">
+            Cuando termine la tabla, armá los playoffs con las primeras {tournament.playoff_size} parejas.
+          </span>
+          <Btn variant="primary" size="sm" icon={TicketCheck} onClick={() => setPlayoffsModal(true)}>
+            Armar playoffs
+          </Btn>
+        </div>
+      )}
+      {isOwner && playoffsEnJuego && (
+        <div className="bg-surface border border-border-mid rounded-xl px-4 py-3 mb-5 text-[14px] text-content">
+          Los playoffs están en juego. Cuando se juegue la final, vas a poder finalizar el torneo.
+        </div>
+      )}
+      {isOwner && !playoffsPendientes && !playoffsEnJuego && (hasMatches || tournament.status === 'finished') && (
         <div className="flex items-center justify-between gap-3 flex-wrap bg-surface border border-border-mid rounded-xl px-4 py-3 mb-5">
           <span className="text-[14px] text-content">
             {tournament.status === 'active' ? 'Cuando se jueguen todos los partidos, cerrá el torneo.' : 'El torneo está terminado.'}
@@ -318,6 +339,24 @@ export default function Management({
             </Btn>
           </div>
         </div>
+      )}
+
+      {playoffsModal && (
+        <Modal
+          title="¿Armar los playoffs?"
+          confirmText="Armar playoffs"
+          onConfirm={() => { setPlayoffsModal(false); onGeneratePlayoffs?.(); }}
+          onCancel={() => setPlayoffsModal(false)}
+        >
+          <p className="m-0 mb-2">
+            El cuadro se arma con las primeras {tournament.playoff_size} parejas de la tabla de hoy.
+          </p>
+          {sinJugar > 0 && (
+            <p className="m-0 text-premium">
+              Quedan {sinJugar} {sinJugar === 1 ? 'partido sin jugar' : 'partidos sin jugar'}. No van a sumar a la tabla.
+            </p>
+          )}
+        </Modal>
       )}
 
       {finishModal && (

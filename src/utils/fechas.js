@@ -97,6 +97,7 @@ export function totalDeFechas(t) {
 // Encabezado: "Fecha 3 de 9 · sáb 22 y dom 23/11" y el partido del que mira.
 export function resumenTemporada(t, mios = []) {
   const fechas = t.fechas ?? [];
+  if (t.bracket) return { linea: t.bracket.final?.winner_id ? 'Playoffs terminados' : 'Playoffs en juego', miPartido: null };
   if (fechas.length === 0) return { linea: 'Fechas a confirmar', miPartido: null };
   const n = fechaEnCurso(fechas);
   const fecha = fechas.find((f) => f.number === n);
