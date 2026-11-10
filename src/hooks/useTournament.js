@@ -93,6 +93,7 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity:      extra.signup_capacity ?? null,
       signup_capacity_unit: extra.signup_capacity_unit ?? null,
       signup_closes_at:     extra.signup_closes_at ?? null,
+      rules:                extra.rules ?? null,
       ...(format === 'liga' && extra.liga ? extra.liga : {}),
     });
     setTournament(adaptTournament(t));
@@ -386,6 +387,7 @@ export function useTournament(groupId, tournamentId) {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
+        rules:                signup.rules ?? null,
       });
     }
     if (Object.keys(body).length === 0) return;
@@ -404,7 +406,7 @@ export function useTournament(groupId, tournamentId) {
     }
   }
 
-  async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at }) {
+  async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at, rules }) {
     const updated = await api.tournaments.update(tournament.id, {
       signup_open:       open,
       signup_price:      price,
@@ -414,6 +416,7 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity:      capacity ?? null,
       signup_capacity_unit: capacity_unit ?? null,
       signup_closes_at:     closes_at ?? null,
+      ...(rules !== undefined ? { rules } : {}),
     });
     setTournament((prev) => (prev ? { ...prev, ...updated } : prev));
     showToast('Inscripción actualizada');

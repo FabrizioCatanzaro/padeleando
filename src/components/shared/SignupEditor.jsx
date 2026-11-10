@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react';
+import { MAX_RULES } from '../../utils/rules';
 import { CONTACT_META, CONTACT_TYPES, formatPrice } from '../../utils/signup';
 import { levelLabel } from '../../utils/category';
 import LevelPicker from './LevelPicker';
@@ -202,6 +203,27 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
           </div>
         </>
       )}
+
+      <div>
+        <label htmlFor="signup-reglamento" className="block text-[12px] font-semibold text-soft mb-1.5">Reglamento</label>
+        <textarea
+          id="signup-reglamento"
+          value={value.rules ?? ''}
+          onChange={(e) => set({ rules: e.target.value === '' ? null : e.target.value })}
+          maxLength={MAX_RULES}
+          rows={5}
+          placeholder={inherited?.rules ? 'Vacío usa el reglamento de la categoría' : 'Formato, puntos, W.O., horarios, pelotas…'}
+          className="w-full bg-surface border border-border-mid text-white px-2.5 py-2 font-sans text-[13px] leading-relaxed rounded-sm outline-none resize-y"
+        />
+        <span className="flex justify-between gap-3 text-[12px] font-sans text-secondary mt-1">
+          <span>
+            {inherited?.rules && !value.rules
+              ? 'Se usa el reglamento de la categoría.'
+              : 'Si hay reglamento, el jugador lo tiene que aceptar para inscribirse.'}
+          </span>
+          <span className="shrink-0 tabular-nums">{(value.rules ?? '').length}/{MAX_RULES}</span>
+        </span>
+      </div>
     </div>
   );
 }

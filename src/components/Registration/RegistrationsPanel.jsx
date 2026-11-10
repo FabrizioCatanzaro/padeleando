@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { AlertTriangle, Settings, FileCheck } from 'lucide-react';
 import { api } from '../../utils/api';
 import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
@@ -140,6 +140,11 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
           <p className="m-0 text-[13px] text-amber-200 bg-amber-500/8 rounded-lg px-2.5 py-2 leading-snug">
             {issues.join('. ')}{signup.level ? ` (${levelLabel(signup.level)})` : ''}.
           </p>
+        )}
+        {r.rules_accepted_at && (
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-secondary">
+            <FileCheck size={13} className="text-green" aria-hidden="true" /> Aceptó el reglamento
+          </span>
         )}
         {r.status === 'rejected' && r.reject_reason && (
           <p className="m-0 text-[13px] text-secondary">Motivo: “{r.reject_reason}”</p>

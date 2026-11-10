@@ -23,6 +23,7 @@ function signupDe(t) {
     capacity: t.signup_capacity ?? null,
     capacity_unit: t.signup_capacity_unit ?? null,
     closes_at: t.signup_closes_at ?? null,
+    rules:    t.rules ?? null,
   };
 }
 
@@ -49,6 +50,7 @@ function DatosDelTorneo({ tournament, onSave }) {
     level:    tournament.group_level ?? null,
     capacity: tournament.group_signup_capacity ?? null,
     capacity_unit: tournament.group_signup_capacity_unit ?? null,
+    rules:    tournament.group_rules ?? null,
   };
 
   const clubId      = club?.pending ? null : (club?.id ?? null);

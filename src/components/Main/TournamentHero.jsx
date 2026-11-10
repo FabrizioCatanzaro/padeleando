@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, Pencil, Share2, Eye, QrCode, Tv, Radio, Lock, User, Link2,
+  ChevronLeft, Pencil, Share2, Eye, QrCode, Tv, Radio, Lock, User, Link2, FileText,
 } from 'lucide-react';
 import { fmtHora, tournamentCourts, bracketPhaseLabel, isDeletedAccount } from '../../utils/helpers';
 import { esTemporada, resumenTemporada } from '../../utils/fechas';
@@ -9,6 +9,7 @@ import Badge from '../shared/Badge';
 import Btn from '../shared/Btn';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import SignupPricePill from '../shared/SignupPricePill';
+import RulesModal from '../shared/RulesModal';
 
 // Reloj del partido en curso. Vive acá y no adentro del formulario: el que mira
 // no tiene ningún formulario abierto, y el organizador puede cerrar el suyo sin
@@ -94,6 +95,7 @@ export default function TournamentHero({
   onEditName, onShare, onQr, onTv, onSpectator, onManage,
 }) {
   const navigate = useNavigate();
+  const [verReglamento, setVerReglamento] = useState(false);
   // En un club con varias canchas se juegan varios partidos a la vez: el
   // encabezado los muestra todos. Los que ya arrancaron van primero.
   const live = (Array.isArray(tournament.live_match) ? tournament.live_match : [])
@@ -231,6 +233,14 @@ export default function TournamentHero({
 
         <div className="flex items-center gap-2 flex-wrap">
           <SignupPricePill signup={signup} />
+          {signup?.rules && (
+            <button
+              type="button" onClick={() => setVerReglamento(true)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border-strong bg-transparent text-[13px] text-content cursor-pointer hover:text-white hover:border-soft transition-colors"
+            >
+              <FileText size={13} aria-hidden="true" /> Reglamento
+            </button>
+          )}
           {owner?.username && (
             isDeletedAccount(owner.username) ? (
               <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
@@ -313,6 +323,7 @@ export default function TournamentHero({
           </div>
         </div>
       )}
+      {verReglamento && <RulesModal rules={signup.rules} tournamentName={tournament.name} onClose={() => setVerReglamento(false)} />}
     </div>
   );
 }

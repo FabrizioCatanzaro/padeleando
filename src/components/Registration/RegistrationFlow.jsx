@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowLeft, Users, User, Search, Check, Bell, AlertTriangle } from 'lucide-react';
+import RulesModal from '../shared/RulesModal';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { formatPrice } from '../../utils/signup';
@@ -27,6 +28,8 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   const [guest, setGuest]     = useState({ name: '', phone: '' });
   const [sending, setSending] = useState(false);
   const [error, setError]     = useState(null);
+  const [acepto, setAcepto]   = useState(false);
+  const [verReglamento, setVerReglamento] = useState(false);
 
   // Búsqueda del compañero: espera 250 ms después de la última tecla.
   useEffect(() => {
@@ -67,6 +70,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
       const reg = await api.registrations.create({
         tournamentId: tournament.id,
         kind,
+        ...(signup.rules ? { accept_rules: acepto } : {}),
         partner: kind === 'solo' ? undefined
           : hasAccount ? { username: partner.username } : { name: guest.name, phone: guest.phone },
       });
@@ -230,6 +234,19 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                 </p>
                 {contactos.length > 0 && <div className="flex gap-2 flex-wrap">{contactos}</div>}
               </div>
+              {signup.rules && (
+                <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border-strong bg-surface cursor-pointer">
+                  <input
+                    type="checkbox" checked={acepto} onChange={(e) => setAcepto(e.target.checked)}
+                    className="w-5 h-5 mt-0.5 accent-brand cursor-pointer shrink-0"
+                  />
+                  <span className="text-[14px] text-content leading-snug">
+                    Leí y acepto el{' '}
+                    <button type="button" onClick={(e) => { e.preventDefault(); setVerReglamento(true); }}
+                      className="bg-transparent border-0 p-0 text-brand underline cursor-pointer font-sans text-[14px]">reglamento del torneo</button>.
+                  </span>
+                </label>
+              )}
             </>
           )}
 
@@ -240,10 +257,11 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
           {step < 3 ? (
             <Btn variant="primary" size="lg" full onClick={siguiente} disabled={step === 2 && !companeroListo}>SIGUIENTE</Btn>
           ) : (
-            <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria}>ENVIAR INSCRIPCIÓN</Btn>
+            <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria || (!!signup.rules && !acepto)}>ENVIAR INSCRIPCIÓN</Btn>
           )}
         </footer>
       </div>
+      {verReglamento && <RulesModal rules={signup.rules} tournamentName={tournament.name} onClose={() => setVerReglamento(false)} />}
     </div>
   );
 }

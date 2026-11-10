@@ -192,6 +192,7 @@ export default function Setup() {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
+        rules:                signup.rules ?? null,
         liga: fmt === 'liga' ? liga : null,
       });
       navigate(`/cat/${groupId}/torneo/${tId}`);
@@ -307,6 +308,7 @@ export default function Setup() {
                 level:    group?.level ?? null,
                 capacity: group?.signup_capacity ?? null,
                 capacity_unit: group?.signup_capacity_unit ?? null,
+                rules:    group?.rules ?? null,
               }}
               profile={profileContacts(group?.owner_social_links)}
             />

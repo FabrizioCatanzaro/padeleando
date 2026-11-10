@@ -282,6 +282,7 @@ export default function HomeView() {
               signup_contacts:   signup.contacts.filter((c) => c.value.trim()),
             }
           : {}),
+        ...(signup.rules?.trim() ? { rules: signup.rules } : {}),
       });
       showToast('Categoría creada');
       navigate(`/cat/${g.id}`);

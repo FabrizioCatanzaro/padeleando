@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, AlertTriangle, Ticket, ChevronDown } from 'lucide-react';
+import { Check, AlertTriangle, Ticket, ChevronDown, FileText } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -8,6 +8,7 @@ import { formatPrice, contactHref, CONTACT_META } from '../../utils/signup';
 import { levelLabel, checkRegistrationLevel } from '../../utils/category';
 import Btn from '../shared/Btn';
 import RegistrationFlow from './RegistrationFlow';
+import RulesModal from '../shared/RulesModal';
 import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
 
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
@@ -23,6 +24,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState(null);
   const [abierta, setAbierta] = useState(true);
+  const [verReglamento, setVerReglamento] = useState(false);
 
   const load = useCallback(() => {
     if (!isLoggedIn) return;
@@ -48,6 +50,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   const precio = formatPrice(signup.price, signup.price_unit ?? signup.unit);
   const nivel = levelLabel(signup.level);
   const check = signup.level ? checkRegistrationLevel([user?.category ?? null], signup.level, { solo: true }) : null;
+  const rules = signup.rules ?? signupBase?.rules ?? null;
 
   async function cancelar() {
     if (!reg) return;
@@ -76,7 +79,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
     <RegistrationFlow
       tournament={tournament}
       groupName={groupName}
-      signup={signup}
+      signup={{ ...signup, rules }}
       contactos={contactos}
       onClose={() => setFlowOpen(false)}
       onDone={(reg) => {
@@ -185,6 +188,15 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
         )}
         <p className="m-0 text-[12px] text-secondary text-center">El organizador aprueba cada inscripción.</p>
         {contactos.length > 0 && <div className="flex gap-2 flex-wrap justify-center">{contactos}</div>}
+        {rules && (
+          <button
+            type="button" onClick={() => setVerReglamento(true)}
+            className="self-center inline-flex items-center gap-1.5 min-h-[40px] px-3 bg-transparent border-0 text-[13px] text-brand font-semibold cursor-pointer hover:underline"
+          >
+            <FileText size={14} aria-hidden="true" /> Ver reglamento
+          </button>
+        )}
+        {verReglamento && <RulesModal rules={rules} tournamentName={tournament.name} onClose={() => setVerReglamento(false)} />}
 
         {flow}
       </div>
