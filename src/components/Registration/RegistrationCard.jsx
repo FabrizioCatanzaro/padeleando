@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, AlertTriangle, Ticket } from 'lucide-react';
+import { Check, AlertTriangle, Ticket, ChevronDown } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -93,31 +93,38 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
     const pareja = reg.kind === 'pair'
       ? `${user?.name ?? 'Vos'} & ${reg.p2_user_name ?? reg.p2_name ?? 'tu compañero'}`
       : `${user?.name ?? 'Vos'} · busca pareja`;
+    // Una línea plegada: el detalle y cancelar se abren al tocarla.
     return (
-      <section aria-label="Tu inscripción" className="mx-5 sm:mx-auto my-4 bg-surface border border-border-mid rounded-xl p-4 flex flex-col gap-3 max-w-xl">
-        <div className="flex items-center justify-between gap-2">
-          <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-white">TU INSCRIPCIÓN</span>
-          <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
+      <details aria-label="Tu inscripción" className="group mx-5 sm:mx-auto my-3 max-w-xl bg-surface border border-border-mid rounded-xl">
+        <summary className="flex items-center gap-2.5 px-4 min-h-[48px] cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <Ticket size={15} className="shrink-0 text-soft" aria-hidden="true" />
+          <span className="text-[14px] font-semibold text-white whitespace-nowrap">Tu inscripción</span>
+          <span className={`text-[12px] font-bold px-2.5 py-0.5 rounded-full border whitespace-nowrap ${meta.color}`}>{meta.label}</span>
+          <span className="flex-1" />
+          <span className="hidden sm:inline text-[13px] text-soft whitespace-nowrap group-open:hidden">Ver detalle</span>
+          <ChevronDown size={16} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+        </summary>
+        <div className="px-4 pb-4 pt-3 flex flex-col gap-3 border-t border-border">
+          <div className="text-[15px] text-white font-bold">{pareja}</div>
+          <p className="m-0 text-[13px] text-soft leading-relaxed">
+            {reg.status === 'pending' && 'El organizador todavía no decidió. Te avisamos por la app.'}
+            {reg.status === 'approved' && 'Ya tenés un lugar en el torneo.'}
+            {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
+            {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
+          </p>
+          {activo && signup.open && (
+            <>
+              <Btn variant="danger" full onClick={cancelar} loading={cancelling}>Cancelar inscripción</Btn>
+              {cierre && <span className="text-[12px] text-dim text-center">Podés cancelar hasta el {cierre}.</span>}
+            </>
+          )}
+          {reg.status === 'rejected' && signup.open && (
+            <Btn full onClick={() => setFlowOpen(true)}>Inscribirme de nuevo</Btn>
+          )}
+          {error && <p className="m-0 text-[12px] text-danger">{error}</p>}
+          {flow}
         </div>
-        <div className="text-[16px] text-white font-bold">{pareja}</div>
-        <p className="m-0 text-[13px] text-soft leading-relaxed">
-          {reg.status === 'pending' && 'El organizador todavía no decidió. Te avisamos por la app.'}
-          {reg.status === 'approved' && 'Ya tenés un lugar en el torneo.'}
-          {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
-          {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
-        </p>
-        {activo && signup.open && (
-          <>
-            <Btn variant="danger" full onClick={cancelar} loading={cancelling}>Cancelar inscripción</Btn>
-            {cierre && <span className="text-[12px] text-dim text-center">Podés cancelar hasta el {cierre}.</span>}
-          </>
-        )}
-        {reg.status === 'rejected' && signup.open && (
-          <Btn full onClick={() => setFlowOpen(true)}>Inscribirme de nuevo</Btn>
-        )}
-        {error && <p className="m-0 text-[12px] text-danger">{error}</p>}
-        {flow}
-      </section>
+      </details>
     );
   }
 
