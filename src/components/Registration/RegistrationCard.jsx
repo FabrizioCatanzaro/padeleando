@@ -22,6 +22,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   const [flowOpen, setFlowOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [error, setError] = useState(null);
+  const [abierta, setAbierta] = useState(true);
 
   const load = useCallback(() => {
     if (!isLoggedIn) return;
@@ -129,55 +130,64 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   }
 
   // ── Inscripción abierta ───────────────────────────────────────────────────
+  // Empieza desplegada; plegada queda en una línea con el cupo.
   return (
-    <section aria-label="Inscripción" className="mx-5 sm:mx-auto my-4 bg-surface border border-brand/35 rounded-xl p-4 flex flex-col gap-3.5 max-w-xl">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-brand inline-flex items-center gap-1.5">
-          <Ticket size={14} /> INSCRIPCIÓN ABIERTA
-        </span>
-        {cierre && <span className="text-[12px] text-secondary">Cierra {cierre}</span>}
-      </div>
+    <details
+      aria-label="Inscripción" open={abierta} onToggle={(e) => setAbierta(e.currentTarget.open)}
+      className="group mx-5 sm:mx-auto my-3 max-w-xl bg-surface border border-brand/35 rounded-xl"
+    >
+      <summary className="flex items-center gap-2.5 px-4 min-h-[48px] cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        <Ticket size={15} className="shrink-0 text-brand" aria-hidden="true" />
+        <span className="text-[14px] font-semibold text-brand whitespace-nowrap">Inscripción abierta</span>
+        {disp && (
+          <span className={`text-[11px] font-bold tracking-wide px-2.5 py-0.5 rounded-full border whitespace-nowrap ${disp.color}`}>{disp.label}</span>
+        )}
+        <span className="flex-1" />
+        <span className="hidden sm:inline text-[13px] text-soft whitespace-nowrap group-open:hidden">Ver detalle</span>
+        <ChevronDown size={16} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="px-4 pb-4 pt-3 flex flex-col gap-3.5 border-t border-border">
+        {(cierre || signup.availability === 'full') && (
+          <div className="flex flex-col gap-1">
+            {cierre && <span className="text-[12px] text-secondary">Cierra {cierre}</span>}
+            {signup.availability === 'full' && <span className="text-[12px] text-cyan">Tu inscripción queda en lista de espera.</span>}
+          </div>
+        )}
 
-      {disp && (
-        <div className="flex flex-col gap-1.5">
-          <span className={`self-start text-[11px] font-bold tracking-wide px-2.5 py-1 rounded-full border ${disp.color}`}>{disp.label}</span>
-          {signup.availability === 'full' && <span className="text-[12px] text-cyan">Tu inscripción queda en lista de espera.</span>}
+        <div className="grid grid-cols-2 gap-2.5">
+          {precio && (
+            <div className="bg-surface-alt rounded-lg px-3 py-2.5">
+              <div className="text-[11px] tracking-wide text-dim font-semibold">PRECIO</div>
+              <div className="text-[15px] text-white font-bold mt-0.5">{precio}</div>
+            </div>
+          )}
+          {nivel && (
+            <div className="bg-surface-alt rounded-lg px-3 py-2.5">
+              <div className="text-[11px] tracking-wide text-dim font-semibold">CATEGORÍA</div>
+              <div className="text-[15px] text-white font-bold mt-0.5">{nivel}</div>
+              {isLoggedIn && check && (
+                check.issues.length === 0 && user?.category
+                  ? <div className="text-[12px] text-green inline-flex items-center gap-1"><Check size={12} strokeWidth={3} /> Tu categoría: {user.category}</div>
+                  : check.issues.length > 0
+                    ? <div className="text-[12px] text-amber-300 inline-flex items-start gap-1"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {check.issues[0]}</div>
+                    : null
+              )}
+            </div>
+          )}
         </div>
-      )}
 
-      <div className="grid grid-cols-2 gap-2.5">
-        {precio && (
-          <div className="bg-surface-alt rounded-lg px-3 py-2.5">
-            <div className="text-[11px] tracking-wide text-dim font-semibold">PRECIO</div>
-            <div className="text-[15px] text-white font-bold mt-0.5">{precio}</div>
-          </div>
+        {isLoggedIn ? (
+          <Btn variant="primary" size="lg" full onClick={() => setFlowOpen(true)}>INSCRIBIRME</Btn>
+        ) : (
+          <Btn variant="primary" size="lg" full onClick={() => navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`)}>
+            ENTRÁ PARA INSCRIBIRTE
+          </Btn>
         )}
-        {nivel && (
-          <div className="bg-surface-alt rounded-lg px-3 py-2.5">
-            <div className="text-[11px] tracking-wide text-dim font-semibold">CATEGORÍA</div>
-            <div className="text-[15px] text-white font-bold mt-0.5">{nivel}</div>
-            {isLoggedIn && check && (
-              check.issues.length === 0 && user?.category
-                ? <div className="text-[12px] text-green inline-flex items-center gap-1"><Check size={12} strokeWidth={3} /> Tu categoría: {user.category}</div>
-                : check.issues.length > 0
-                  ? <div className="text-[12px] text-amber-300 inline-flex items-start gap-1"><AlertTriangle size={12} className="mt-0.5 shrink-0" /> {check.issues[0]}</div>
-                  : null
-            )}
-          </div>
-        )}
+        <p className="m-0 text-[12px] text-secondary text-center">El organizador aprueba cada inscripción.</p>
+        {contactos.length > 0 && <div className="flex gap-2 flex-wrap justify-center">{contactos}</div>}
+
+        {flow}
       </div>
-
-      {isLoggedIn ? (
-        <Btn variant="primary" size="lg" full onClick={() => setFlowOpen(true)}>INSCRIBIRME</Btn>
-      ) : (
-        <Btn variant="primary" size="lg" full onClick={() => navigate(`/login?redirect=${encodeURIComponent(location.pathname)}`)}>
-          ENTRÁ PARA INSCRIBIRTE
-        </Btn>
-      )}
-      <p className="m-0 text-[12px] text-secondary text-center">El organizador aprueba cada inscripción.</p>
-      {contactos.length > 0 && <div className="flex gap-2 flex-wrap justify-center">{contactos}</div>}
-
-      {flow}
-    </section>
+    </details>
   );
 }
