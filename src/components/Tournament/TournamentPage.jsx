@@ -6,8 +6,9 @@ import {
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
   tournamentDisplayStatus, TOURNAMENT_STATUS_META,
-  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete,
+  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete, myPlayerIds as idsDelUsuario,
 } from "../../utils/helpers";
+import { useAuth } from "../../context/useAuth";
 import Standings from "../Standings/Standings";
 import Matches from "../Matches/Matches";
 // Sólo se monta al abrir la pestaña: importarlo estático arrastraba los
@@ -23,6 +24,8 @@ import ShareModal from "../shared/ShareModal";
 import QrModal from "../shared/QrModal";
 import FinishTournamentModal from "../shared/FinishTournamentModal";
 import TournamentHero from "../Main/TournamentHero";
+import ReadonlyFechas from "../Spectator/ReadonlyFechas";
+import { esTemporada } from "../../utils/fechas";
 import {
   TvOverlay, LiveTicker, SpectatorLive, ReadonlyMatches, ReadonlyPlayers,
 } from "../Spectator/SpectatorParts";
@@ -117,6 +120,7 @@ export default function TournamentPage({
   const [tvStep, setTvStep] = useState(0);
   // Estado de la inscripción del que mira: lo trae RegistrationCard.
   const [miInscripcion, setMiInscripcion] = useState(null);
+  const { user } = useAuth() ?? {};
   // Inscripciones pendientes: la marca de la solapa INSCRIPCIONES.
   const [pendientes, setPendientes] = useState(0);
   useEffect(() => {
@@ -208,6 +212,7 @@ export default function TournamentPage({
         statusMeta={statusMeta}
         draft={draftText}
         miEstado={miEstadoDe(miInscripcion)}
+        myIds={[...idsDelUsuario(tournament, user?.username)]}
         isPairs={isPairs}
         signup={signup}
         tvActivo={tvMode}
@@ -360,7 +365,9 @@ export default function TournamentPage({
           ) : (
             <>
               <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="previa" />
-              <ReadonlyMatches tournament={tournament} groupName={groupName} />
+              {esTemporada(tournament)
+                ? <ReadonlyFechas tournament={tournament} />
+                : <ReadonlyMatches tournament={tournament} groupName={groupName} />}
             </>
           )
         )}

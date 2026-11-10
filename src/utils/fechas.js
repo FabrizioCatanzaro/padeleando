@@ -1,4 +1,5 @@
 // Liga por fechas: la temporada se divide en fechas con sus días de juego.
+import { fmtHora } from './helpers';
 
 const DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
@@ -84,4 +85,38 @@ export function estadoDeFecha(tournament, fecha, hoy = hoyIso()) {
   if (pendientes === 0 && jugados > 0) return 'completa';
   const termino = String(fecha.end_date ?? fecha.start_date).slice(0, 10) < hoy;
   return termino && pendientes > 0 ? 'pendiente' : null;
+}
+
+/** Fechas que lleva la temporada sin cruces repetidos, o null si no se sabe. */
+export function totalDeFechas(t) {
+  const activas = (t.pairs ?? []).filter((p) => p.status !== 'withdrawn').length;
+  if (t.allow_rematch || activas < 2) return null;
+  return Math.max((t.fechas ?? []).length, activas % 2 ? activas : activas - 1);
+}
+
+// Encabezado: "Fecha 3 de 9 · sáb 22 y dom 23/11" y el partido del que mira.
+export function resumenTemporada(t, mios = []) {
+  const fechas = t.fechas ?? [];
+  if (fechas.length === 0) return { linea: 'Fechas a confirmar', miPartido: null };
+  const n = fechaEnCurso(fechas);
+  const fecha = fechas.find((f) => f.number === n);
+  const total = totalDeFechas(t);
+  const linea = `Fecha ${n}${total ? ` de ${total}` : ''} · ${rangoDeFecha(fecha)}`;
+
+  const ids = new Set(mios.map(String));
+  if (ids.size === 0) return { linea, miPartido: null };
+  const juega = (m) => [...(m.team1 ?? []), ...(m.team2 ?? [])].some((id) => ids.has(String(id)));
+  const programado = (t.scheduled_matches ?? []).find((s) => s.round === n && juega(s));
+  if (programado) {
+    const cuando = [
+      diaCorto(programado.scheduled_date),
+      programado.scheduled_at ? fmtHora(programado.scheduled_at) : null,
+      programado.court != null ? `Cancha ${programado.court}` : null,
+    ].filter(Boolean).join(' · ');
+    return { linea, miPartido: `Tu partido: ${cuando || 'a programar'}${programado.postponed ? ' (postergado)' : ''}` };
+  }
+  if ((t.matches ?? []).some((m) => m.round === n && juega(m))) return { linea, miPartido: 'Ya jugaste esta fecha' };
+  const miPareja = (t.pairs ?? []).find((p) => p.status !== 'withdrawn' && (ids.has(String(p.p1)) || ids.has(String(p.p2))));
+  if (miPareja && libresDeFecha(t, n).some((p) => p.id === miPareja.id)) return { linea, miPartido: 'Libre esta fecha' };
+  return { linea, miPartido: null };
 }

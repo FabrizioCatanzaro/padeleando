@@ -4,6 +4,7 @@ import {
   ChevronLeft, Pencil, Share2, Eye, QrCode, Tv, Radio, Lock, User, Link2,
 } from 'lucide-react';
 import { fmtHora, tournamentCourts, bracketPhaseLabel, isDeletedAccount } from '../../utils/helpers';
+import { esTemporada, resumenTemporada } from '../../utils/fechas';
 import Badge from '../shared/Badge';
 import Btn from '../shared/Btn';
 import PlayerAvatar from '../shared/PlayerAvatar';
@@ -89,7 +90,7 @@ function ShareMenu({ isOwner, onShare, onQr, onTv, onSpectator }) {
 export default function TournamentHero({
   tournament, groupId, groupName, groupIsPublic = true, owner = null,
   isOwner, playedCount, scheduledCount = 0, statusMeta,
-  isPairs, signup, tvActivo = false, draft = null, miEstado = null,
+  isPairs, signup, tvActivo = false, draft = null, miEstado = null, myIds = [],
   onEditName, onShare, onQr, onTv, onSpectator, onManage,
 }) {
   const navigate = useNavigate();
@@ -103,9 +104,11 @@ export default function TournamentHero({
   const canchas = tournamentCourts(tournament);
   const total = playedCount + scheduledCount;
 
-  // Línea 1: cuándo y dónde.
-  const fecha = fechaCorta(tournament.event_date);
-  const hora = tournament.event_time ? fmtHora(tournament.event_time) : null;
+  // Línea 1: cuándo y dónde. En la liga por fechas, la fecha en curso.
+  const temporada = esTemporada(tournament);
+  const resumen = temporada ? resumenTemporada(tournament, myIds) : null;
+  const fecha = temporada ? resumen.linea : fechaCorta(tournament.event_date);
+  const hora = !temporada && tournament.event_time ? fmtHora(tournament.event_time) : null;
   const canchasTxt = canchas > 0 ? `${canchas} ${canchas === 1 ? 'cancha' : 'canchas'}` : null;
 
   // Línea 2: los números del torneo, cuando ya se pueden mostrar.
@@ -118,7 +121,8 @@ export default function TournamentHero({
 
   const formato = tournament.format === 'americano'
     ? 'Americano'
-    : tournament.mode === 'pairs' ? 'Liga · parejas fijas' : 'Liga · equipos libres';
+    : temporada ? 'Liga en varios días'
+      : tournament.mode === 'pairs' ? 'Liga · parejas fijas' : 'Liga · equipos libres';
 
   return (
     <div>
@@ -208,6 +212,10 @@ export default function TournamentHero({
             ><Pencil size={12} /> Editar</button></>
           )}
         </p>
+
+        {resumen?.miPartido && (
+          <p className="m-0 text-[14px] font-semibold text-brand">{resumen.miPartido}</p>
+        )}
 
         {/* Línea 2: lo que importa según el estado. */}
         {draft && isOwner ? (
