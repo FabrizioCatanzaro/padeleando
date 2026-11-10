@@ -10,26 +10,26 @@ const porDia = (a, b) => `${a.scheduled_date ?? '9999'} ${a.scheduled_at ?? '99'
   .localeCompare(`${b.scheduled_date ?? '9999'} ${b.scheduled_at ?? '99'}`) || (a.position ?? 0) - (b.position ?? 0);
 
 // Partidos de una fecha: los que faltan jugar, los jugados y la pareja libre.
-function PartidosDeFecha({ tournament, number, mios, conLibre = true }) {
+function PartidosDeFecha({ tournament, number, mios, soloMios = false }) {
   const programados = (tournament.scheduled_matches ?? [])
-    .filter((s) => s.round === number && (!mios || isMyMatch(s, mios)))
+    .filter((s) => s.round === number && (!soloMios || isMyMatch(s, mios)))
     .sort(porDia);
   const jugados = (tournament.matches ?? [])
-    .filter((m) => m.round === number && (!mios || isMyMatch(m, mios)))
+    .filter((m) => m.round === number && (!soloMios || isMyMatch(m, mios)))
     .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  const libres = conLibre ? libresDeFecha(tournament, number) : [];
+  const libres = soloMios ? [] : libresDeFecha(tournament, number);
   const nombre = (id) => getPairLabel(id, tournament.pairs, tournament.players);
 
   return (
     <div className="flex flex-col gap-2.5">
       {programados.map((s) => (
-        <ScheduledCard key={s.id} match={s} tournament={tournament} isOwner={false} esMio={isMyMatch(s, mios ?? new Set())} />
+        <ScheduledCard key={s.id} match={s} tournament={tournament} isOwner={false} esMio={isMyMatch(s, mios)} />
       ))}
       {jugados.map((m) => (
         <MatchCard key={m.id} match={m} tournament={tournament} isOwner={false} hideDate />
       ))}
       {programados.length === 0 && jugados.length === 0 && (
-        <p className="m-0 text-[14px] text-secondary">{mios ? 'Libre esta fecha.' : 'Esta fecha no tiene partidos.'}</p>
+        <p className="m-0 text-[14px] text-secondary">{soloMios ? 'Libre esta fecha.' : 'Esta fecha no tiene partidos.'}</p>
       )}
       {libres.length > 0 && (
         <p className="m-0 mt-1 text-[13px] text-soft">
@@ -79,7 +79,7 @@ export default function ReadonlyFechas({ tournament }) {
               <h3 className="m-0 text-[13px] font-bold text-white">
                 Fecha {f.number} <span className="font-normal text-soft">· {rangoDeFecha(f)}</span>
               </h3>
-              <PartidosDeFecha tournament={tournament} number={f.number} mios={mios} conLibre={false} />
+              <PartidosDeFecha tournament={tournament} number={f.number} mios={mios} soloMios />
             </section>
           ))}
         </div>
@@ -92,7 +92,7 @@ export default function ReadonlyFechas({ tournament }) {
                 <h3 className="m-0 text-[15px] font-bold text-white">Fecha {fecha.number}</h3>
                 <span className="text-[13px] text-soft">{rangoDeFecha(fecha)}</span>
               </div>
-              <PartidosDeFecha tournament={tournament} number={fecha.number} />
+              <PartidosDeFecha tournament={tournament} number={fecha.number} mios={mios} />
             </>
           )}
         </>
