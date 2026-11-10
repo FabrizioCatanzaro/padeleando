@@ -93,6 +93,7 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity:      extra.signup_capacity ?? null,
       signup_capacity_unit: extra.signup_capacity_unit ?? null,
       signup_closes_at:     extra.signup_closes_at ?? null,
+      ...(format === 'liga' && extra.liga ? extra.liga : {}),
     });
     setTournament(adaptTournament(t));
     return t.id; // para que App.js pueda navegar al torneo
@@ -140,6 +141,8 @@ export function useTournament(groupId, tournamentId) {
       team2: data.team2,
       court: data.court ?? null,
       scheduled_at: data.scheduled_at ?? null,
+      ...(data.round != null ? { round: data.round } : {}),
+      ...(data.scheduled_date !== undefined ? { scheduled_date: data.scheduled_date } : {}),
     });
     setTournament((prev) => (prev ? {
       ...prev,
@@ -157,6 +160,26 @@ export function useTournament(groupId, tournamentId) {
         (s) => (s.id === id ? adaptScheduled(updated) : s),
       ),
     } : prev));
+  }
+
+  // ── Liga por fechas ──────────────────────────────────────────────────────
+  async function handlePreviewFecha(body) {
+    return api.tournaments.fechas.create(tournament.id, { ...body, preview: true });
+  }
+
+  async function handleSaveFecha(number, body) {
+    const res = number == null
+      ? await api.tournaments.fechas.create(tournament.id, body)
+      : await api.tournaments.fechas.update(tournament.id, number, body);
+    await reload(true);
+    showToast(number == null ? `Fecha ${res.fecha.number} armada` : `Fecha ${number} actualizada`);
+    return res;
+  }
+
+  async function handleDeleteFecha(number) {
+    await api.tournaments.fechas.delete(tournament.id, number);
+    await reload(true);
+    showToast(`Fecha ${number} deshecha`, 'info');
   }
 
   async function handleDeleteScheduled(id) {
@@ -288,7 +311,9 @@ export function useTournament(groupId, tournamentId) {
       await reload(true);
       showToast(res.walkovers > 0
         ? `Pareja retirada: ${res.walkovers} ${res.walkovers === 1 ? 'partido' : 'partidos'} por W.O.`
-        : 'Pareja retirada', 'info');
+        : res.cancelled > 0
+          ? `Pareja dada de baja: ${res.cancelled} ${res.cancelled === 1 ? 'partido cancelado' : 'partidos cancelados'}`
+          : 'Pareja retirada', 'info');
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -367,6 +392,16 @@ export function useTournament(groupId, tournamentId) {
     await api.tournaments.update(tournament.id, body);
     await reload(true);
     showToast('Datos del torneo guardados');
+  }
+
+  async function handleUpdateLiga(body) {
+    try {
+      await api.tournaments.update(tournament.id, body);
+      await reload(true);
+      showToast('Opciones de la liga guardadas');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
   async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at }) {
@@ -478,12 +513,13 @@ export function useTournament(groupId, tournamentId) {
     handleCreate,
     handleAddMatch,    handleEditMatch,    handleDeleteMatch,
     handleAddScheduled, handleEditScheduled, handleDeleteScheduled,
+    handlePreviewFecha, handleSaveFecha, handleDeleteFecha,
     handleAddPlayer,   handleEditPlayer,   handleDeletePlayer,
     handleAddPair,     handleEditPair,     handleDeletePair,     handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
-    handleUpdateMode,
+    handleUpdateMode, handleUpdateLiga,
     refresh: () => reload(true),
   };
 }

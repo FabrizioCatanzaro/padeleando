@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { X } from 'lucide-react';
 import { expandPair, getPairLabel, tournamentCourts, countPairMatches, pairKeyOf, fmtHora } from '../../utils/helpers';
 import { TEAM_SELECT_CLS } from './MatchForm';
+import { diasDeFecha, diaCorto, parejaDeEquipo } from '../../utils/fechas';
 
 const MAX_PREVIA_MATCHES = 2;
 
@@ -13,7 +14,7 @@ const MAX_PREVIA_MATCHES = 2;
  * pareja, y cuenta lo programado además de lo jugado: si no contara, se podrían
  * programar tres y la fase quedaría rota antes de empezar.
  */
-export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }) {
+export default function ScheduleForm({ tournament, scheduled, fecha = null, onSave, onCancel }) {
   const isPairs = tournament.mode === 'pairs';
   const esAmericano = tournament.format === 'americano';
   const canchas = tournamentCourts(tournament) ?? 0;
@@ -28,6 +29,11 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
   const [hora, setHora]   = useState(scheduled?.scheduled_at ? fmtHora(scheduled.scheduled_at) : '');
   const [error, setError] = useState(null);
   const [guardando, setGuardando] = useState(false);
+  // Liga por fechas: día dentro de la fecha (u otro) y postergado.
+  const diasFecha = diasDeFecha(fecha);
+  const [dia, setDia] = useState(scheduled?.scheduled_date ?? '');
+  const [otroDia, setOtroDia] = useState(() => !!scheduled?.scheduled_date && !diasFecha.includes(scheduled.scheduled_date));
+  const [postergado, setPostergado] = useState(!!scheduled?.postponed);
 
   // Cuántos partidos lleva cada pareja: jugados + programados, sin contar el que
   // se está editando (si no, se bloquearía a sí mismo).
@@ -51,6 +57,16 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
   const parejasConCupo = tournament.pairs.filter((p) => pjDePareja(p.id) < MAX_PREVIA_MATCHES);
   const sinCruces = esAmericano && isPairs && parejasConCupo.length < 2;
 
+  // Sin cruces repetidos, una pareja no se ofrece contra otra con la que ya se cruzó.
+  const cruzados = new Set();
+  if (fecha && !tournament.allow_rematch) {
+    for (const m of [...tournament.matches, ...(tournament.scheduled_matches ?? []).filter((x) => x.id !== scheduled?.id)]) {
+      const a = parejaDeEquipo(m.team1, tournament.pairs);
+      const b = parejaDeEquipo(m.team2, tournament.pairs);
+      if (a && b) { cruzados.add(`${a}|${b}`); cruzados.add(`${b}|${a}`); }
+    }
+  }
+
   async function guardar() {
     if (!completo || sinCupo) return;
     setGuardando(true);
@@ -61,6 +77,11 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
         team2: isPairs ? expandPair(t2, tournament.pairs) : t2,
         court: court ?? null,
         scheduled_at: hora || null,
+        ...(fecha ? {
+          scheduled_date: dia || null,
+          postponed: postergado,
+          ...(scheduled ? {} : { round: fecha.number }),
+        } : {}),
       });
     } catch (e) {
       setError(e?.message ?? 'No se pudo programar el partido');
@@ -76,10 +97,12 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
     return tournament.pairs.filter((p) => p.status !== 'withdrawn' || p.id === actual).map((p) => {
       const n = pjDePareja(p.id);
       const lleno = esAmericano && n >= MAX_PREVIA_MATCHES && p.id !== actual;
+      const yaCruzo = !!otro && cruzados.has(`${p.id}|${otro}`) && p.id !== actual;
       return (
-        <option key={p.id} value={p.id} disabled={p.id === otro || lleno}>
+        <option key={p.id} value={p.id} disabled={p.id === otro || lleno || yaCruzo}>
           {getPairLabel(p.id, tournament.pairs, tournament.players)}
           {esAmericano ? ` · ${n}/${MAX_PREVIA_MATCHES} PJ` : ''}
+          {yaCruzo ? ' · ya se cruzaron' : ''}
         </option>
       );
     });
@@ -182,9 +205,56 @@ export default function ScheduleForm({ tournament, scheduled, onSave, onCancel }
               id="sch-hora" type="time" value={hora} onChange={(e) => setHora(e.target.value)}
               className={selectCls}
             />
-            <p className="text-[11px] text-dim mt-1.5 mb-0">Opcional. La fecha es la de la jornada.</p>
+            <p className="text-[11px] text-dim mt-1.5 mb-0">{fecha ? 'Opcional.' : 'Opcional. La fecha es la de la jornada.'}</p>
           </div>
         </div>
+
+        {fecha && (
+          <div className="mt-4 flex flex-col gap-3">
+            <div>
+              <span className={labelCls}>Día · Fecha {fecha.number}</span>
+              <div className="flex gap-1.5 flex-wrap">
+                {diasFecha.map((d) => (
+                  <button
+                    key={d} type="button" aria-pressed={!otroDia && dia === d}
+                    onClick={() => { setOtroDia(false); setDia(dia === d ? '' : d); }}
+                    className={`min-h-[40px] px-3 rounded-lg border text-[13px] font-semibold cursor-pointer transition-colors ${
+                      !otroDia && dia === d ? 'bg-white border-white text-base' : 'border-border-strong text-content hover:text-white'
+                    }`}
+                  >
+                    {diaCorto(d)}
+                  </button>
+                ))}
+                <button
+                  type="button" aria-pressed={otroDia}
+                  onClick={() => { setOtroDia(true); setDia(''); }}
+                  className={`min-h-[40px] px-3 rounded-lg border text-[13px] font-semibold cursor-pointer transition-colors ${
+                    otroDia ? 'bg-white border-white text-base' : 'border-border-strong text-content hover:text-white'
+                  }`}
+                >
+                  Otro día
+                </button>
+              </div>
+              {otroDia && (
+                <input
+                  type="date" aria-label="Otro día" value={dia} min="2000-01-01" max="2100-12-31"
+                  onChange={(e) => setDia(e.target.value)}
+                  className={`${selectCls} mt-2`}
+                />
+              )}
+            </div>
+            <label className="flex items-start gap-3 rounded-lg border border-border-mid px-3 py-2.5 cursor-pointer">
+              <input
+                type="checkbox" checked={postergado} onChange={(e) => setPostergado(e.target.checked)}
+                className="mt-0.5 w-5 h-5 shrink-0 accent-[var(--color-brand)]"
+              />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-[14px] font-semibold text-white">Postergado</span>
+                <span className="text-[12px] text-secondary">Sigue en la fecha {fecha.number}. Se juega otro día o queda a reprogramar.</span>
+              </span>
+            </label>
+          </div>
+        )}
 
         {sinCupo && (
           <p className="text-[12.5px] text-danger m-0 mt-3">

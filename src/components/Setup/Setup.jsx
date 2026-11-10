@@ -10,6 +10,7 @@ import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import { useToast } from "../../context/useToast";
 import { ChevronLeft, Check } from "lucide-react";
+import LigaOpciones from "../shared/LigaOpciones";
 import Btn from "../shared/Btn";
 import StepBar from "../shared/StepBar";
 
@@ -81,6 +82,12 @@ export default function Setup() {
   // Vacío a propósito: lo que no se cargue queda en null y se hereda.
   const [signup, setSignup]       = useState({ open: false, price: null, unit: 'player', contacts: [] });
   const [creating, setCreating]   = useState(false);
+  const [liga, setLiga] = useState({ liga_mode: 'jornada', allow_rematch: false, winner_format: 'tabla', playoff_size: null });
+  // La liga en varios días se arma con parejas fijas, como el americano.
+  const temporada = format === 'liga' && liga.liga_mode === 'temporada';
+  const conParejas = format === 'americano' || temporada;
+  const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : 2;
+  const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : 32;
 
   // Heredar el club de la categoría como default (editable por torneo).
   // Si la categoría no tiene club, se usa el de la última jornada que sí lo tenga.
@@ -116,12 +123,12 @@ export default function Setup() {
   const completeDirectPairs = directPairs.filter(p => p.p1Name.trim() && p.p2Name.trim());
   const directHasPartial    = directPairs.some(p => !!p.p1Name.trim() !== !!p.p2Name.trim());
   // Menos parejas que el mínimo → se crea igual, pero como borrador (no se puede jugar).
-  const directIsDraft    = completeDirectPairs.length < AMERICANO_MIN_PAIRS;
+  const directIsDraft    = completeDirectPairs.length < pairsMin;
   const directPairsValid = !!name.trim() && !directHasPartial && !directHasDupes;
 
   // ── Barra de progreso ────────────────────────────────────────────────────
   const infoStep = { id: 'info', label: 'INFORMACIÓN' };
-  const flowSteps = format === 'americano'
+  const flowSteps = conParejas
     ? [{ id: 'formato', label: 'FORMATO' }, infoStep, { id: 'direct-pairs', label: 'PAREJAS' }]
     : (isEven && ligaMode === 'pairs') || step === 'pairs'
       ? [{ id: 'formato', label: 'FORMATO' }, infoStep, { id: 'players', label: 'JUGADORES' }, { id: 'pairs', label: 'PAREJAS' }]
@@ -163,7 +170,7 @@ export default function Setup() {
     setDirectPairs(directPairs.map(p => p.id === id ? { ...p, [field]: value } : p));
   }
   function addDirectPair() {
-    if (directPairs.length < AMERICANO_MAX_PAIRS) setDirectPairs([...directPairs, { id: uid(), p1Name: "", p2Name: "" }]);
+    if (directPairs.length < pairsMax) setDirectPairs([...directPairs, { id: uid(), p1Name: "", p2Name: "" }]);
   }
   function removeDirectPair(id) {
     if (directPairs.length > 1) setDirectPairs(directPairs.filter(p => p.id !== id));
@@ -185,6 +192,7 @@ export default function Setup() {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
+        liga: fmt === 'liga' ? liga : null,
       });
       navigate(`/cat/${groupId}/torneo/${tId}`);
     } catch (e) {
@@ -215,7 +223,7 @@ export default function Setup() {
     if (!directPairsValid) return;
     const players = completeDirectPairs.flatMap(p => [p.p1Name.trim(), p.p2Name.trim()]);
     const cleanPairs = completeDirectPairs.map(p => ({ ...p, p1Name: p.p1Name.trim(), p2Name: p.p2Name.trim() }));
-    onCreate(name.trim(), players, cleanPairs, 'americano');
+    onCreate(name.trim(), players, cleanPairs, format);
   }
 
   function infoBox() {
@@ -256,6 +264,7 @@ export default function Setup() {
               >
                 <div className="font-condensed font-bold text-[16px] text-white mb-1">LIGA</div>
                 <div className="text-[12px] text-muted font-sans">Partidos libres o por parejas fijas. Tabla de posiciones acumulada.</div>
+                {format === 'liga' && <LigaOpciones value={liga} onChange={setLiga} />}
               </div>
               <div
                 onClick={() => setFormat('americano')}
@@ -277,7 +286,7 @@ export default function Setup() {
             <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">NOMBRE DEL TORNEO</label>
             <input
               className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none mb-2"
-              placeholder="ej: Fecha 1 - 24/03"
+              placeholder={temporada ? "ej: 1ERA EDICIÓN 2026" : "ej: Fecha 1 - 24/03"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={30}
@@ -307,10 +316,10 @@ export default function Setup() {
               variant="primary"
               full
               size="lg"
-              onClick={() => tituloValido ? setStep(format === 'americano' ? 'direct-pairs' : 'players') : setError(true)}
+              onClick={() => tituloValido ? setStep(conParejas ? 'direct-pairs' : 'players') : setError(true)}
               className="mt-7"
             >
-              {format === 'americano' ? 'SIGUIENTE → PAREJAS' : 'SIGUIENTE → JUGADORES'}
+              {conParejas ? 'SIGUIENTE → PAREJAS' : 'SIGUIENTE → JUGADORES'}
             </Btn>
           </>
         )}
@@ -385,7 +394,7 @@ export default function Setup() {
         {step === "direct-pairs" && (
           <>
             <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-1">
-              PAREJAS <span className="text-muted">(mínimo {AMERICANO_MIN_PAIRS} para jugar, máximo {AMERICANO_MAX_PAIRS})</span>
+              PAREJAS <span className="text-muted">(mínimo {pairsMin} para jugar, máximo {pairsMax})</span>
             </label>
             <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado. Podés dejar filas vacías y completarlas después.</p>
 
@@ -410,7 +419,7 @@ export default function Setup() {
             {directHasDupes  && <p className="text-danger text-[11px] font-mono mt-2">Hay nombres duplicados.</p>}
             {directHasPartial && <p className="text-danger text-[11px] font-mono mt-2">Hay parejas incompletas — cargá los dos jugadores o dejá la fila vacía.</p>}
 
-            {directPairs.length < AMERICANO_MAX_PAIRS && (
+            {directPairs.length < pairsMax && (
               <button onClick={addDirectPair} className="bg-transparent border border-dashed border-border-strong text-muted px-4 py-2 cursor-pointer font-condensed tracking-wide text-[13px] rounded-sm w-full mt-2">
                 + Agregar pareja
               </button>
@@ -420,7 +429,7 @@ export default function Setup() {
               ✦ {completeDirectPairs.length} {completeDirectPairs.length === 1 ? 'pareja completa' : 'parejas completas'} — {completeDirectPairs.length * 2} jugadores.
               {directIsDraft && (
                 <span className="block text-brand mt-1">
-                  Faltan {AMERICANO_MIN_PAIRS - completeDirectPairs.length} para el mínimo de {AMERICANO_MIN_PAIRS}. Se crea como <strong>borrador</strong>: vas a poder sumar las parejas que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.
+                  Faltan {pairsMin - completeDirectPairs.length} para el mínimo de {pairsMin}. Se crea como <strong>borrador</strong>: vas a poder sumar las parejas que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.
                 </span>
               )}
             </div>

@@ -22,12 +22,13 @@ export default function Main() {
     tournament, groupName, groupEmojis, groupOwnerIsPremium, loading, error, notFound, isOwner,
     handleAddMatch, handleEditMatch, handleDeleteMatch,
     handleAddScheduled, handleEditScheduled, handleDeleteScheduled,
+    handlePreviewFecha, handleSaveFecha, handleDeleteFecha,
     handleAddPlayer, handleEditPlayer, handleDeletePlayer,
     handleAddPair, handleEditPair, handleDeletePair, handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
-    handleUpdateMode, refresh,
+    handleUpdateMode, handleUpdateLiga, refresh,
   } = useTournament(groupId, tournamentId);
 
   // El que entra a esta ruta y no puede gestionar ve la misma página en modo
@@ -76,6 +77,7 @@ export default function Main() {
     onAddMatch: handleAddMatch, onEditMatch: handleEditMatch, onDeleteMatch: handleDeleteMatch,
     onAddScheduled: handleAddScheduled, onEditScheduled: handleEditScheduled,
     onDeleteScheduled: handleDeleteScheduled,
+    onPreviewFecha: handlePreviewFecha, onSaveFecha: handleSaveFecha, onDeleteFecha: handleDeleteFecha,
     onAddPlayer: handleAddPlayer, onEditPlayer: handleEditPlayer, onDeletePlayer: handleDeletePlayer,
     onAddPair: handleAddPair, onEditPair: handleEditPair, onDeletePair: handleDeletePair, onWithdrawPair: handleWithdrawPair,
     onResetScores: handleResetScores, onDeleteTournament: handleDeleteTournament,
@@ -85,7 +87,7 @@ export default function Main() {
     onGenerateSchedule: handleGenerateSchedule, onGenerateBracket: handleGenerateBracket,
     onUpdateBracketMatch: handleUpdateBracketMatch, onClearBracketMatch: handleClearBracketMatch,
     onSetBracket: handleSetBracket, onDeleteBracket: handleDeleteBracket,
-    onUpdateMode: handleUpdateMode, onRefresh: refresh,
+    onUpdateMode: handleUpdateMode, onUpdateLiga: handleUpdateLiga, onRefresh: refresh,
   } : null;
 
   return (

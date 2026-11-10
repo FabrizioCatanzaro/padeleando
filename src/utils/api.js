@@ -189,6 +189,12 @@ export const api = {
     setBracket:   (id, b)     => req('PATCH',  `/tournaments/${id}/bracket`, { bracket: b }),
     deleteBracket:(id)         => req('DELETE', `/tournaments/${id}/bracket`),
     clearBracketMatch: (id, mId) => req('DELETE', `/tournaments/${id}/bracket/${mId}`),
+    // Liga por fechas: armar, cambiar y deshacer una fecha.
+    fechas: {
+      create: (id, body)         => req('POST',   `/tournaments/${id}/fechas`, body),
+      update: (id, number, body) => req('PUT',    `/tournaments/${id}/fechas/${number}`, body),
+      delete: (id, number)       => req('DELETE', `/tournaments/${id}/fechas/${number}`),
+    },
   },
   matches: {
     create: (body)   => req('POST',   '/matches',       body),

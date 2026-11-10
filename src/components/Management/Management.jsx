@@ -7,6 +7,7 @@ import ClubSelector from "../shared/ClubSelector";
 import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import Btn from "../shared/Btn";
+import LigaOpciones from "../shared/LigaOpciones";
 import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
 
@@ -139,11 +140,43 @@ function DatosDelTorneo({ tournament, onSave }) {
   );
 }
 
+const ligaDe = (t) => ({
+  liga_mode: t.liga_mode ?? 'jornada', allow_rematch: !!t.allow_rematch,
+  winner_format: t.winner_format ?? 'tabla', playoff_size: t.playoff_size ?? null,
+});
+
+function resumenLiga(t) {
+  const l = ligaDe(t);
+  return [
+    l.liga_mode === 'temporada' ? 'Varios días' : 'Un solo día',
+    ...(l.liga_mode === 'temporada' ? [l.allow_rematch ? 'Con cruces repetidos' : 'Sin cruces repetidos'] : []),
+    l.winner_format === 'playoffs' ? `Playoffs a ${l.playoff_size}` : 'Gana la tabla',
+  ].join(' · ');
+}
+
+// Opciones de la liga: se guardan con un botón, solo si cambiaron.
+function OpcionesDeLiga({ tournament, onSave }) {
+  const [liga, setLiga] = useState(() => ligaDe(tournament));
+  const [saving, setSaving] = useState(false);
+  const cambio = JSON.stringify(liga) !== JSON.stringify(ligaDe(tournament));
+  return (
+    <>
+      <LigaOpciones value={liga} onChange={setLiga} modoBloqueado={(tournament.fechas?.length ?? 0) > 0} />
+      <Btn
+        variant="primary" full className="mt-4" disabled={!cambio || saving} loading={saving}
+        onClick={async () => { setSaving(true); await onSave(liga); setSaving(false); }}
+      >
+        Guardar opciones
+      </Btn>
+    </>
+  );
+}
+
 export default function Management({
   tournament, isOwner,
   onAddPlayer, onEditPlayer, onDeletePlayer,
   onAddPair, onEditPair, onDeletePair, onWithdrawPair,
-  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos,
+  onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos, onUpdateLiga,
   onRefresh,
 }) {
   const [resetModal, setResetModal]   = useState(false);
@@ -153,7 +186,7 @@ export default function Management({
   const [finishModal, setFinishModal] = useState(false);
 
   const activePlayers = tournament.players.filter((p) => !p.removed).length;
-  const showModeToggle = tournament.format === 'liga' && activePlayers >= 4;
+  const showModeToggle = tournament.format === 'liga' && tournament.liga_mode !== 'temporada' && activePlayers >= 4;
   const canPickPairs   = activePlayers % 2 === 0;
 
   const hasMatches = (tournament.matches?.length ?? 0) > 0;
@@ -238,6 +271,21 @@ export default function Management({
           onDelete={onDeletePair}
           onWithdraw={onWithdrawPair}
         />
+      )}
+
+      {isOwner && tournament.format === 'liga' && (
+        <details className="group bg-surface border border-border-mid rounded-xl mt-6">
+          <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[15px] font-bold text-white">Opciones de la liga</span>
+              <span className="text-[13px] text-secondary truncate">{resumenLiga(tournament)}</span>
+            </span>
+            <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="px-4 pb-4">
+            <OpcionesDeLiga key={resumenLiga(tournament)} tournament={tournament} onSave={onUpdateLiga} />
+          </div>
+        </details>
       )}
 
       {/* Datos del torneo: se configuran una vez. Plegados, con un resumen. */}

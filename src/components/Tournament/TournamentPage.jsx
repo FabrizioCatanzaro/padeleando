@@ -352,6 +352,9 @@ export default function TournamentPage({
                 onAddScheduled={acciones.onAddScheduled}
                 onEditScheduled={acciones.onEditScheduled}
                 onDeleteScheduled={acciones.onDeleteScheduled}
+                onPreviewFecha={acciones.onPreviewFecha}
+                onSaveFecha={acciones.onSaveFecha}
+                onDeleteFecha={acciones.onDeleteFecha}
               />
             )
           ) : (
@@ -400,6 +403,7 @@ export default function TournamentPage({
             onAddPair={acciones.onAddPair}
             onEditPair={acciones.onEditPair}
             onDeletePair={acciones.onDeletePair}
+            onUpdateLiga={acciones.onUpdateLiga}
             onWithdrawPair={acciones.onWithdrawPair}
             onResetScores={acciones.onResetScores}
             onDeleteTournament={async () => {

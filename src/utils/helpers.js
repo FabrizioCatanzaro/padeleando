@@ -608,6 +608,7 @@ export function adaptTournament(t) {
     pairs,
     matches: (t.matches ?? []).map(adaptMatch),
     scheduled_matches: (t.scheduled_matches ?? []).map(adaptScheduled),
+    fechas: t.fechas ?? [],
     bracket: patchBracketNames(t.bracket, pairs, players),
   };
 }

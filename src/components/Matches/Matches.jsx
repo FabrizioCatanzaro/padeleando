@@ -5,9 +5,12 @@ import MatchCard from "./MatchCard";
 import MatchForm from "./MatchForm";
 import ScheduledCard from "./ScheduledCard";
 import ScheduleForm from "./ScheduleForm";
+import FechaBar from "./FechaBar";
+import ArmarFecha from "./ArmarFecha";
 import Modal from "../shared/Modal";
+import { esTemporada, fechaEnCurso, rangoDeFecha, libresDeFecha } from "../../utils/fechas";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
-import { Share2, CalendarPlus } from "lucide-react";
+import { Share2, CalendarPlus, Pencil } from "lucide-react";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -17,9 +20,23 @@ export default function Matches({
   tournament, isOwner, categoryName, myPlayerIds = [],
   onAddMatch, onEditMatch, onDeleteMatch, onSetLiveMatch,
   onAddScheduled, onEditScheduled, onDeleteScheduled,
+  onPreviewFecha, onSaveFecha, onDeleteFecha,
 }) {
   const isPairs = tournament.mode === "pairs";
   const canEdit = isOwner && tournament.status !== 'finished';
+  const temporada = esTemporada(tournament);
+  const fechas = tournament.fechas ?? [];
+  const [fechaSel, setFechaSel] = useState(() => fechaEnCurso(fechas));
+  const fecha = temporada ? (fechas.find((f) => f.number === fechaSel) ?? null) : null;
+  // 'nueva' arma la fecha siguiente; 'editar' cambia la elegida.
+  const [armando, setArmando] = useState(null);
+  const [confirmDeshacer, setConfirmDeshacer] = useState(false);
+
+  useEffect(() => {
+    if (temporada && fechas.length > 0 && !fechas.some((f) => f.number === fechaSel)) {
+      setFechaSel(fechaEnCurso(fechas));
+    }
+  }, [temporada, fechas, fechaSel]);
 
   // Array de partidos en progreso: [{ id, form, timer }, ...]
   const [liveMatches, setLiveMatches] = useState(() => {
@@ -348,14 +365,22 @@ export default function Matches({
     setConfirmDelete(id);
   }
 
-  const sorted = [...tournament.matches].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+  const sorted = [...tournament.matches]
+    .filter((m) => !temporada || m.round === fechaSel)
+    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
   // Los ids del fixture que ahora mismo están abiertos en un formulario. Un
   // partido no puede estar a la vez "por jugar" y "cargándose": mientras tenga
   // su tarjeta de carga abierta, sale de PRÓXIMOS.
   const idsAbiertos = new Set(
     liveMatches.map((lm) => lm.form?.scheduledId).filter(Boolean),
   );
-  const programados = (tournament.scheduled_matches ?? []).filter((sm) => !idsAbiertos.has(sm.id));
+  const ordenFecha = (x) => `${x.scheduled_date ?? '9999'} ${x.scheduled_at ?? '99'}`;
+  const programados = (tournament.scheduled_matches ?? [])
+    .filter((sm) => !idsAbiertos.has(sm.id))
+    .filter((sm) => !temporada || sm.round === fechaSel);
+  if (temporada) programados.sort((a, b) => ordenFecha(a).localeCompare(ordenFecha(b)) || (a.position ?? 0) - (b.position ?? 0));
+  const libres = temporada && fecha ? libresDeFecha(tournament, fecha.number) : [];
+  const esUltimaFecha = !!fecha && fecha.number === fechas[fechas.length - 1]?.number;
   // El partido del que mira, para que el fixture le resuelva cuál es el suyo.
   const esMio = (sm) => myPlayerIds.length > 0
     && [...sm.team1, ...sm.team2].some((id) => myPlayerIds.includes(id));
@@ -382,6 +407,16 @@ export default function Matches({
           onCancel={() => setConfirmUnschedule(null)}
         />
       )}
+      {confirmDeshacer && fecha && (
+        <Modal
+          title={`Deshacer la fecha ${fecha.number}`}
+          message="Se borran la fecha y sus partidos programados. No hay partidos jugados, así que no se pierde ningún resultado."
+          confirmText="Deshacer"
+          confirmDanger
+          onConfirm={async () => { const n = fecha.number; setConfirmDeshacer(false); setArmando(null); await onDeleteFecha(n); }}
+          onCancel={() => setConfirmDeshacer(false)}
+        />
+      )}
       {shareFixture && (
         <ShareFixtureModal
           tournament={tournament}
@@ -403,7 +438,7 @@ export default function Matches({
               <Share2 size={15} /> Compartir
             </button>
           )}
-          {canEdit && (
+          {canEdit && (!temporada || fecha) && (
             <button
               onClick={() => setScheduling({ nuevo: true })}
               title="Programar un partido"
@@ -412,7 +447,7 @@ export default function Matches({
               <CalendarPlus size={14} /> Programar
             </button>
           )}
-          {canEdit && (
+          {canEdit && !temporada && (
             <button
               onClick={addNewMatch}
               className="bg-brand text-base border-0 px-5 py-2.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer rounded-sm whitespace-nowrap"
@@ -422,6 +457,57 @@ export default function Matches({
           )}
         </div>
       </div>
+
+      {temporada && (
+        <FechaBar
+          tournament={tournament}
+          selected={fechaSel}
+          onSelect={(n) => { setFechaSel(n); setArmando(null); }}
+          onArmar={canEdit ? () => setArmando('nueva') : null}
+        />
+      )}
+
+      {temporada && armando && (
+        <ArmarFecha
+          key={armando === 'nueva' ? 'nueva' : `editar-${fecha?.number}`}
+          tournament={tournament}
+          fecha={armando === 'editar' ? fecha : null}
+          esUltima={esUltimaFecha}
+          onPreview={onPreviewFecha}
+          onSave={async (number, body) => {
+            const res = await onSaveFecha(number, body);
+            setArmando(null);
+            if (res?.fecha) setFechaSel(res.fecha.number);
+          }}
+          onDelete={() => setConfirmDeshacer(true)}
+          onCancel={() => setArmando(null)}
+        />
+      )}
+
+      {temporada && !fecha && !armando && (
+        <div className="text-center text-dim py-10 px-5 font-sans leading-relaxed">
+          {canEdit
+            ? <>Todavía no hay fechas.<br />Tocá <span className="text-white font-semibold">+ Fecha 1</span> para armar la primera.</>
+            : <>Todavía no hay fechas armadas.</>}
+        </div>
+      )}
+
+      {temporada && fecha && (
+        <div className="flex items-center justify-between gap-3 mb-3">
+          <div className="flex flex-col min-w-0">
+            <h3 className="m-0 text-[15px] font-bold text-white">Fecha {fecha.number}</h3>
+            <span className="text-[13px] text-soft">{rangoDeFecha(fecha)}</span>
+          </div>
+          {canEdit && armando !== 'editar' && (
+            <button
+              type="button" onClick={() => setArmando('editar')}
+              className="inline-flex items-center gap-1.5 shrink-0 min-h-[36px] px-3 rounded-sm border border-border-strong bg-transparent text-content text-[13px] cursor-pointer hover:text-white"
+            >
+              <Pencil size={13} /> Editar fecha
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Formularios de partidos en progreso */}
       {canEdit && liveMatches.map((liveMatch) => (
@@ -445,6 +531,7 @@ export default function Matches({
         <ScheduleForm
           tournament={tournament}
           scheduled={scheduling.nuevo ? null : scheduling}
+          fecha={temporada ? fecha : null}
           onSave={async (data) => {
             if (scheduling.nuevo) await onAddScheduled(data);
             else await onEditScheduled(scheduling.id, data);
@@ -492,11 +579,13 @@ export default function Matches({
         </div>
       )}
 
-      {sorted.length === 0 ? (
+      {temporada && !fecha ? null : sorted.length === 0 ? (
         <div className="text-center text-dim py-10 px-5 font-sans leading-loose">
           {programados.length > 0
             ? <>Todavía no se jugó ninguno de los partidos programados.</>
-            : <>No hay partidos registrados todavía.<br />¡Jugá el primero!</>}
+            : temporada
+              ? <>Esta fecha no tiene partidos.</>
+              : <>No hay partidos registrados todavía.<br />¡Jugá el primero!</>}
         </div>
       ) : (
         <div className="flex flex-col gap-5">
@@ -524,6 +613,15 @@ export default function Matches({
             </section>
           ))}
         </div>
+      )}
+
+      {libres.length > 0 && (
+        <p className="m-0 mt-4 text-[13px] text-soft">
+          {libres.length === 1 ? 'Libre esta fecha: ' : 'Sin jugar esta fecha: '}
+          <span className="text-white font-semibold">
+            {libres.map((p) => getPairLabel(p.id, tournament.pairs, tournament.players)).join(' · ')}
+          </span>
+        </p>
       )}
     </div>
   );
