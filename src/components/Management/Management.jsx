@@ -145,6 +145,7 @@ function DatosDelTorneo({ tournament, onSave }) {
 const ligaDe = (t) => ({
   liga_mode: t.liga_mode ?? 'jornada', allow_rematch: !!t.allow_rematch,
   winner_format: t.winner_format ?? 'tabla', playoff_size: t.playoff_size ?? null,
+  points_win: t.points_win ?? 3, points_loss: t.points_loss ?? 0,
 });
 
 function resumenLiga(t) {
@@ -152,6 +153,7 @@ function resumenLiga(t) {
   return [
     l.liga_mode === 'temporada' ? 'Varios días' : 'Un solo día',
     ...(l.liga_mode === 'temporada' ? [l.allow_rematch ? 'Con cruces repetidos' : 'Sin cruces repetidos'] : []),
+    `Victoria ${l.points_win}${l.points_loss > 0 ? `, derrota ${l.points_loss}` : ''}`,
     l.winner_format === 'playoffs' ? `Playoffs a ${l.playoff_size}` : 'Gana la tabla',
   ].join(' · ');
 }

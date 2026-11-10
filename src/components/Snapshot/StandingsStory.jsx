@@ -60,7 +60,7 @@ export default function StandingsStory({ tournament, rows = [], champions = [] }
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         {top.map((r, i) => {
-          const pts  = r.pg * 3;
+          const pts  = r.pts ?? r.pg * 3;
           const diff = r.sf - r.sc;
           const isTop = i === 0 && champions.length === 0;
           return (

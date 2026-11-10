@@ -88,6 +88,10 @@ export default function Setup() {
   const conParejas = format === 'americano' || temporada;
   const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : 2;
   const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : 32;
+  // Una liga nueva copia los puntos de la última liga de la categoría (lo hace la API).
+  const ultimaLiga = (group?.tournaments ?? []).filter((t) => t.format === 'liga')
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
+  const puntosHeredados = ultimaLiga ? { win: ultimaLiga.points_win ?? 3, loss: ultimaLiga.points_loss ?? 0 } : null;
 
   // Heredar el club de la categoría como default (editable por torneo).
   // Si la categoría no tiene club, se usa el de la última jornada que sí lo tenga.
@@ -265,7 +269,7 @@ export default function Setup() {
               >
                 <div className="font-condensed font-bold text-[16px] text-white mb-1">LIGA</div>
                 <div className="text-[12px] text-muted font-sans">Partidos libres o por parejas fijas. Tabla de posiciones acumulada.</div>
-                {format === 'liga' && <LigaOpciones value={liga} onChange={setLiga} />}
+                {format === 'liga' && <LigaOpciones value={liga} onChange={setLiga} heredado={puntosHeredados} />}
               </div>
               <div
                 onClick={() => setFormat('americano')}

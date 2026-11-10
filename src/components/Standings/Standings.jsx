@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Trophy } from "lucide-react";
-import { calcStandings, pairRowStats, compareStandingRows, topStandingRows } from "../../utils/helpers";
+import { calcStandings, pairRowStats, compareStandingRows, topStandingRows, conPuntos, puntosDe } from "../../utils/helpers";
 import PlayerAvatar, { PairAvatar } from "../shared/PlayerAvatar";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
@@ -76,7 +76,7 @@ export default function Standings({ tournament }) {
   let displayRows;
   if (hasPairs) {
     displayRows = tournament.pairs.map((pair) => {
-      const stats = pairRowStats(tournament, pair, individualRows);
+      const stats = conPuntos(pairRowStats(tournament, pair, individualRows), tournament);
       const p1 = playerById[String(pair.p1)];
       const p2 = playerById[String(pair.p2)];
       return {
@@ -93,7 +93,7 @@ export default function Standings({ tournament }) {
   } else {
     displayRows = individualRows.map((r) => {
       const p = playerById[String(r.id)];
-      return { ...r, src: p?.linked_avatar_url ?? null, is_premium: p?.is_premium ?? false, playerIds: [r.id] };
+      return { ...conPuntos(r, tournament), src: p?.linked_avatar_url ?? null, is_premium: p?.is_premium ?? false, playerIds: [r.id] };
     }).sort(compareStandingRows);
   }
 
@@ -176,7 +176,7 @@ export default function Standings({ tournament }) {
                     <span className="text-[15px] font-semibold text-white leading-snug min-w-0">{r.name}</span>
                   )}
                 </span>
-                <span className="text-right font-condensed font-bold text-[17px] text-brand">{r.pg * 3}</span>
+                <span className="text-right font-condensed font-bold text-[17px] text-brand">{r.pts}</span>
                 <span className="hidden sm:block text-right text-[14px] text-content">{r.pj}</span>
                 <span className="hidden sm:block text-right text-[14px] text-content">{r.pg}</span>
                 <span className="hidden sm:block text-right text-[14px] text-content">{r.sf}</span>
@@ -200,7 +200,11 @@ export default function Standings({ tournament }) {
       </div>
 
       <p className="mt-2 mb-0 text-[12px] text-secondary leading-relaxed">
-        Se ordena por victorias, después diferencia de games.
+        {(() => {
+          const { win, loss } = puntosDe(tournament);
+          const pt = (n) => `${n} ${n === 1 ? 'punto' : 'puntos'}`;
+          return `Victoria ${pt(win)}${loss > 0 ? `, derrota ${pt(loss)}` : ''}. Se ordena por puntos, después victorias y diferencia de games.`;
+        })()}
         <span className="sm:hidden"> Tocá una fila para ver el detalle.</span>
       </p>
 

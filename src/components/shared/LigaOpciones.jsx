@@ -11,9 +11,28 @@ function Opcion({ on, onClick, children }) {
   );
 }
 
-// Opciones de la Liga: cuándo se juega, cruces repetidos y cómo se define el campeón.
-export default function LigaOpciones({ value, onChange, modoBloqueado = false }) {
+function Puntos({ label, value, min, max, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-sm border border-border-mid">
+      <span className="text-[14px] text-white">{label}</span>
+      <div className="flex items-center gap-2">
+        <button type="button" aria-label={`${label}: menos`} disabled={value <= min} onClick={() => onChange(value - 1)}
+          className="inline-flex items-center justify-center w-11 h-11 rounded-sm border border-border-strong bg-transparent text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"><Minus size={16} /></button>
+        <span className="min-w-[78px] text-center text-[14px] font-semibold text-white" aria-live="polite">{value} {value === 1 ? 'punto' : 'puntos'}</span>
+        <button type="button" aria-label={`${label}: más`} disabled={value >= max} onClick={() => onChange(value + 1)}
+          className="inline-flex items-center justify-center w-11 h-11 rounded-sm border border-border-strong bg-transparent text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"><Plus size={16} /></button>
+      </div>
+    </div>
+  );
+}
+
+// Opciones de la Liga: cuándo se juega, cruces repetidos, puntos y cómo se define el campeón.
+// `heredado` son los puntos de la última liga de la categoría, si los hay.
+export default function LigaOpciones({ value, onChange, modoBloqueado = false, heredado = null }) {
   const set = (k, v) => onChange({ ...value, [k]: v });
+  const win  = value.points_win  ?? heredado?.win  ?? 3;
+  const loss = value.points_loss ?? heredado?.loss ?? 0;
+  const setPuntos = (w, l) => onChange({ ...value, points_win: w, points_loss: Math.min(l, w) });
   const temporada = value.liga_mode === 'temporada';
   const playoffs = value.winner_format === 'playoffs';
   return (
@@ -45,9 +64,20 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false })
         </div>
       )}
       <div>
+        <span className="block text-[13px] font-semibold text-white mb-1.5">Puntos</span>
+        <div className="flex flex-col gap-2">
+          <Puntos label="Victoria" value={win} min={0} max={10} onChange={(w) => setPuntos(w, loss)} />
+          <Puntos label="Derrota" value={loss} min={0} max={win} onChange={(l) => setPuntos(win, l)} />
+        </div>
+        <p className="m-0 mt-1.5 text-[12px] text-secondary">
+          La tabla se ordena por puntos. La derrota por W.O. no suma.
+          {heredado && value.points_win == null ? ' Copiados de la última liga de la categoría.' : ''}
+        </p>
+      </div>
+      <div>
         <span className="block text-[13px] font-semibold text-white mb-1.5">Campeón</span>
         <div className="flex gap-2">
-          <Opcion on={!playoffs} onClick={() => onChange({ ...value, winner_format: 'tabla', playoff_size: null })}>Más victorias</Opcion>
+          <Opcion on={!playoffs} onClick={() => onChange({ ...value, winner_format: 'tabla', playoff_size: null })}>Primero de la tabla</Opcion>
           <Opcion on={playoffs} onClick={() => onChange({ ...value, winner_format: 'playoffs', playoff_size: value.playoff_size ?? 4 })}>Playoffs</Opcion>
         </div>
         {playoffs && (
