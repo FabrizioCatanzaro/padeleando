@@ -94,7 +94,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
       ? `${user?.name ?? 'Vos'} & ${reg.p2_user_name ?? reg.p2_name ?? 'tu compañero'}`
       : `${user?.name ?? 'Vos'} · busca pareja`;
     return (
-      <section aria-label="Tu inscripción" className="mx-5 sm:mx-6 mt-4 bg-surface border border-border-mid rounded-xl p-4 flex flex-col gap-3 max-w-xl">
+      <section aria-label="Tu inscripción" className="mx-5 sm:mx-auto my-4 bg-surface border border-border-mid rounded-xl p-4 flex flex-col gap-3 max-w-xl">
         <div className="flex items-center justify-between gap-2">
           <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-white">TU INSCRIPCIÓN</span>
           <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full border ${meta.color}`}>{meta.label}</span>
@@ -123,7 +123,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
 
   // ── Inscripción abierta ───────────────────────────────────────────────────
   return (
-    <section aria-label="Inscripción" className="mx-5 sm:mx-6 mt-4 bg-surface border border-brand/35 rounded-xl p-4 flex flex-col gap-3.5 max-w-xl">
+    <section aria-label="Inscripción" className="mx-5 sm:mx-auto my-4 bg-surface border border-brand/35 rounded-xl p-4 flex flex-col gap-3.5 max-w-xl">
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <span className="font-condensed font-bold text-[12px] tracking-[1.5px] text-brand inline-flex items-center gap-1.5">
           <Ticket size={14} /> INSCRIPCIÓN ABIERTA
