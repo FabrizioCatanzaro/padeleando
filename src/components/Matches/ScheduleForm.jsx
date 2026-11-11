@@ -3,6 +3,7 @@ import { X } from 'lucide-react';
 import { expandPair, getPairLabel, tournamentCourts, countPairMatches, pairKeyOf, fmtHora } from '../../utils/helpers';
 import { TEAM_SELECT_CLS } from './MatchForm';
 import { diasDeFecha, diaCorto, parejaDeEquipo } from '../../utils/fechas';
+import DisponibilidadParejas from './DisponibilidadParejas';
 
 const MAX_PREVIA_MATCHES = 2;
 
@@ -208,6 +209,14 @@ export default function ScheduleForm({ tournament, scheduled, fecha = null, onSa
             <p className="text-[11px] text-dim mt-1.5 mb-0">{fecha ? 'Opcional.' : 'Opcional. La fecha es la de la jornada.'}</p>
           </div>
         </div>
+
+        {fecha && isPairs && t1 && t2 && t1 !== t2 && (
+          <DisponibilidadParejas
+            tournament={tournament} pairIds={[t1, t2]}
+            dias={otroDia && dia ? [...diasFecha, dia] : diasFecha}
+            onElegir={(d, desde) => { setOtroDia(!diasFecha.includes(d)); setDia(d); setHora(desde); }}
+          />
+        )}
 
         {fecha && (
           <div className="mt-4 flex flex-col gap-3">

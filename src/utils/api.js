@@ -267,6 +267,7 @@ export const api = {
   registrations: {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
+    availability: (id, availability) => req('PATCH', `/registrations/${id}/availability`, { availability }),
     mineAll: ()             => req('GET',   '/registrations/mine'),
     cancel: (id)            => req('POST',  `/registrations/${id}/cancel`),
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),

@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, ArrowLeft, Users, User, Search, Check, Bell, AlertTriangle } from 'lucide-react';
 import RulesModal from '../shared/RulesModal';
+import AvailabilityEditor from '../shared/AvailabilityEditor';
+import { resumenDisponibilidad, disponibilidadInvalida, sinDisponibilidad } from '../../utils/disponibilidad';
+import { esTemporada } from '../../utils/fechas';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { formatPrice } from '../../utils/signup';
@@ -14,12 +17,13 @@ const OPTION = 'w-full text-left rounded-xl p-4 flex gap-3.5 items-start cursor-
 const INPUT  = 'h-12 w-full box-border bg-surface border border-border-strong rounded-lg px-3.5 text-white font-sans text-[15px] outline-none focus:border-brand';
 const LABEL  = 'text-[11px] tracking-wide text-dim font-semibold';
 
-// Formulario de inscripción en tres pasos: tipo → compañero → resumen.
+// Formulario de inscripción: tipo → compañero → horarios (liga en varios días) → resumen.
 // Pantalla completa en el teléfono, ventana centrada en escritorio.
 export default function RegistrationFlow({ tournament, groupName = null, signup, contactos = [], onClose, onDone }) {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [step, setStep]       = useState(1);
+  const [paso, setPaso]       = useState('tipo');
+  const [disp, setDisp]       = useState({ slots: [], note: '' });
   const [kind, setKind]       = useState('pair');
   const [hasAccount, setHasAccount] = useState(true);
   const [query, setQuery]     = useState('');
@@ -43,8 +47,11 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   }, [query, hasAccount, user?.id]);
 
   const sinCategoria = !user?.category;
-  const pasos = kind === 'pair' ? ['Tipo', 'Compañero', 'Resumen'] : ['Tipo', 'Resumen'];
-  const pasoActual = kind === 'pair' ? step : (step === 1 ? 1 : 2);
+  const temporada = esTemporada(tournament);
+  const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
+  const NOMBRES = { tipo: 'Tipo', companero: 'Compañero', disp: 'Horarios', resumen: 'Resumen' };
+  const pasos = orden.map((p) => NOMBRES[p]);
+  const pasoActual = orden.indexOf(paso) + 1;
   const companeroListo = kind === 'solo' || (hasAccount ? !!partner : guest.name.trim().length >= 2 && guest.phone.trim().length >= 6);
 
   const categorias = kind === 'pair' ? [user?.category ?? null, hasAccount ? (partner?.category ?? null) : null] : [user?.category ?? null];
@@ -54,13 +61,11 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
 
   function siguiente() {
     setError(null);
-    if (step === 1) setStep(kind === 'pair' ? 2 : 3);
-    else if (step === 2) setStep(3);
+    setPaso(orden[orden.indexOf(paso) + 1] ?? paso);
   }
   function atras() {
     setError(null);
-    if (step === 3) setStep(kind === 'pair' ? 2 : 1);
-    else if (step === 2) setStep(1);
+    setPaso(orden[orden.indexOf(paso) - 1] ?? 'tipo');
   }
 
   async function enviar() {
@@ -71,6 +76,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         tournamentId: tournament.id,
         kind,
         ...(signup.rules ? { accept_rules: acepto } : {}),
+        ...(temporada && !sinDisponibilidad(disp) ? { availability: disp } : {}),
         partner: kind === 'solo' ? undefined
           : hasAccount ? { username: partner.username } : { name: guest.name, phone: guest.phone },
       });
@@ -86,7 +92,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
     <div className="fixed inset-0 z-50 bg-black/70 flex sm:items-center sm:justify-center" role="dialog" aria-modal="true" aria-labelledby="reg-titulo">
       <div className="bg-base w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-md sm:rounded-2xl sm:border sm:border-border-mid flex flex-col overflow-hidden">
         <header className="h-14 px-2 flex items-center justify-between border-b border-border shrink-0">
-          {step > 1 ? (
+          {paso !== 'tipo' ? (
             <button type="button" onClick={atras} aria-label="Volver" className="w-11 h-11 flex items-center justify-center bg-transparent border-0 text-soft cursor-pointer"><ArrowLeft size={20} /></button>
           ) : <span className="w-11" />}
           <div className="text-center min-w-0">
@@ -119,7 +125,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
             </div>
           )}
 
-          {step === 1 && (
+          {paso === 'tipo' && (
             <>
               <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">¿Cómo te inscribís?</h1>
               <button type="button" aria-pressed={kind === 'pair'} onClick={() => setKind('pair')}
@@ -141,7 +147,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
             </>
           )}
 
-          {step === 2 && (
+          {paso === 'companero' && (
             <>
               <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">¿Quién es tu compañero?</h1>
               <div role="group" aria-label="Tipo de compañero" className="grid grid-cols-2 gap-1 p-1 bg-surface border border-border-strong rounded-lg">
@@ -202,7 +208,17 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
             </>
           )}
 
-          {step === 3 && (
+          {paso === 'disp' && (
+            <>
+              <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">¿Cuándo pueden jugar?</h1>
+              <p className="m-0 text-[14px] text-soft leading-snug">
+                La liga se juega en varios días. Marcá los días y horarios en que {kind === 'pair' ? 'pueden jugar los dos' : 'podés jugar'}. El organizador los usa para programar los partidos.
+              </p>
+              <AvailabilityEditor value={disp} onChange={setDisp} />
+            </>
+          )}
+
+          {paso === 'resumen' && (
             <>
               <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">Revisá y enviá</h1>
               <dl className="m-0 bg-surface border border-border rounded-xl px-4 py-1 flex flex-col">
@@ -212,6 +228,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                   ...(kind === 'pair' ? [['Compañero', hasAccount
                     ? `${partner?.name ?? ''}${partner?.category ? ` · ${partner.category}` : ''}`
                     : `${guest.name} · sin cuenta`]] : []),
+                  ...(temporada ? [['Horarios', resumenDisponibilidad(disp) || 'Sin cargar']] : []),
                   ...(precio ? [['A pagar', `${precio}`]] : []),
                 ].map(([k, v], i, arr) => (
                   <div key={k} className={`flex justify-between gap-3 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
@@ -254,8 +271,11 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         </main>
 
         <footer className="p-4 border-t border-border shrink-0">
-          {step < 3 ? (
-            <Btn variant="primary" size="lg" full onClick={siguiente} disabled={step === 2 && !companeroListo}>SIGUIENTE</Btn>
+          {paso !== 'resumen' ? (
+            <Btn variant="primary" size="lg" full onClick={siguiente}
+              disabled={(paso === 'companero' && !companeroListo) || (paso === 'disp' && disponibilidadInvalida(disp))}>
+              {paso === 'disp' && sinDisponibilidad(disp) ? 'SEGUIR SIN CARGAR' : 'SIGUIENTE'}
+            </Btn>
           ) : (
             <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria || (!!signup.rules && !acepto)}>ENVIAR INSCRIPCIÓN</Btn>
           )}

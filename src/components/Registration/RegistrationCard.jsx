@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, AlertTriangle, Ticket, ChevronDown, FileText } from 'lucide-react';
+import { Check, AlertTriangle, Ticket, ChevronDown, FileText, Clock } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -9,6 +9,9 @@ import { levelLabel, checkRegistrationLevel } from '../../utils/category';
 import Btn from '../shared/Btn';
 import RegistrationFlow from './RegistrationFlow';
 import RulesModal from '../shared/RulesModal';
+import EditAvailability from './EditAvailability';
+import { resumenDisponibilidad } from '../../utils/disponibilidad';
+import { esTemporada } from '../../utils/fechas';
 import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
 
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
@@ -25,6 +28,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   const [error, setError] = useState(null);
   const [abierta, setAbierta] = useState(true);
   const [verReglamento, setVerReglamento] = useState(false);
+  const [editarHorarios, setEditarHorarios] = useState(false);
 
   const load = useCallback(() => {
     if (!isLoggedIn) return;
@@ -116,6 +120,31 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
             {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
             {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
           </p>
+          {activo && esTemporada(tournament) && tournament.status !== 'finished' && (
+            <div className="flex items-start gap-2.5 rounded-lg bg-surface-alt px-3 py-2.5">
+              <Clock size={15} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
+              <span className="flex-1 min-w-0 text-[13px] text-content leading-snug">
+                <span className="text-secondary">Horarios: </span>
+                {resumenDisponibilidad(reg.availability) || 'sin cargar'}
+                {reg.availability?.note && <span className="block text-secondary">{reg.availability.note}</span>}
+              </span>
+              <button type="button" onClick={() => setEditarHorarios(true)}
+                className="shrink-0 min-h-[32px] bg-transparent border-0 p-0 text-[13px] text-brand font-semibold cursor-pointer hover:underline">
+                {reg.availability ? 'Editar' : 'Cargar'}
+              </button>
+            </div>
+          )}
+          {editarHorarios && (
+            <EditAvailability
+              registration={reg}
+              onClose={() => setEditarHorarios(false)}
+              onSaved={(availability) => {
+                setEditarHorarios(false);
+                setData((d) => ({ ...d, registration: { ...d.registration, availability } }));
+                showToast('Horarios guardados');
+              }}
+            />
+          )}
           {activo && signup.open && (
             <>
               <Btn variant="danger" full onClick={cancelar} loading={cancelling}>Cancelar inscripción</Btn>
