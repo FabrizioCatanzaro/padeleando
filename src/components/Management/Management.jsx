@@ -5,7 +5,7 @@ import PlayerManager from "./PlayerManager";
 import PairManager from "./PairManager";
 import ClubSelector from "../shared/ClubSelector";
 import SignupEditor from "../shared/SignupEditor";
-import { profileContacts } from "../../utils/signup";
+import { profileContacts, formatPrice } from "../../utils/signup";
 import Btn from "../shared/Btn";
 import LigaOpciones from "../shared/LigaOpciones";
 import FlyerCard from "./FlyerCard";
@@ -28,20 +28,29 @@ function signupDe(t) {
   };
 }
 
-/**
- * Datos del torneo: club, fecha e inscripción con UN botón (auditoría UI).
- * Antes eran dos bloques con su propio GUARDAR y no quedaba claro qué se
- * había guardado. Se manda sólo lo que cambió, en una sola llamada.
- */
-function DatosDelTorneo({ tournament, onSave }) {
-  const [club, setClub] = useState(() => entityClub(tournament));
-  const [date, setDate] = useState(() => fechaDe(tournament));
-  const [time, setTime] = useState(() => fmtHora(tournament.event_time));
+// Barra de guardado: queda pegada abajo mientras haya cambios sin guardar.
+function BarraGuardar({ dirty, saving, error, onSave }) {
+  return (
+    <div className={`mt-5 flex items-center justify-between gap-3 flex-wrap ${dirty ? 'sticky bottom-20 sm:bottom-4 z-10 bg-surface border border-brand/40 rounded-xl px-3.5 py-3 shadow-xl' : ''}`}>
+      <span className={`text-[13px] ${dirty ? 'text-white font-semibold' : 'text-secondary'}`}>
+        {error ? <span className="text-danger">{error}</span>
+          : dirty ? 'Tenés cambios sin guardar.' : 'Todo guardado.'}
+      </span>
+      <Btn variant="primary" size="sm" icon={Check} onClick={onSave} loading={saving} disabled={!dirty}>
+        Guardar cambios
+      </Btn>
+    </div>
+  );
+}
+
+// Inscripción del torneo: su propia sección, con su propio botón.
+function InscripcionDelTorneo({ tournament, onSave }) {
   const [signup, setSignup] = useState(() => signupDe(tournament));
   // Lo guardado: contra esto se mide si hay cambios.
-  const [base, setBase] = useState(() => ({ signup: JSON.stringify(signupDe(tournament)) }));
+  const [base, setBase] = useState(() => JSON.stringify(signupDe(tournament)));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const dirty = JSON.stringify(signup) !== base;
 
   const inherited = {
     open:     tournament.group_signup_open ?? false,
@@ -54,6 +63,40 @@ function DatosDelTorneo({ tournament, onSave }) {
     rules:    tournament.group_rules ?? null,
   };
 
+  async function save() {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({ signup });
+      setBase(JSON.stringify(signup));
+    } catch (e) {
+      setError(e.message ?? 'No se pudo guardar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <>
+      <SignupEditor
+        value={signup}
+        onChange={setSignup}
+        inherited={inherited}
+        profile={profileContacts(tournament.owner_social_links)}
+      />
+      <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />
+    </>
+  );
+}
+
+// Datos del torneo: club, fecha y hora.
+function DatosDelTorneo({ tournament, onSave }) {
+  const [club, setClub] = useState(() => entityClub(tournament));
+  const [date, setDate] = useState(() => fechaDe(tournament));
+  const [time, setTime] = useState(() => fmtHora(tournament.event_time));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+
   const clubId      = club?.pending ? null : (club?.id ?? null);
   const requestId   = club?.pending ? club.request_id : null;
   const clubChanged = clubId !== (tournament.club_id ?? null)
@@ -61,8 +104,7 @@ function DatosDelTorneo({ tournament, onSave }) {
   const clubDirty = clubChanged
     || (date || null) !== (fechaDe(tournament) || null)
     || (time || null) !== (fmtHora(tournament.event_time) || null);
-  const signupDirty = JSON.stringify(signup) !== base.signup;
-  const dirty = clubDirty || signupDirty;
+  const dirty = clubDirty;
 
   async function save() {
     setSaving(true);
@@ -75,9 +117,7 @@ function DatosDelTorneo({ tournament, onSave }) {
           // Al cambiar de club, las canchas del torneo pasan a ser las del nuevo club.
           ...(clubChanged ? { number_of_courts: clubCourts(club) } : {}),
         } : null,
-        signup: signupDirty ? signup : null,
       });
-      setBase({ signup: JSON.stringify(signup) });
     } catch (e) {
       setError(e.message ?? 'No se pudo guardar');
     } finally {
@@ -87,8 +127,7 @@ function DatosDelTorneo({ tournament, onSave }) {
 
   return (
     <div className="flex flex-col">
-      <div className="py-4 border-b border-border">
-        <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Club y fecha</h4>
+      <div className="pt-4">
         <div className="flex flex-col gap-3">
           <div>
             <label className="block text-[12px] font-semibold text-soft mb-1.5">Club</label>
@@ -119,26 +158,7 @@ function DatosDelTorneo({ tournament, onSave }) {
         </div>
       </div>
 
-      <div className="pt-4">
-        <h4 className="m-0 mb-3 text-[14px] font-bold text-white">Inscripción</h4>
-        <SignupEditor
-          value={signup}
-          onChange={setSignup}
-          inherited={inherited}
-          profile={profileContacts(tournament.owner_social_links)}
-        />
-      </div>
-
-      {/* Un solo botón, pegado abajo mientras haya cambios sin guardar. */}
-      <div className={`mt-5 flex items-center justify-between gap-3 flex-wrap ${dirty ? 'sticky bottom-20 sm:bottom-4 z-10 bg-surface border border-brand/40 rounded-xl px-3.5 py-3 shadow-xl' : ''}`}>
-        <span className={`text-[13px] ${dirty ? 'text-white font-semibold' : 'text-secondary'}`}>
-          {error ? <span className="text-danger">{error}</span>
-            : dirty ? 'Tenés cambios sin guardar.' : 'Todo guardado.'}
-        </span>
-        <Btn variant="primary" size="sm" icon={Check} onClick={save} loading={saving} disabled={!dirty}>
-          Guardar cambios
-        </Btn>
-      </div>
+      <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />
     </div>
   );
 }
@@ -201,14 +221,20 @@ export default function Management({
   const playoffsPendientes = conPlayoffs && tournament.status === 'active' && !tournament.bracket;
   const playoffsEnJuego = conPlayoffs && tournament.status === 'active' && !!tournament.bracket && !tournament.bracket.final?.winner_id;
   const sinJugar = (tournament.scheduled_matches ?? []).length;
-  // Resumen de una línea de "Datos del torneo", para no abrirlo de gusto.
+  // Resúmenes de una línea, para no abrir las secciones de gusto.
   const resumen = [
     tournament.club_name ?? 'Sin club',
     tournament.event_date
       ? `${String(tournament.event_date).slice(8, 10)}/${String(tournament.event_date).slice(5, 7)}${tournament.event_time ? ` ${fmtHora(tournament.event_time)}` : ''}`
       : 'Fecha a confirmar',
-    (tournament.signup_open ?? tournament.group_signup_open) ? 'Inscripción abierta' : 'Inscripción cerrada',
   ].join(' · ');
+  const sg = tournament.signup ?? {};
+  const resumenInscripcion = [
+    sg.open ? 'Abierta' : 'Cerrada',
+    sg.open && sg.price != null ? formatPrice(sg.price, sg.unit) : null,
+    sg.open && sg.capacity ? `Cupo ${sg.capacity} ${sg.capacity_unit === 'player' ? 'jugadores' : 'parejas'}` : null,
+    sg.rules ? 'Con reglamento' : 'Sin reglamento',
+  ].filter(Boolean).join(' · ');
 
   return (
     <div>
@@ -328,6 +354,21 @@ export default function Management({
           </summary>
           <div className="px-4 pb-4 border-t border-border">
             <DatosDelTorneo tournament={tournament} onSave={onUpdateDatos} />
+          </div>
+        </details>
+      )}
+
+      {isOwner && (
+        <details className="group bg-surface border border-border-mid rounded-xl mt-3">
+          <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <span className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-[15px] font-bold text-white">Inscripción</span>
+              <span className="text-[13px] text-secondary truncate">{resumenInscripcion}</span>
+            </span>
+            <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+          </summary>
+          <div className="px-4 pt-4 pb-4 border-t border-border">
+            <InscripcionDelTorneo key={tournament.id} tournament={tournament} onSave={onUpdateDatos} />
           </div>
         </details>
       )}

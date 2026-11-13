@@ -1,10 +1,11 @@
 import { Plus, X } from 'lucide-react';
-import { MAX_RULES } from '../../utils/rules';
 import { CONTACT_META, CONTACT_TYPES, formatPrice } from '../../utils/signup';
 import { levelLabel } from '../../utils/category';
+import { MAX_RULES } from '../../utils/rules';
 import LevelPicker from './LevelPicker';
 
-// `inherited` es lo que trae la categoría; null en un campo = heredarlo.
+const INPUT = 'h-10 bg-surface border border-border-mid text-white px-3 font-sans text-[14px] rounded-lg outline-none focus:border-brand';
+
 // ISO → valor de <input type="datetime-local"> en la hora del navegador.
 function toLocalInput(iso) {
   if (!iso) return '';
@@ -14,12 +15,41 @@ function toLocalInput(iso) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
+function Bloque({ titulo, ayuda, children }) {
+  return (
+    <section className="flex flex-col gap-2.5 py-4 border-t border-border first:border-t-0 first:pt-0">
+      <div className="flex flex-col gap-0.5">
+        <h5 className="m-0 text-[14px] font-bold text-white">{titulo}</h5>
+        {ayuda && <p className="m-0 text-[12px] text-secondary leading-snug">{ayuda}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Segmentos({ label, opciones, value, onChange }) {
+  return (
+    <div role="group" aria-label={label} className="inline-flex p-1 gap-1 rounded-lg border border-border-mid bg-surface shrink-0">
+      {opciones.map(([v, texto]) => (
+        <button
+          key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)}
+          className={`min-h-[32px] px-3 rounded-md border-0 font-sans text-[13px] cursor-pointer transition-colors ${
+            value === v ? 'bg-brand text-base font-bold' : 'bg-transparent text-soft hover:text-white'
+          }`}
+        >
+          {texto}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// Inscripción de un torneo o de una categoría. `inherited` es lo de la categoría; null en un campo = heredarlo.
 export default function SignupEditor({ value, onChange, inherited = null, profile = [] }) {
   const set = (patch) => onChange({ ...value, ...patch });
   const contacts = value.contacts ?? [];
   const usedTypes = new Set(contacts.map((c) => c.type));
-  // Un contacto nuevo arranca en un canal que no esté cargado ni venga del
-  // perfil: antes tomaba el primero libre, y si era uno del perfil lo pisaba.
+  // Un contacto nuevo arranca en un canal que no esté cargado ni venga del perfil.
   const profileTypes = new Set(profile.map((p) => p.type));
   const freeType  = CONTACT_TYPES.find((t) => !usedTypes.has(t) && !profileTypes.has(t));
   // Los del perfil se muestran solos; cargar el mismo canal a mano los reemplaza.
@@ -28,118 +58,106 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
   const setContact = (i, patch) =>
     set({ contacts: contacts.map((c, idx) => (idx === i ? { ...c, ...patch } : c)) });
 
-  const inheritedPrice = inherited && inherited.price != null
-    ? formatPrice(inherited.price, inherited.unit)
-    : null;
-
+  const inheritedPrice = inherited && inherited.price != null ? formatPrice(inherited.price, inherited.unit) : null;
   const inheritedLevel = inherited?.level ? levelLabel(inherited.level) : null;
+  const capacityUnit = value.capacity_unit ?? inherited?.capacity_unit ?? 'pair';
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* La categoría del torneo marca a los inscriptos excedidos de nivel.
-          Vacía en la jornada = la de la categoría del organizador. */}
-      <div>
-        <label className="block text-[12px] font-semibold text-soft mb-1.5">Categoría del torneo</label>
+    <div className="flex flex-col">
+      <Bloque titulo="Estado">
+        <label className="flex items-center justify-between gap-3 rounded-lg border border-border-mid px-3 py-2.5 cursor-pointer">
+          <span className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-[14px] font-semibold text-white">{value.open ? 'Inscripción abierta' : 'Inscripción cerrada'}</span>
+            <span className="text-[12px] text-secondary leading-snug">
+              {value.open ? 'Los jugadores se anotan desde la app y vos aprobás cada inscripción.' : 'Nadie puede anotarse desde la app.'}
+            </span>
+          </span>
+          <input
+            type="checkbox" role="switch" checked={!!value.open} onChange={(e) => set({ open: e.target.checked })}
+            aria-label="Abrir inscripción" className="w-5 h-5 shrink-0 accent-brand cursor-pointer"
+          />
+        </label>
+      </Bloque>
+
+      <Bloque titulo="Categoría" ayuda="La inscripción marca a quien excede el nivel. Vos decidís si lo aceptás.">
         <LevelPicker
           value={value.level ?? null}
           onChange={(level) => set({ level })}
           emptyLabel={inheritedLevel ? `De la categoría: ${inheritedLevel}` : 'Sin categoría'}
         />
-      </div>
-
-      <label className="flex items-center gap-2.5 cursor-pointer">
-        <input
-          type="checkbox"
-          checked={!!value.open}
-          onChange={(e) => set({ open: e.target.checked })}
-          className="w-4 h-4 accent-brand cursor-pointer"
-        />
-        <span className="text-[13px] text-content font-sans">Abrir inscripción</span>
-      </label>
+      </Bloque>
 
       {value.open && (
         <>
-          {/* Cupo y cierre: los usa la inscripción desde la app (lista de
-              espera, cierre automático). Vacío = sin cupo / sin cierre. */}
-          <div className="flex gap-2 items-end">
-            <div className="w-24 shrink-0">
-              <label className="block text-[12px] font-semibold text-soft mb-1.5">Cupo</label>
+          <Bloque titulo="Cupo" ayuda="Al llenarse, las inscripciones nuevas quedan en lista de espera. Vacío: sin cupo.">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
-                type="number"
-                min="1"
-                inputMode="numeric"
+                type="number" min="1" inputMode="numeric" aria-label="Cupo"
                 value={value.capacity ?? ''}
                 onChange={(e) => set({ capacity: e.target.value === '' ? null : Number(e.target.value) })}
-                placeholder={inherited?.capacity ? `De la categoría: ${inherited.capacity}` : 'Sin cupo'}
-                className="w-full bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
+                placeholder={inherited?.capacity ? 'Categoría' : 'Sin cupo'}
+                className={`${INPUT} w-28`}
+              />
+              <Segmentos
+                label="El cupo cuenta" value={capacityUnit} onChange={(v) => set({ capacity_unit: v })}
+                opciones={[['pair', 'Parejas'], ['player', 'Jugadores']]}
               />
             </div>
-            <div className="shrink-0">
-              <label className="block text-[12px] font-semibold text-soft mb-1.5">El cupo cuenta</label>
-              <select
-                value={value.capacity_unit ?? inherited?.capacity_unit ?? 'pair'}
-                onChange={(e) => set({ capacity_unit: e.target.value })}
-                className="bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none cursor-pointer"
-              >
-                <option value="pair">Parejas</option>
-                <option value="player">Jugadores</option>
-              </select>
-            </div>
-          </div>
+            {inherited?.capacity && value.capacity == null && (
+              <span className="text-[12px] text-secondary">Usa el cupo de la categoría: {inherited.capacity}.</span>
+            )}
+          </Bloque>
 
-          <div>
-            <label htmlFor="signup-cierre" className="block text-[12px] font-semibold text-soft mb-1.5">Cierre de la inscripción</label>
-            <input
-              id="signup-cierre"
-              type="datetime-local"
-              value={toLocalInput(value.closes_at)}
-              onChange={(e) => set({ closes_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
-              className="bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
-            />
-            <span className="block text-[12px] font-sans text-secondary mt-1">
-              A esa hora deja de aceptar inscripciones y cancelaciones. Sin fecha, la cerrás vos a mano.
-            </span>
-          </div>
-
-          <div className="flex gap-2 items-end">
-            <div className="flex-1 min-w-0">
-              <label className="block text-[12px] font-semibold text-soft mb-1.5">Precio</label>
+          <Bloque titulo="Cierre" ayuda="A esa hora deja de aceptar inscripciones y cancelaciones. Sin fecha, la cerrás vos a mano.">
+            <div className="flex items-center gap-2 flex-wrap">
               <input
-                type="number"
-                min="0"
-                inputMode="numeric"
-                value={value.price ?? ''}
-                onChange={(e) => set({ price: e.target.value === '' ? null : Number(e.target.value) })}
-                placeholder={inheritedPrice ? 'Igual que la categoría' : 'Sin precio'}
-                className="w-full bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
+                id="signup-cierre" type="datetime-local" aria-label="Cierre de la inscripción"
+                value={toLocalInput(value.closes_at)}
+                onChange={(e) => set({ closes_at: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                className={INPUT}
               />
+              {value.closes_at && (
+                <button type="button" onClick={() => set({ closes_at: null })}
+                  className="min-h-[40px] px-2 bg-transparent border-0 text-[13px] text-soft hover:text-white cursor-pointer">
+                  Quitar cierre
+                </button>
+              )}
             </div>
-            <div className="shrink-0">
-              <label className="block text-[12px] font-semibold text-soft mb-1.5">Por</label>
-              <select
-                value={value.unit ?? 'player'}
-                onChange={(e) => set({ unit: e.target.value })}
-                className="bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none cursor-pointer"
-              >
-                <option value="player">Jugador</option>
-                <option value="pair">Pareja</option>
-              </select>
-            </div>
-          </div>
-          {inheritedPrice && value.price == null && (
-            <span className="block -mt-1 text-[12px] text-secondary">Precio de la categoría: {inheritedPrice}.</span>
-          )}
+          </Bloque>
 
-          <div>
-            <label className="block text-[12px] font-semibold text-soft mb-1.5">Contacto</label>
+          <Bloque titulo="Precio" ayuda="Se muestra en la inscripción. El pago se coordina con vos. 0 es gratis.">
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="relative w-36">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-secondary" aria-hidden="true">$</span>
+                <input
+                  type="number" min="0" inputMode="numeric" aria-label="Precio"
+                  value={value.price ?? ''}
+                  onChange={(e) => set({ price: e.target.value === '' ? null : Number(e.target.value) })}
+                  placeholder={inheritedPrice ? 'Categoría' : 'Sin precio'}
+                  className={`${INPUT} w-full pl-7`}
+                />
+              </div>
+              {value.price != null && (
+                <Segmentos
+                  label="El precio es" value={value.unit ?? 'player'} onChange={(v) => set({ unit: v })}
+                  opciones={[['player', 'Por jugador'], ['pair', 'Por pareja']]}
+                />
+              )}
+            </div>
+            {inheritedPrice && value.price == null && (
+              <span className="text-[12px] text-secondary">Usa el precio de la categoría: {inheritedPrice}.</span>
+            )}
+          </Bloque>
+
+          <Bloque titulo="Contacto" ayuda="Para consultas antes de inscribirse. Las redes de tu perfil se suman solas.">
             <div className="flex flex-col gap-2">
               {fromProfile.map((p) => {
                 const meta = CONTACT_META[p.type] ?? {};
                 const Icon = meta.icon;
                 return (
-                  <div key={`profile-${p.type}`} className="flex items-center gap-2 px-2.5 py-1.5 rounded-sm border border-dashed border-border-strong">
-                    {Icon && <Icon size={13} className="text-brand shrink-0" />}
-                    <span className="text-[12px] text-content font-sans truncate flex-1 min-w-0">{p.value}</span>
+                  <div key={`profile-${p.type}`} className="flex items-center gap-2 h-10 px-3 rounded-lg border border-dashed border-border-strong">
+                    {Icon && <Icon size={14} className="text-brand shrink-0" />}
+                    <span className="text-[13px] text-content font-sans truncate flex-1 min-w-0">{p.value}</span>
                     <span className="text-[12px] text-secondary shrink-0">de tu perfil</span>
                   </div>
                 );
@@ -150,9 +168,9 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
                 return (
                   <div key={i} className="flex gap-2 items-center">
                     <select
-                      value={c.type}
+                      value={c.type} aria-label="Canal"
                       onChange={(e) => setContact(i, { type: e.target.value })}
-                      className="bg-surface border border-border-mid text-white px-2 py-[7px] font-sans text-[12px] rounded-sm outline-none cursor-pointer shrink-0"
+                      className={`${INPUT} px-2 cursor-pointer shrink-0`}
                     >
                       {CONTACT_TYPES.map((t) => (
                         <option key={t} value={t} disabled={t !== c.type && usedTypes.has(t)}>
@@ -161,19 +179,17 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
                       ))}
                     </select>
                     <input
-                      value={c.value}
+                      value={c.value} aria-label={meta.label}
                       onChange={(e) => setContact(i, { value: e.target.value })}
-                      placeholder={meta.placeholder}
-                      maxLength={80}
-                      className="flex-1 min-w-0 bg-surface border border-border-mid text-white px-2.5 py-1.5 font-sans text-[13px] rounded-sm outline-none"
+                      placeholder={meta.placeholder} maxLength={80}
+                      className={`${INPUT} flex-1 min-w-0`}
                     />
                     <button
-                      type="button"
-                      onClick={() => set({ contacts: contacts.filter((_, idx) => idx !== i) })}
+                      type="button" onClick={() => set({ contacts: contacts.filter((_, idx) => idx !== i) })}
                       aria-label="Quitar contacto"
-                      className="bg-transparent border-0 text-muted hover:text-danger cursor-pointer p-1 shrink-0 transition-colors"
+                      className="w-10 h-10 flex items-center justify-center bg-transparent border-0 text-muted hover:text-danger cursor-pointer shrink-0 transition-colors"
                     >
-                      <X size={14} />
+                      <X size={16} />
                     </button>
                   </div>
                 );
@@ -181,49 +197,40 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
 
               {freeType && (
                 <button
-                  type="button"
-                  onClick={() => set({ contacts: [...contacts, { type: freeType, value: '' }] })}
-                  className="flex items-center gap-1.5 self-start text-[13px] text-brand hover:text-white cursor-pointer bg-transparent border-0 p-0 transition-colors"
+                  type="button" onClick={() => set({ contacts: [...contacts, { type: freeType, value: '' }] })}
+                  className="flex items-center gap-1.5 self-start min-h-[36px] text-[13px] text-brand font-semibold hover:text-white cursor-pointer bg-transparent border-0 p-0 transition-colors"
                 >
-                  <Plus size={13} /> Agregar contacto
+                  <Plus size={14} /> Agregar contacto
                 </button>
               )}
 
               {contacts.length === 0 && inherited?.contacts?.length > 0 && (
-                <span className="text-[12px] text-secondary">
-                  Sin contactos propios se usan los de la categoría.
-                </span>
+                <span className="text-[12px] text-secondary">Sin contactos propios se usan los de la categoría.</span>
               )}
               {contacts.length === 0 && !inherited?.contacts?.length && fromProfile.length === 0 && (
-                <span className="text-[12px] text-secondary">
-                  Cargá tus redes en el perfil y aparecen acá solas.
-                </span>
+                <span className="text-[12px] text-secondary">Cargá tus redes en el perfil y aparecen acá solas.</span>
               )}
             </div>
-          </div>
+          </Bloque>
         </>
       )}
 
-      <div>
-        <label htmlFor="signup-reglamento" className="block text-[12px] font-semibold text-soft mb-1.5">Reglamento</label>
+      <Bloque
+        titulo="Reglamento"
+        ayuda={inherited?.rules && !value.rules
+          ? 'Vacío usa el reglamento de la categoría.'
+          : 'Si hay reglamento, el jugador lo tiene que aceptar para inscribirse.'}
+      >
         <textarea
-          id="signup-reglamento"
+          id="signup-reglamento" aria-label="Reglamento"
           value={value.rules ?? ''}
           onChange={(e) => set({ rules: e.target.value === '' ? null : e.target.value })}
-          maxLength={MAX_RULES}
-          rows={5}
-          placeholder={inherited?.rules ? 'Vacío usa el reglamento de la categoría' : 'Formato, puntos, W.O., horarios, pelotas…'}
-          className="w-full bg-surface border border-border-mid text-white px-2.5 py-2 font-sans text-[13px] leading-relaxed rounded-sm outline-none resize-y"
+          maxLength={MAX_RULES} rows={6}
+          placeholder={inherited?.rules ? 'Igual que la categoría' : 'Formato, puntos, W.O., horarios, pelotas…'}
+          className="w-full bg-surface border border-border-mid text-white px-3 py-2.5 font-sans text-[14px] leading-relaxed rounded-lg outline-none focus:border-brand resize-y"
         />
-        <span className="flex justify-between gap-3 text-[12px] font-sans text-secondary mt-1">
-          <span>
-            {inherited?.rules && !value.rules
-              ? 'Se usa el reglamento de la categoría.'
-              : 'Si hay reglamento, el jugador lo tiene que aceptar para inscribirse.'}
-          </span>
-          <span className="shrink-0 tabular-nums">{(value.rules ?? '').length}/{MAX_RULES}</span>
-        </span>
-      </div>
+        <span className="self-end text-[12px] text-secondary tabular-nums">{(value.rules ?? '').length}/{MAX_RULES}</span>
+      </Bloque>
     </div>
   );
 }

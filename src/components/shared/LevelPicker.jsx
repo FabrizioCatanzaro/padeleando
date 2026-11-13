@@ -24,15 +24,15 @@ export default function LevelPicker({ value, onChange, emptyLabel = 'Sin categor
   }
 
   const segment = (items, selected, onPick, label) => (
-    <div className="inline-flex rounded-sm border border-border-mid overflow-hidden" role="group" aria-label={label}>
+    <div className="inline-flex p-1 gap-1 rounded-lg border border-border-mid bg-surface" role="group" aria-label={label}>
       {items.map((it) => (
         <button
           key={it.value}
           type="button"
           onClick={() => onPick(it.value)}
           aria-pressed={selected === it.value}
-          className={`px-3 py-[7px] font-sans text-[13px] border-0 cursor-pointer transition-colors ${
-            selected === it.value ? 'bg-brand text-base font-bold' : 'bg-surface text-muted hover:text-white'
+          className={`min-h-[32px] px-3 rounded-md font-sans text-[13px] border-0 cursor-pointer transition-colors ${
+            selected === it.value ? 'bg-brand text-base font-bold' : 'bg-transparent text-soft hover:text-white'
           }`}
         >
           {it.label}
@@ -51,7 +51,7 @@ export default function LevelPicker({ value, onChange, emptyLabel = 'Sin categor
         value={current?.value ?? ''}
         onChange={(e) => onChange(e.target.value === '' ? null : buildLevel(kind, branch, Number(e.target.value)))}
         aria-label={kind === 'sum' ? 'Suma de la pareja' : 'Número de categoría'}
-        className="w-full bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none cursor-pointer"
+        className="w-full h-10 bg-surface border border-border-mid text-white px-3 font-sans text-[14px] rounded-lg outline-none focus:border-brand cursor-pointer"
       >
         <option value="">{emptyLabel}</option>
         {numbers.map((n) => (
@@ -60,7 +60,7 @@ export default function LevelPicker({ value, onChange, emptyLabel = 'Sin categor
           </option>
         ))}
       </select>
-      <span className="text-[11px] font-sans text-dim">
+      <span className="text-[12px] font-sans text-secondary leading-snug">
         {kind === 'sum'
           ? 'Las categorías de la pareja tienen que sumar este número o más. Ejemplo: C6 + C5 en SUMA 11.'
           : branch === 'M'
