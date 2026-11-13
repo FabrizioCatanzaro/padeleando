@@ -5,6 +5,8 @@ import PlayerManager from "./PlayerManager";
 import PairManager from "./PairManager";
 import ClubSelector from "../shared/ClubSelector";
 import SignupEditor from "../shared/SignupEditor";
+import RulesEditor from "../shared/RulesEditor";
+import { ayudaReglamento } from "../../utils/rules";
 import { profileContacts, formatPrice } from "../../utils/signup";
 import Btn from "../shared/Btn";
 import LigaOpciones from "../shared/LigaOpciones";
@@ -24,7 +26,6 @@ function signupDe(t) {
     capacity: t.signup_capacity ?? null,
     capacity_unit: t.signup_capacity_unit ?? null,
     closes_at: t.signup_closes_at ?? null,
-    rules:    t.rules ?? null,
   };
 }
 
@@ -60,7 +61,6 @@ function InscripcionDelTorneo({ tournament, onSave }) {
     level:    tournament.group_level ?? null,
     capacity: tournament.group_signup_capacity ?? null,
     capacity_unit: tournament.group_signup_capacity_unit ?? null,
-    rules:    tournament.group_rules ?? null,
   };
 
   async function save() {
@@ -83,17 +83,20 @@ function InscripcionDelTorneo({ tournament, onSave }) {
         onChange={setSignup}
         inherited={inherited}
         profile={profileContacts(tournament.owner_social_links)}
+        conReglamento={false}
       />
       <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />
     </>
   );
 }
 
-// Datos del torneo: club, fecha y hora.
+// Datos del torneo: club, fecha, hora y reglamento.
 function DatosDelTorneo({ tournament, onSave }) {
   const [club, setClub] = useState(() => entityClub(tournament));
   const [date, setDate] = useState(() => fechaDe(tournament));
   const [time, setTime] = useState(() => fmtHora(tournament.event_time));
+  const [rules, setRules] = useState(() => tournament.rules ?? null);
+  const [rulesBase, setRulesBase] = useState(() => tournament.rules ?? null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -104,7 +107,8 @@ function DatosDelTorneo({ tournament, onSave }) {
   const clubDirty = clubChanged
     || (date || null) !== (fechaDe(tournament) || null)
     || (time || null) !== (fmtHora(tournament.event_time) || null);
-  const dirty = clubDirty;
+  const rulesDirty = (rules ?? '') !== (rulesBase ?? '');
+  const dirty = clubDirty || rulesDirty;
 
   async function save() {
     setSaving(true);
@@ -117,7 +121,9 @@ function DatosDelTorneo({ tournament, onSave }) {
           // Al cambiar de club, las canchas del torneo pasan a ser las del nuevo club.
           ...(clubChanged ? { number_of_courts: clubCourts(club) } : {}),
         } : null,
+        ...(rulesDirty ? { rules: rules?.trim() ? rules : null } : {}),
       });
+      setRulesBase(rules);
     } catch (e) {
       setError(e.message ?? 'No se pudo guardar');
     } finally {
@@ -127,7 +133,8 @@ function DatosDelTorneo({ tournament, onSave }) {
 
   return (
     <div className="flex flex-col">
-      <div className="pt-4">
+      <section className="pt-4 flex flex-col gap-2.5">
+        <h5 className="m-0 text-[14px] font-bold text-white">Club y fecha</h5>
         <div className="flex flex-col gap-3">
           <div>
             <label className="block text-[12px] font-semibold text-soft mb-1.5">Club</label>
@@ -156,7 +163,15 @@ function DatosDelTorneo({ tournament, onSave }) {
             </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="mt-4 pt-4 border-t border-border flex flex-col gap-2.5">
+        <div className="flex flex-col gap-0.5">
+          <h5 className="m-0 text-[14px] font-bold text-white">Reglamento</h5>
+          <p className="m-0 text-[12px] text-secondary leading-snug">{ayudaReglamento(rules, tournament.group_rules)}</p>
+        </div>
+        <RulesEditor value={rules} onChange={setRules} heredado={tournament.group_rules} />
+      </section>
 
       <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />
     </div>
@@ -227,13 +242,13 @@ export default function Management({
     tournament.event_date
       ? `${String(tournament.event_date).slice(8, 10)}/${String(tournament.event_date).slice(5, 7)}${tournament.event_time ? ` ${fmtHora(tournament.event_time)}` : ''}`
       : 'Fecha a confirmar',
+    tournament.signup?.rules ? 'Con reglamento' : 'Sin reglamento',
   ].join(' · ');
   const sg = tournament.signup ?? {};
   const resumenInscripcion = [
     sg.open ? 'Abierta' : 'Cerrada',
     sg.open && sg.price != null ? formatPrice(sg.price, sg.unit) : null,
     sg.open && sg.capacity ? `Cupo ${sg.capacity} ${sg.capacity_unit === 'player' ? 'jugadores' : 'parejas'}` : null,
-    sg.rules ? 'Con reglamento' : 'Sin reglamento',
   ].filter(Boolean).join(' · ');
 
   return (

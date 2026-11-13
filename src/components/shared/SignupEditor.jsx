@@ -1,8 +1,9 @@
 import { Plus, X } from 'lucide-react';
 import { CONTACT_META, CONTACT_TYPES, formatPrice } from '../../utils/signup';
 import { levelLabel } from '../../utils/category';
-import { MAX_RULES } from '../../utils/rules';
 import LevelPicker from './LevelPicker';
+import RulesEditor from './RulesEditor';
+import { ayudaReglamento } from '../../utils/rules';
 
 const INPUT = 'h-10 bg-surface border border-border-mid text-white px-3 font-sans text-[14px] rounded-lg outline-none focus:border-brand';
 
@@ -45,7 +46,7 @@ function Segmentos({ label, opciones, value, onChange }) {
 }
 
 // Inscripción de un torneo o de una categoría. `inherited` es lo de la categoría; null en un campo = heredarlo.
-export default function SignupEditor({ value, onChange, inherited = null, profile = [] }) {
+export default function SignupEditor({ value, onChange, inherited = null, profile = [], conReglamento = true }) {
   const set = (patch) => onChange({ ...value, ...patch });
   const contacts = value.contacts ?? [];
   const usedTypes = new Set(contacts.map((c) => c.type));
@@ -215,22 +216,11 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
         </>
       )}
 
-      <Bloque
-        titulo="Reglamento"
-        ayuda={inherited?.rules && !value.rules
-          ? 'Vacío usa el reglamento de la categoría.'
-          : 'Si hay reglamento, el jugador lo tiene que aceptar para inscribirse.'}
-      >
-        <textarea
-          id="signup-reglamento" aria-label="Reglamento"
-          value={value.rules ?? ''}
-          onChange={(e) => set({ rules: e.target.value === '' ? null : e.target.value })}
-          maxLength={MAX_RULES} rows={6}
-          placeholder={inherited?.rules ? 'Igual que la categoría' : 'Formato, puntos, W.O., horarios, pelotas…'}
-          className="w-full bg-surface border border-border-mid text-white px-3 py-2.5 font-sans text-[14px] leading-relaxed rounded-lg outline-none focus:border-brand resize-y"
-        />
-        <span className="self-end text-[12px] text-secondary tabular-nums">{(value.rules ?? '').length}/{MAX_RULES}</span>
-      </Bloque>
+      {conReglamento && (
+        <Bloque titulo="Reglamento" ayuda={ayudaReglamento(value.rules, inherited?.rules)}>
+          <RulesEditor value={value.rules} onChange={(rules) => set({ rules })} heredado={inherited?.rules} />
+        </Bloque>
+      )}
     </div>
   );
 }

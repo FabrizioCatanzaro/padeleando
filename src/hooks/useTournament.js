@@ -368,7 +368,7 @@ export function useTournament(groupId, tournamentId) {
 
   // "Datos del torneo" con un solo botón: club, fecha e inscripción en una
   // sola llamada, sólo con lo que cambió (auditoría UI).
-  async function handleUpdateDatos({ club = null, signup = null }) {
+  async function handleUpdateDatos({ club = null, signup = null, rules }) {
     const body = {};
     if (club) {
       Object.assign(body, {
@@ -387,9 +387,10 @@ export function useTournament(groupId, tournamentId) {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
-        rules:                signup.rules ?? null,
+        ...('rules' in signup ? { rules: signup.rules ?? null } : {}),
       });
     }
+    if (rules !== undefined) body.rules = rules;
     if (Object.keys(body).length === 0) return;
     await api.tournaments.update(tournament.id, body);
     await reload(true);
