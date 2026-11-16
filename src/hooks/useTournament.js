@@ -224,9 +224,8 @@ export function useTournament(groupId, tournamentId) {
   // ── Jugadores ───────────────────────────────────────────────────────
   async function syncMode() {
     const t = await api.tournaments.get(tournamentId);
-    // El americano es siempre por parejas: nunca se cambia el modo. Si se hiciera,
-    // desaparecería el gestor de parejas y no habría toggle para volver a activarlo.
-    if (t.format === 'americano') return;
+    // Americano y liga en varios días se juegan siempre con parejas fijas.
+    if (t.format === 'americano' || t.liga_mode === 'temporada') return;
     const count = (t.players ?? []).filter((p) => !p.removed).length;
     // Solo forzar 'free' si el count es impar (no se pueden tener parejas fijas con impar)
     if (count % 2 !== 0 && t.mode === 'pairs') {
@@ -243,7 +242,7 @@ export function useTournament(groupId, tournamentId) {
 
   async function handleAddPlayer(name) {
     await api.players.resolve(name, groupId, tournamentId);
-    await syncMode();
+    try { await syncMode(); } catch { /* el jugador ya se agregó: igual se refresca */ }
     await reload(true);
     flash();
     showToast('Jugador agregado');
@@ -264,7 +263,7 @@ export function useTournament(groupId, tournamentId) {
       showToast(err.message, 'error');
       return;
     }
-    await syncMode();
+    try { await syncMode(); } catch { /* el jugador ya se eliminó: igual se refresca */ }
     await reload(true);
     showToast('Jugador eliminado', 'error');
   }
