@@ -27,7 +27,10 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   // parejas cambian libremente. El back aplica la misma regla.
   const teamKey = (ids) => [...ids].map(String).sort().join('|');
   const playedKeys = new Set((tournament.matches ?? []).flatMap((m) => [teamKey(m.team1), teamKey(m.team2)]));
-  const pairStarted = (pair) => isAmericano && (!!tournament.bracket || playedKeys.has(teamKey([pair.p1, pair.p2])));
+  const temporada = tournament.format === 'liga' && tournament.liga_mode === 'temporada';
+  const pairStarted = (pair) => (isAmericano && (!!tournament.bracket || playedKeys.has(teamKey([pair.p1, pair.p2]))))
+    || (temporada && playedKeys.has(teamKey([pair.p1, pair.p2])));
+  const cuentaDe = (pair, rows) => rows.filter((m) => [teamKey(m.team1), teamKey(m.team2)].includes(teamKey([pair.p1, pair.p2]))).length;
   const activePlayers = players.filter((p) => !p.removed);
 
   // Los avisos salen del helper compartido: la pestaña de gestión marca el "!"
@@ -222,7 +225,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
                 </span>
                 {isWithdrawn(pair) && (
                   <span className="shrink-0 font-mono text-[12px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
-                    RETIRADA
+                    {temporada ? 'DE BAJA' : 'RETIRADA'}
                   </span>
                 )}
                 {isOwner && !isWithdrawn(pair) && pairStarted(pair) && (
@@ -230,7 +233,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
                     onClick={() => setWithdrawTarget(pair)}
                     className="shrink-0 inline-flex items-center gap-1.5 bg-transparent border border-border-strong text-muted cursor-pointer text-[12px] font-sans px-2.5 py-1 rounded-sm hover:text-danger hover:border-danger/40 transition-colors"
                   >
-                    <UserMinus size={14} /> Retirar
+                    <UserMinus size={14} /> {temporada ? 'Dar de baja' : 'Retirar'}
                   </button>
                 )}
                 {isOwner && !isWithdrawn(pair) && !pairStarted(pair) && (
@@ -266,9 +269,15 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
 
       {withdrawTarget && (
         <Modal
-          title="¿Retirar esta pareja?"
-          message={`${getPairLabel(withdrawTarget.id, pairs, players)} deja de jugar. Sus partidos jugados se conservan en la tabla. Los programados pasan a W.O. 6-0 para el rival${tournament.bracket ? ', y en el cuadro su rival avanza por W.O.' : '.'} Esta acción no se puede deshacer.`}
-          confirmText="Retirar"
+          title={temporada ? `¿Dar de baja a ${getPairLabel(withdrawTarget.id, pairs, players)}?` : "¿Retirar esta pareja?"}
+          message={temporada
+            ? (() => {
+              const pend = cuentaDe(withdrawTarget, tournament.scheduled_matches ?? []);
+              const jug = cuentaDe(withdrawTarget, tournament.matches ?? []);
+              return `Se ${pend === 1 ? 'cancela su partido pendiente' : `cancelan sus ${pend} partidos pendientes`}. ${jug === 1 ? 'Su partido jugado se mantiene' : `Sus ${jug} partidos jugados se mantienen`} en la tabla. No entra en las fechas nuevas. No se deshace.`;
+            })()
+            : `${getPairLabel(withdrawTarget.id, pairs, players)} deja de jugar. Sus partidos jugados se conservan en la tabla. Los programados pasan a W.O. 6-0 para el rival${tournament.bracket ? ', y en el cuadro su rival avanza por W.O.' : '.'} Esta acción no se puede deshacer.`}
+          confirmText={temporada ? "Dar de baja" : "Retirar"}
           confirmDanger
           onConfirm={() => { onWithdraw?.(withdrawTarget.id); setWithdrawTarget(null); }}
           onCancel={() => setWithdrawTarget(null)}

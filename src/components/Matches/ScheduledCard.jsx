@@ -1,5 +1,6 @@
 import { Clock, Pencil, Trash2, Play, Radio } from 'lucide-react';
 import { getPairLabel, courtLabel, fmtHora } from '../../utils/helpers';
+import { diaCorto } from '../../utils/fechas';
 import { TeamName } from './MatchCard';
 
 /**
@@ -26,13 +27,16 @@ export default function ScheduledCard({
 
   const cancha = courtLabel(tournament, match.court);
   const hora = match.scheduled_at ? fmtHora(match.scheduled_at) : null;
+  const dia = match.scheduled_date ? diaCorto(match.scheduled_date) : null;
 
   return (
     <div
       className={`border rounded-xl px-4 py-3 border-l-[3px] ${
         enVivo
           ? 'border-green/40 border-l-green'
-          : esMio
+          : match.postponed
+            ? 'border-premium/40 border-l-premium'
+            : esMio
             ? 'border-border-mid border-l-brand'
             : 'border-border-mid border-l-border-strong'
       }`}
@@ -48,9 +52,12 @@ export default function ScheduledCard({
             <Radio size={12} /> En juego
           </span>
         )}
-        {hora && (
+        {match.postponed && (
+          <span className="text-[12px] font-semibold text-premium">Postergado</span>
+        )}
+        {(dia || hora) && (
           <span className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-cyan">
-            <Clock size={12} /> {hora}
+            <Clock size={12} /> {[dia, hora].filter(Boolean).join(' · ')}
           </span>
         )}
         {cancha != null && (

@@ -719,44 +719,37 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                      bracket.semis?.some(m => m.winner_id)   ||
                      bracket.final?.winner_id;
 
-  // Construye los 8 slots de octavos: reales + "byes" (parejas que pasan directo)
-  // en el orden que dicta la pairing de cuartos, de modo que cada par de slots
-  // alimente al mismo cuarto y el árbol quede balanceado.
-  function buildOctavosSlots() {
-    if (!bracket.octavos?.length) return null;
+  // La primera ronda se ordena según la siguiente y suma los "byes" para balancear el árbol.
+  const wrapMatches = (arr) => arr.map(m => ({ type: "match", data: m }));
+  const RONDAS = [["octavos", "OCTAVOS"], ["cuartos", "CUARTOS DE FINAL"], ["semis", "SEMIFINALES"], ["final", "FINAL"]];
+  const delaRonda = (k) => (k === "final" ? (bracket.final ? [bracket.final] : []) : (bracket[k] ?? []));
+  const presentes = RONDAS.filter(([k]) => delaRonda(k).length > 0);
+  const fuente = (m, n) => m[`slot${n}_source`] ?? m[`source${n}`] ?? null;
+
+  function primeraRonda(k, siguiente) {
+    const propios = delaRonda(k);
+    const ids = new Set(propios.map((m) => m.id));
+    const alimenta = delaRonda(siguiente).some((m) => [1, 2].some((n) => ids.has(fuente(m, n))));
+    if (!alimenta) return wrapMatches(propios);
     const slots = [];
-    for (const qm of bracket.cuartos) {
+    for (const m of delaRonda(siguiente)) {
       for (const n of [1, 2]) {
-        const src = qm[`slot${n}_source`];
-        if (src) {
-          const octavo = bracket.octavos.find(m => m.id === src);
-          if (octavo) slots.push({ type: "match", data: octavo });
-        } else {
-          slots.push({
-            type: "bye",
-            data: {
-              pair_id:   qm[`pair${n}_id`],
-              pair_name: qm[`pair${n}_name`],
-              seed:      qm[`slot${n}_seed`],
-            },
-          });
-        }
+        const src = fuente(m, n);
+        const partido = src ? propios.find((x) => x.id === src) : null;
+        if (partido) slots.push({ type: "match", data: partido });
+        else slots.push({
+          type: "bye",
+          data: { pair_id: m[`pair${n}_id`], pair_name: m[`pair${n}_name`], seed: m[`slot${n}_seed`] ?? m[`seed${n}`] },
+        });
       }
     }
     return slots;
   }
 
-  const wrapMatches = (arr) => arr.map(m => ({ type: "match", data: m }));
-  const octavosSlots = buildOctavosSlots();
-
-  const phases = [
-    octavosSlots
-      ? { key: "octavos", label: "OCTAVOS",         items: octavosSlots }
-      : null,
-    { key: "cuartos", label: "CUARTOS DE FINAL", items: wrapMatches(bracket.cuartos) },
-    { key: "semis",   label: "SEMIFINALES",     items: wrapMatches(bracket.semis)   },
-    { key: "final",   label: "FINAL",           items: bracket.final ? wrapMatches([bracket.final]) : [] },
-  ].filter(Boolean);
+  const phases = presentes.map(([key, label], i) => ({
+    key, label,
+    items: i === 0 && presentes[1] ? primeraRonda(key, presentes[1][0]) : wrapMatches(delaRonda(key)),
+  }));
 
   // Partidos jugados del bracket (para mostrar como cards)
   const playedBracketMatches = phases
@@ -771,7 +764,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
         {!editMode && (
           <div className="flex gap-2">
             <ShareStoryButton onClick={() => setShowStory(true)} />
-            {isOwner && (
+            {isOwner && bracket.kind !== 'playoffs' && (
               <button
                 onClick={() => hasResults ? setReorgBlocked(true) : enterEditMode()}
                 aria-label="Reorganizar"
@@ -818,7 +811,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       )}
 
       {/* Aviso previo: el cuadro sólo se puede reorganizar mientras no haya resultados. */}
-      {isOwner && !editMode && !hasResults && (
+      {isOwner && !editMode && !hasResults && bracket.kind !== 'playoffs' && (
         <div className="flex items-start gap-2 text-[12px] text-secondary mb-4 leading-relaxed">
           <Info size={13} className="shrink-0 mt-px" />
           <span>Podés reorganizar los cruces con el lápiz hasta que cargues el primer resultado.</span>

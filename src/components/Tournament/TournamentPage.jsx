@@ -6,8 +6,9 @@ import {
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
   tournamentDisplayStatus, TOURNAMENT_STATUS_META,
-  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete,
+  AMERICANO_MIN_PAIRS, LIGA_MIN_PLAYERS, isPreviaComplete, myPlayerIds as idsDelUsuario,
 } from "../../utils/helpers";
+import { useAuth } from "../../context/useAuth";
 import Standings from "../Standings/Standings";
 import Matches from "../Matches/Matches";
 // Sólo se monta al abrir la pestaña: importarlo estático arrastraba los
@@ -23,6 +24,8 @@ import ShareModal from "../shared/ShareModal";
 import QrModal from "../shared/QrModal";
 import FinishTournamentModal from "../shared/FinishTournamentModal";
 import TournamentHero from "../Main/TournamentHero";
+import ReadonlyFechas from "../Spectator/ReadonlyFechas";
+import { esTemporada } from "../../utils/fechas";
 import {
   TvOverlay, LiveTicker, SpectatorLive, ReadonlyMatches, ReadonlyPlayers,
 } from "../Spectator/SpectatorParts";
@@ -68,6 +71,7 @@ function tabsDe({ esAmericano, puedeGestionar, conCuadro }) {
     if (conCuadro) tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
   } else {
     tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
+    if (conCuadro) tabs.push({ id: 'bracket', label: 'PLAYOFFS', corto: 'Playoffs', icon: Split });
   }
   if (!puedeGestionar) tabs.push({ id: 'players', label: 'JUGADORES', corto: 'Jugadores', icon: Users });
   tabs.push({ id: 'stats', label: 'ESTADÍSTICAS', corto: 'Stats', icon: ChartNoAxesCombined });
@@ -117,6 +121,7 @@ export default function TournamentPage({
   const [tvStep, setTvStep] = useState(0);
   // Estado de la inscripción del que mira: lo trae RegistrationCard.
   const [miInscripcion, setMiInscripcion] = useState(null);
+  const { user } = useAuth() ?? {};
   // Inscripciones pendientes: la marca de la solapa INSCRIPCIONES.
   const [pendientes, setPendientes] = useState(0);
   useEffect(() => {
@@ -178,7 +183,7 @@ export default function TournamentPage({
       { screen: 'live', label: 'PARTIDOS EN VIVO', duration: 10000 },
     ];
     if (playedCount >= 3) seq.push({ screen: 'stats', label: 'ESTADÍSTICAS', duration: 12000 });
-    if (esAmericano && tournament.bracket) seq.push({ screen: 'bracket', label: 'CUADRO', duration: 20000 });
+    if (tournament.bracket) seq.push({ screen: 'bracket', label: esAmericano ? 'CUADRO' : 'PLAYOFFS', duration: 20000 });
     return seq;
   })();
   const pasoTv = tvStep >= tvSequence.length ? 0 : tvStep;
@@ -208,6 +213,7 @@ export default function TournamentPage({
         statusMeta={statusMeta}
         draft={draftText}
         miEstado={miEstadoDe(miInscripcion)}
+        myIds={[...idsDelUsuario(tournament, user?.username)]}
         isPairs={isPairs}
         signup={signup}
         tvActivo={tvMode}
@@ -263,7 +269,7 @@ export default function TournamentPage({
       {espectador?.joinBanner}
       {espectador && enJuegoAhora && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}
 
-      {puedeGestionar && esAmericano && tournament.status === 'active' && tournament.bracket?.final?.winner_id && (
+      {puedeGestionar && tournament.status === 'active' && tournament.bracket?.final?.winner_id && (
         <div className="px-6 py-3 border-b border-border bg-surface-alt flex items-center justify-between gap-3">
           <span className="text-muted font-mono text-[12px]">La final fue jugada. ¿Querés cerrar el torneo?</span>
           <Btn variant="primary" size="sm" onClick={() => setFinishModal(true)}>FINALIZAR TORNEO</Btn>
@@ -352,12 +358,17 @@ export default function TournamentPage({
                 onAddScheduled={acciones.onAddScheduled}
                 onEditScheduled={acciones.onEditScheduled}
                 onDeleteScheduled={acciones.onDeleteScheduled}
+                onPreviewFecha={acciones.onPreviewFecha}
+                onSaveFecha={acciones.onSaveFecha}
+                onDeleteFecha={acciones.onDeleteFecha}
               />
             )
           ) : (
             <>
               <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="previa" />
-              <ReadonlyMatches tournament={tournament} groupName={groupName} />
+              {esTemporada(tournament)
+                ? <ReadonlyFechas tournament={tournament} />
+                : <ReadonlyMatches tournament={tournament} groupName={groupName} />}
             </>
           )
         )}
@@ -400,6 +411,10 @@ export default function TournamentPage({
             onAddPair={acciones.onAddPair}
             onEditPair={acciones.onEditPair}
             onDeletePair={acciones.onDeletePair}
+            onGeneratePlayoffs={async () => { if (await acciones.onGeneratePlayoffs()) irATab('bracket'); }}
+            onUpdateLiga={acciones.onUpdateLiga}
+            onUploadFlyer={acciones.onUploadFlyer}
+            onDeleteFlyer={acciones.onDeleteFlyer}
             onWithdrawPair={acciones.onWithdrawPair}
             onResetScores={acciones.onResetScores}
             onDeleteTournament={async () => {

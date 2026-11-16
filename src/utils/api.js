@@ -182,13 +182,22 @@ export const api = {
     update:      (id,b) => req('PATCH',  `/tournaments/${id}`, b),
     delete:      (id)   => req('DELETE', `/tournaments/${id}`),
     resetScores: (id)   => req('DELETE', `/tournaments/${id}/matches`),
+    uploadFlyer: (id, file) => reqMultipart('POST', `/tournaments/${id}/flyer`, imageForm(file)),
+    deleteFlyer: (id)   => req('DELETE', `/tournaments/${id}/flyer`),
     setLive:      (id,d)       => req('PATCH',  `/tournaments/${id}/live`, { live_match: d }),
     schedule:     (id)         => req('POST',   `/tournaments/${id}/schedule`),
     bracket:      (id)         => req('POST',   `/tournaments/${id}/bracket`),
+    playoffs:     (id)         => req('POST',   `/tournaments/${id}/playoffs`),
     updateBracket:(id, mId, b) => req('PATCH',  `/tournaments/${id}/bracket/${mId}`, b),
     setBracket:   (id, b)     => req('PATCH',  `/tournaments/${id}/bracket`, { bracket: b }),
     deleteBracket:(id)         => req('DELETE', `/tournaments/${id}/bracket`),
     clearBracketMatch: (id, mId) => req('DELETE', `/tournaments/${id}/bracket/${mId}`),
+    // Liga por fechas: armar, cambiar y deshacer una fecha.
+    fechas: {
+      create: (id, body)         => req('POST',   `/tournaments/${id}/fechas`, body),
+      update: (id, number, body) => req('PUT',    `/tournaments/${id}/fechas/${number}`, body),
+      delete: (id, number)       => req('DELETE', `/tournaments/${id}/fechas/${number}`),
+    },
   },
   matches: {
     create: (body)   => req('POST',   '/matches',       body),
@@ -258,6 +267,7 @@ export const api = {
   registrations: {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
+    availability: (id, availability) => req('PATCH', `/registrations/${id}/availability`, { availability }),
     mineAll: ()             => req('GET',   '/registrations/mine'),
     cancel: (id)            => req('POST',  `/registrations/${id}/cancel`),
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),

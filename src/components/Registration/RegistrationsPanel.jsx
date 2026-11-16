@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Settings } from 'lucide-react';
+import { AlertTriangle, Settings, FileCheck, Clock } from 'lucide-react';
+import { resumenDisponibilidad } from '../../utils/disponibilidad';
 import { api } from '../../utils/api';
 import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
@@ -140,6 +141,20 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
           <p className="m-0 text-[13px] text-amber-200 bg-amber-500/8 rounded-lg px-2.5 py-2 leading-snug">
             {issues.join('. ')}{signup.level ? ` (${levelLabel(signup.level)})` : ''}.
           </p>
+        )}
+        {r.availability && (
+          <p className="m-0 flex items-start gap-1.5 text-[13px] text-content leading-snug">
+            <Clock size={13} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
+            <span>
+              {resumenDisponibilidad(r.availability) || 'Sin horarios'}
+              {r.availability.note && <span className="block text-secondary">“{r.availability.note}”</span>}
+            </span>
+          </p>
+        )}
+        {r.rules_accepted_at && (
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-secondary">
+            <FileCheck size={13} className="text-green" aria-hidden="true" /> Aceptó el reglamento
+          </span>
         )}
         {r.status === 'rejected' && r.reject_reason && (
           <p className="m-0 text-[13px] text-secondary">Motivo: “{r.reject_reason}”</p>

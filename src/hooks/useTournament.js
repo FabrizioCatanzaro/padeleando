@@ -93,6 +93,8 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity:      extra.signup_capacity ?? null,
       signup_capacity_unit: extra.signup_capacity_unit ?? null,
       signup_closes_at:     extra.signup_closes_at ?? null,
+      rules:                extra.rules ?? null,
+      ...(format === 'liga' && extra.liga ? extra.liga : {}),
     });
     setTournament(adaptTournament(t));
     return t.id; // para que App.js pueda navegar al torneo
@@ -140,6 +142,8 @@ export function useTournament(groupId, tournamentId) {
       team2: data.team2,
       court: data.court ?? null,
       scheduled_at: data.scheduled_at ?? null,
+      ...(data.round != null ? { round: data.round } : {}),
+      ...(data.scheduled_date !== undefined ? { scheduled_date: data.scheduled_date } : {}),
     });
     setTournament((prev) => (prev ? {
       ...prev,
@@ -157,6 +161,26 @@ export function useTournament(groupId, tournamentId) {
         (s) => (s.id === id ? adaptScheduled(updated) : s),
       ),
     } : prev));
+  }
+
+  // ── Liga por fechas ──────────────────────────────────────────────────────
+  async function handlePreviewFecha(body) {
+    return api.tournaments.fechas.create(tournament.id, { ...body, preview: true });
+  }
+
+  async function handleSaveFecha(number, body) {
+    const res = number == null
+      ? await api.tournaments.fechas.create(tournament.id, body)
+      : await api.tournaments.fechas.update(tournament.id, number, body);
+    await reload(true);
+    showToast(number == null ? `Fecha ${res.fecha.number} armada` : `Fecha ${number} actualizada`);
+    return res;
+  }
+
+  async function handleDeleteFecha(number) {
+    await api.tournaments.fechas.delete(tournament.id, number);
+    await reload(true);
+    showToast(`Fecha ${number} deshecha`, 'info');
   }
 
   async function handleDeleteScheduled(id) {
@@ -288,7 +312,9 @@ export function useTournament(groupId, tournamentId) {
       await reload(true);
       showToast(res.walkovers > 0
         ? `Pareja retirada: ${res.walkovers} ${res.walkovers === 1 ? 'partido' : 'partidos'} por W.O.`
-        : 'Pareja retirada', 'info');
+        : res.cancelled > 0
+          ? `Pareja dada de baja: ${res.cancelled} ${res.cancelled === 1 ? 'partido cancelado' : 'partidos cancelados'}`
+          : 'Pareja retirada', 'info');
     } catch (err) {
       showToast(err.message, 'error');
     }
@@ -342,7 +368,7 @@ export function useTournament(groupId, tournamentId) {
 
   // "Datos del torneo" con un solo botón: club, fecha e inscripción en una
   // sola llamada, sólo con lo que cambió (auditoría UI).
-  async function handleUpdateDatos({ club = null, signup = null }) {
+  async function handleUpdateDatos({ club = null, signup = null, rules }) {
     const body = {};
     if (club) {
       Object.assign(body, {
@@ -361,15 +387,40 @@ export function useTournament(groupId, tournamentId) {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
+        ...('rules' in signup ? { rules: signup.rules ?? null } : {}),
       });
     }
+    if (rules !== undefined) body.rules = rules;
     if (Object.keys(body).length === 0) return;
     await api.tournaments.update(tournament.id, body);
     await reload(true);
     showToast('Datos del torneo guardados');
   }
 
-  async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at }) {
+  // Los errores los muestra la tarjeta del flyer.
+  async function handleUploadFlyer(file) {
+    const { flyer_url } = await api.tournaments.uploadFlyer(tournament.id, file);
+    setTournament((prev) => (prev ? { ...prev, flyer_url } : prev));
+    showToast('Flyer guardado');
+  }
+
+  async function handleDeleteFlyer() {
+    await api.tournaments.deleteFlyer(tournament.id);
+    setTournament((prev) => (prev ? { ...prev, flyer_url: null } : prev));
+    showToast('Flyer quitado');
+  }
+
+  async function handleUpdateLiga(body) {
+    try {
+      await api.tournaments.update(tournament.id, body);
+      await reload(true);
+      showToast('Opciones de la liga guardadas');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at, rules }) {
     const updated = await api.tournaments.update(tournament.id, {
       signup_open:       open,
       signup_price:      price,
@@ -379,6 +430,7 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity:      capacity ?? null,
       signup_capacity_unit: capacity_unit ?? null,
       signup_closes_at:     closes_at ?? null,
+      ...(rules !== undefined ? { rules } : {}),
     });
     setTournament((prev) => (prev ? { ...prev, ...updated } : prev));
     showToast('Inscripción actualizada');
@@ -421,6 +473,19 @@ export function useTournament(groupId, tournamentId) {
       showToast(err.message, 'error');
       // Otro organizador ya lo generó: se trae el torneo para mostrar ese cuadro.
       if (err.data?.code === 'bracket_exists') reload(true);
+    }
+  }
+
+  async function handleGeneratePlayoffs() {
+    try {
+      const res = await api.tournaments.playoffs(tournament.id);
+      applyBracket(res.bracket);
+      showToast('Playoffs armados');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return false;
     }
   }
 
@@ -478,12 +543,13 @@ export function useTournament(groupId, tournamentId) {
     handleCreate,
     handleAddMatch,    handleEditMatch,    handleDeleteMatch,
     handleAddScheduled, handleEditScheduled, handleDeleteScheduled,
+    handlePreviewFecha, handleSaveFecha, handleDeleteFecha,
     handleAddPlayer,   handleEditPlayer,   handleDeletePlayer,
     handleAddPair,     handleEditPair,     handleDeletePair,     handleWithdrawPair,
     handleResetScores, handleDeleteTournament,
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
-    handleUpdateMode,
+    handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer,
     refresh: () => reload(true),
   };
 }

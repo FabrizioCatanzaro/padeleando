@@ -215,6 +215,7 @@ export default function GroupView() {
       capacity: group.signup_capacity ?? null,
       capacity_unit: group.signup_capacity_unit ?? null,
       closes_at: group.signup_closes_at ?? null,
+      rules:    group.rules ?? null,
     });
     setEditingGroup(true);
   }
@@ -238,6 +239,7 @@ export default function GroupView() {
         signup_capacity:      editSignup.capacity ?? null,
         signup_capacity_unit: editSignup.capacity_unit ?? null,
         signup_closes_at:     editSignup.closes_at ?? null,
+        rules:                editSignup.rules ?? null,
       });
       // El PUT devuelve sólo las columnas de groups: los datos del club los
       // aporta el que ya está elegido, así se evita releer la categoría.

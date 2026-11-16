@@ -83,9 +83,9 @@ export function bestMonthOf(monthlyStats) {
 export function calcStandings(players, matches) {
   const s = {};
   players.forEach((p) => {
-    s[p.id] = { id: p.id, name: p.name, linked_username: p.linked_username ?? null, pj: 0, pg: 0, pp: 0, sf: 0, sc: 0 };
+    s[p.id] = { id: p.id, name: p.name, linked_username: p.linked_username ?? null, pj: 0, pg: 0, pp: 0, ppwo: 0, sf: 0, sc: 0 };
   });
-  matches.forEach(({ team1, team2, score1, score2 }) => {
+  matches.forEach(({ team1, team2, score1, score2, walkover }) => {
     if (score1 === "" || score2 === "") return;
     const s1 = parseInt(score1), s2 = parseInt(score2);
     if (Number.isNaN(s1) || Number.isNaN(s2)) return;
@@ -99,6 +99,7 @@ export function calcStandings(players, matches) {
         row.sc += gc;
         if (gf > gc) row.pg++;
         else         row.pp++;
+        if (gf < gc && walkover) row.ppwo++;
       });
     });
   });
@@ -119,7 +120,7 @@ export function calcPairStats(pair, matches) {
   // (Americano. En Liga ver pairRowStats.)
   const key = (ids) => [...ids].map(String).sort().join('|');
   const k = key([pair.p1, pair.p2]);
-  const row = { pj: 0, pg: 0, pp: 0, sf: 0, sc: 0 };
+  const row = { pj: 0, pg: 0, pp: 0, ppwo: 0, sf: 0, sc: 0 };
   for (const m of matches ?? []) {
     const s1 = parseInt(m.score1), s2 = parseInt(m.score2);
     if (Number.isNaN(s1) || Number.isNaN(s2) || s1 === s2) continue;
@@ -128,6 +129,7 @@ export function calcPairStats(pair, matches) {
     const gf = side === 1 ? s1 : s2, gc = side === 1 ? s2 : s1;
     row.pj++; row.sf += gf; row.sc += gc;
     if (gf > gc) row.pg++; else row.pp++;
+    if (gf < gc && m.walkover) row.ppwo++;
   }
   return row;
 }
@@ -152,11 +154,11 @@ export function pairRowStats(tournament, pair, individualRows) {
  * posiciones no (ahí el W.O. sí suma, 6-0).
  */
 export function getAllMatches(tournament) {
-  const { format, bracket, pairs: tournamentPairs } = tournament;
+  const { bracket, pairs: tournamentPairs } = tournament;
   // Un W.O. no se jugó: cuenta en la tabla y en el cuadro, pero no en ninguna
   // estadística (decisión de Fabri, 2026-11-08).
   const previaMatches = (tournament.matches ?? []).filter((m) => !m.walkover);
-  if (format !== 'americano' || !bracket || !tournamentPairs?.length) return previaMatches;
+  if (!bracket || !tournamentPairs?.length) return previaMatches;
   const bracketMatches = [];
   [
     ...(bracket.octavos ?? []),
@@ -250,11 +252,23 @@ export function fmtDuracion(segundos) {
  * Debe coincidir con computeStandings del backend, que asigna los seeds.
  */
 export function compareStandingRows(a, b) {
-  return b.pg - a.pg
+  return (b.pts ?? 0) - (a.pts ?? 0)
+      || b.pg - a.pg
       || (b.sf - b.sc) - (a.sf - a.sc)
       || winRate(b) - winRate(a)
       || b.sf - a.sf
       || String(a.id).localeCompare(String(b.id));
+}
+
+/** Puntos que suma cada resultado en la tabla de una liga. */
+export function puntosDe(t) {
+  return { win: t?.points_win ?? 3, loss: t?.points_loss ?? 0 };
+}
+
+/** Fila de tabla con sus puntos; la derrota por W.O. no suma. */
+export function conPuntos(row, t) {
+  const { win, loss } = puntosDe(t);
+  return { ...row, pts: row.pg * win + Math.max(0, row.pp - (row.ppwo ?? 0)) * loss };
 }
 
 /** Proporción de partidos ganados de una fila de tabla; 0 si no jugó. */
@@ -330,7 +344,8 @@ export function tournamentDate(t) {
 export function getTournamentWinners(t) {
   const nameOf = (id) => t.players.find((p) => p.id === id)?.name ?? '?';
 
-  if (t.format === 'americano') {
+  // Con cuadro (americano o liga con playoffs) el campeón es el de la final.
+  if (t.format === 'americano' || t.bracket) {
     const winnerId = t.bracket?.final?.winner_id;
     if (!winnerId) return [];
     const pair = t.pairs?.find((p) => p.id === winnerId);
@@ -349,10 +364,10 @@ export function getTournamentWinners(t) {
   // Una pareja retirada no puede salir campeona.
   const rows = isPairs
     ? t.pairs.filter((pair) => pair.status !== 'withdrawn').map((pair) => {
-        const stats = pairRowStats(t, pair, standings);
+        const stats = conPuntos(pairRowStats(t, pair, standings), t);
         return { ...stats, ids: [pair.p1, pair.p2], name: `${nameOf(pair.p1)} & ${nameOf(pair.p2)}` };
       })
-    : standings.map((s) => ({ ...s, ids: [s.id], name: s.name }));
+    : standings.map((s) => ({ ...conPuntos(s, t), ids: [s.id], name: s.name }));
 
   return topStandingRows(rows).map((r) => ({ ids: r.ids, name: r.name }));
 }
@@ -543,18 +558,18 @@ export function adaptScheduled(m) {
 
 export function winnerLabelOf(tournament) {
   if (!tournament || tournament.status !== 'finished') return null;
-  if (tournament.format === 'americano') {
+  if (tournament.format === 'americano' || tournament.bracket) {
     return tournament.bracket?.final?.winner_name ?? null;
   }
   const standings = calcStandings(tournament.players, tournament.matches);
   const filas = (tournament.mode === 'pairs' && tournament.pairs?.length > 0)
     ? tournament.pairs.filter((pair) => pair.status !== 'withdrawn').map((pair) => {
-      const stats = pairRowStats(tournament, pair, standings);
+      const stats = conPuntos(pairRowStats(tournament, pair, standings), tournament);
       const n1 = tournament.players.find((p) => p.id === pair.p1)?.name ?? '?';
       const n2 = tournament.players.find((p) => p.id === pair.p2)?.name ?? '?';
       return { ...stats, id: pair.id, name: `${n1} & ${n2}` };
     })
-    : standings;
+    : standings.map((s) => conPuntos(s, tournament));
   // calcStandings ordena por % de victorias: el campeón sale de topStandingRows,
   // que usa el mismo orden que la tabla (antes nombraba campeón a otro jugador).
   const top = topStandingRows(filas);
@@ -563,7 +578,7 @@ export function winnerLabelOf(tournament) {
 
 export function countPlayed(t) {
   if (!t) return 0;
-  const bracketPlayed = t.format === 'americano'
+  const bracketPlayed = t.bracket
     ? [...(t.bracket?.octavos ?? []), ...(t.bracket?.cuartos ?? []),
        ...(t.bracket?.semis ?? []), ...(t.bracket?.final ? [t.bracket.final] : [])]
       .filter((m) => m.winner_id != null).length
@@ -608,6 +623,7 @@ export function adaptTournament(t) {
     pairs,
     matches: (t.matches ?? []).map(adaptMatch),
     scheduled_matches: (t.scheduled_matches ?? []).map(adaptScheduled),
+    fechas: t.fechas ?? [],
     bracket: patchBracketNames(t.bracket, pairs, players),
   };
 }

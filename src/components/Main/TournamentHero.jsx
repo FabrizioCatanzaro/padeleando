@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ChevronLeft, Pencil, Share2, Eye, QrCode, Tv, Radio, Lock, User, Link2,
+  ChevronLeft, Pencil, Share2, Eye, QrCode, Tv, Radio, Lock, User, Link2, FileText,
 } from 'lucide-react';
 import { fmtHora, tournamentCourts, bracketPhaseLabel, isDeletedAccount } from '../../utils/helpers';
+import { esTemporada, resumenTemporada } from '../../utils/fechas';
 import Badge from '../shared/Badge';
 import Btn from '../shared/Btn';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import SignupPricePill from '../shared/SignupPricePill';
+import RulesModal from '../shared/RulesModal';
+import FlyerViewer from '../shared/FlyerViewer';
+import { flyerSrc } from '../../utils/flyer';
 
 // Reloj del partido en curso. Vive acá y no adentro del formulario: el que mira
 // no tiene ningún formulario abierto, y el organizador puede cerrar el suyo sin
@@ -89,10 +93,13 @@ function ShareMenu({ isOwner, onShare, onQr, onTv, onSpectator }) {
 export default function TournamentHero({
   tournament, groupId, groupName, groupIsPublic = true, owner = null,
   isOwner, playedCount, scheduledCount = 0, statusMeta,
-  isPairs, signup, tvActivo = false, draft = null, miEstado = null,
+  isPairs, signup, tvActivo = false, draft = null, miEstado = null, myIds = [],
   onEditName, onShare, onQr, onTv, onSpectator, onManage,
 }) {
   const navigate = useNavigate();
+  const [verReglamento, setVerReglamento] = useState(false);
+  const [verFlyer, setVerFlyer] = useState(false);
+  const flyer = tournament.flyer_url ?? null;
   // En un club con varias canchas se juegan varios partidos a la vez: el
   // encabezado los muestra todos. Los que ya arrancaron van primero.
   const live = (Array.isArray(tournament.live_match) ? tournament.live_match : [])
@@ -103,9 +110,11 @@ export default function TournamentHero({
   const canchas = tournamentCourts(tournament);
   const total = playedCount + scheduledCount;
 
-  // Línea 1: cuándo y dónde.
-  const fecha = fechaCorta(tournament.event_date);
-  const hora = tournament.event_time ? fmtHora(tournament.event_time) : null;
+  // Línea 1: cuándo y dónde. En la liga por fechas, la fecha en curso.
+  const temporada = esTemporada(tournament);
+  const resumen = temporada ? resumenTemporada(tournament, myIds) : null;
+  const fecha = temporada ? resumen.linea : fechaCorta(tournament.event_date);
+  const hora = !temporada && tournament.event_time ? fmtHora(tournament.event_time) : null;
   const canchasTxt = canchas > 0 ? `${canchas} ${canchas === 1 ? 'cancha' : 'canchas'}` : null;
 
   // Línea 2: los números del torneo, cuando ya se pueden mostrar.
@@ -118,7 +127,8 @@ export default function TournamentHero({
 
   const formato = tournament.format === 'americano'
     ? 'Americano'
-    : tournament.mode === 'pairs' ? 'Liga · parejas fijas' : 'Liga · equipos libres';
+    : temporada ? 'Liga en varios días'
+      : tournament.mode === 'pairs' ? 'Liga · parejas fijas' : 'Liga · equipos libres';
 
   return (
     <div>
@@ -156,8 +166,16 @@ export default function TournamentHero({
         </div>
       </div>
 
-      {/* Identidad */}
-      <div className="px-5 sm:px-6 pt-4 pb-4 flex flex-col gap-2 border-b border-border">
+      {/* Identidad; el flyer va arriba a la derecha y el texto le deja lugar. */}
+      <div className={`relative px-5 sm:px-6 pt-4 pb-4 flex flex-col gap-2 border-b border-border ${flyer ? 'pr-[104px] sm:pr-[136px] min-h-[160px] sm:min-h-[204px]' : ''}`}>
+        {flyer && (
+          <button
+            type="button" onClick={() => setVerFlyer(true)} aria-label="Ver el flyer del torneo"
+            className="absolute top-4 right-5 sm:right-6 w-[72px] sm:w-[96px] aspect-[9/16] p-0 rounded-lg overflow-hidden border border-border-strong bg-surface-alt cursor-pointer hover:border-brand transition-colors"
+          >
+            <img src={flyerSrc(flyer, 288)} alt="" width={96} height={171} className="w-full h-full object-cover" />
+          </button>
+        )}
         <div className="flex items-center gap-2.5 flex-wrap">
           <Badge variant="status" color={statusMeta.color} icon={statusMeta.icon} pulse={statusMeta.pulse}>
             {statusMeta.label}
@@ -209,6 +227,10 @@ export default function TournamentHero({
           )}
         </p>
 
+        {resumen?.miPartido && (
+          <p className="m-0 text-[14px] font-semibold text-brand">{resumen.miPartido}</p>
+        )}
+
         {/* Línea 2: lo que importa según el estado. */}
         {draft && isOwner ? (
           <div className="flex items-center justify-between gap-3 flex-wrap rounded-xl border border-brand/35 bg-brand/5 px-3.5 py-2.5">
@@ -223,6 +245,14 @@ export default function TournamentHero({
 
         <div className="flex items-center gap-2 flex-wrap">
           <SignupPricePill signup={signup} />
+          {signup?.rules && (
+            <button
+              type="button" onClick={() => setVerReglamento(true)}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-border-strong bg-transparent text-[13px] text-content cursor-pointer hover:text-white hover:border-soft transition-colors"
+            >
+              <FileText size={13} aria-hidden="true" /> Reglamento
+            </button>
+          )}
           {owner?.username && (
             isDeletedAccount(owner.username) ? (
               <span className="inline-flex items-center gap-1.5 text-[13px] text-muted">
@@ -305,6 +335,8 @@ export default function TournamentHero({
           </div>
         </div>
       )}
+      {verFlyer && <FlyerViewer url={flyer} tournamentName={tournament.name} onClose={() => setVerFlyer(false)} />}
+      {verReglamento && <RulesModal rules={signup.rules} tournamentName={tournament.name} onClose={() => setVerReglamento(false)} />}
     </div>
   );
 }
