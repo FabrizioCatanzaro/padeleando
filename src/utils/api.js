@@ -73,6 +73,9 @@ function imageForm(file, extraFields = {}) {
   return fd
 }
 
+// Los endpoints del cuadro eligen el de plata con ?copa=plata.
+const copaQ = (cup) => (cup === 'plata' ? '?copa=plata' : '')
+
 export const api = {
   auth: {
     register:       (body) => req('POST', '/auth/register', body),
@@ -172,6 +175,8 @@ export const api = {
     resolve:              (name, groupId, tournamentId) => req('POST', '/players/resolve', { name, groupId, tournamentId }),
     rename:               (id, name, groupId) => req('PATCH',  `/players/${id}`, { name, groupId }),
     removeFromTournament: (pId, tId)      => req('DELETE', `/players/${pId}/tournament/${tId}`),
+    // Disponibilidad y WhatsApp de un jugador en un torneo: los edita el organizador.
+    datos:                (pId, tId, body) => req('PATCH', `/players/${pId}/tournament/${tId}/datos`, body),
     removeFromGroup:      (pId, gId)      => req('DELETE', `/players/${pId}/group/${gId}`),
     unlink:               (pId, gId)      => req('DELETE', `/players/${pId}/group/${gId}/link`),
   },
@@ -188,15 +193,31 @@ export const api = {
     schedule:     (id)         => req('POST',   `/tournaments/${id}/schedule`),
     bracket:      (id)         => req('POST',   `/tournaments/${id}/bracket`),
     playoffs:     (id)         => req('POST',   `/tournaments/${id}/playoffs`),
-    updateBracket:(id, mId, b) => req('PATCH',  `/tournaments/${id}/bracket/${mId}`, b),
-    setBracket:   (id, b)     => req('PATCH',  `/tournaments/${id}/bracket`, { bracket: b }),
+    updateBracket:(id, mId, b, cup) => req('PATCH',  `/tournaments/${id}/bracket/${mId}${copaQ(cup)}`, b),
+    setBracket:   (id, b, cup)     => req('PATCH',  `/tournaments/${id}/bracket${copaQ(cup)}`, { bracket: b }),
     deleteBracket:(id)         => req('DELETE', `/tournaments/${id}/bracket`),
-    clearBracketMatch: (id, mId) => req('DELETE', `/tournaments/${id}/bracket/${mId}`),
+    clearBracketMatch: (id, mId, cup) => req('DELETE', `/tournaments/${id}/bracket/${mId}${copaQ(cup)}`),
+    programarCruce:    (id, mId, body, cup) => req('PATCH', `/tournaments/${id}/bracket/${mId}/programar${copaQ(cup)}`, body),
+    // Copa: propuesta de cruces y armado de los cuadros de oro y plata.
+    copaCuadro: {
+      propuesta: (id)              => req('POST', `/tournaments/${id}/copa/cuadro`),
+      armar:     (id, oro, plata)  => req('PUT',  `/tournaments/${id}/copa/cuadro`, { oro, plata }),
+    },
     // Liga por fechas: armar, cambiar y deshacer una fecha.
     fechas: {
       create: (id, body)         => req('POST',   `/tournaments/${id}/fechas`, body),
       update: (id, number, body) => req('PUT',    `/tournaments/${id}/fechas/${number}`, body),
       delete: (id, number)       => req('DELETE', `/tournaments/${id}/fechas/${number}`),
+    },
+    // Copa: grupos (la API los llama zonas) y premios.
+    zonas: {
+      sorteo: (id, cabezas)            => req('POST',   `/tournaments/${id}/zonas/sorteo`, { cabezas }),
+      save:   (id, assignment, cabezas) => req('PUT',    `/tournaments/${id}/zonas`, { assignment, cabezas }),
+      undo:   (id)                     => req('DELETE', `/tournaments/${id}/zonas`),
+    },
+    prizes: {
+      save:   (id, prizes)             => req('PUT',   `/tournaments/${id}/prizes`, { prizes }),
+      winner: (id, prizeId, body)      => req('PATCH', `/tournaments/${id}/prizes/${prizeId}/winner`, body),
     },
   },
   matches: {
@@ -268,6 +289,8 @@ export const api = {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
     availability: (id, availability) => req('PATCH', `/registrations/${id}/availability`, { availability }),
+    // Datos del jugador: availability, whatsapp, whatsapp_visible y los del compañero sin cuenta.
+    datos:  (id, body)      => req('PATCH', `/registrations/${id}/availability`, body),
     mineAll: ()             => req('GET',   '/registrations/mine'),
     cancel: (id)            => req('POST',  `/registrations/${id}/cancel`),
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),

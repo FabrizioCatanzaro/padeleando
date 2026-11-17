@@ -1,3 +1,4 @@
+import { copaMinPairs } from './copa';
 import { FileText, CalendarClock, CircleCheckBig } from 'lucide-react';
 
 export const uid = () => Math.random().toString(36).slice(2, 9);
@@ -161,10 +162,8 @@ export function getAllMatches(tournament) {
   if (!bracket || !tournamentPairs?.length) return previaMatches;
   const bracketMatches = [];
   [
-    ...(bracket.octavos ?? []),
-    ...(bracket.cuartos ?? []),
-    ...(bracket.semis   ?? []),
-    ...(bracket.final   ? [bracket.final] : []),
+    ...bracketNodes(bracket),
+    ...bracketNodes(tournament.bracket_plata).map((m) => ({ ...m, id: `plata:${m.id}` })),
   ].forEach(m => {
     if (m.winner_id == null || m.walkover) return;
     const pair1 = tournamentPairs.find(p => p.id === m.pair1_id);
@@ -344,8 +343,8 @@ export function tournamentDate(t) {
 export function getTournamentWinners(t) {
   const nameOf = (id) => t.players.find((p) => p.id === id)?.name ?? '?';
 
-  // Con cuadro (americano o liga con playoffs) el campeón es el de la final.
-  if (t.format === 'americano' || t.bracket) {
+  // Con cuadro (americano, copa o liga con playoffs) el campeón es el de la final.
+  if (t.format === 'americano' || t.format === 'copa' || t.bracket) {
     const winnerId = t.bracket?.final?.winner_id;
     if (!winnerId) return [];
     const pair = t.pairs?.find((p) => p.id === winnerId);
@@ -418,11 +417,23 @@ export function patchBracketNames(bracket, pairs, players) {
       ...s,
       pair_name: s.pair_id ? (nameByPair[s.pair_id] ?? s.pair_name) : s.pair_name,
     })),
+    ...(bracket.dieciseisavos ? { dieciseisavos: bracket.dieciseisavos.map(patchMatch) } : {}),
     octavos: (bracket.octavos ?? []).map(patchMatch),
     cuartos: (bracket.cuartos ?? []).map(patchMatch),
     semis:   (bracket.semis   ?? []).map(patchMatch),
     final:   patchMatch(bracket.final),
+    ...(bracket.tercer ? { tercer: patchMatch(bracket.tercer) } : {}),
   };
+}
+
+/** Nodos de un cuadro en orden de ronda, con `phase`; incluye dieciseisavos de la copa y el tercer puesto. */
+export function bracketNodes(bracket) {
+  if (!bracket) return [];
+  return [
+    ...['dieciseisavos', 'octavos', 'cuartos', 'semis'].flatMap((k) => (bracket[k] ?? []).map((m) => ({ ...m, phase: k }))),
+    ...(bracket.final ? [{ ...bracket.final, phase: 'final' }] : []),
+    ...(bracket.tercer ? [{ ...bracket.tercer, phase: 'tercer' }] : []),
+  ];
 }
 
 // Club asociado a una categoría o jornada, en la forma que espera ClubSelector.
@@ -451,9 +462,27 @@ export function clubCourts(club) {
 // manda lo que el club tiene hoy. Sin ese dato en el payload, la copia.
 export function tournamentCourts(tournament) {
   if (!tournament) return 1;
+  const conNombre = canchasConNombre(tournament);
+  if (conNombre.length > 0) return conNombre.length;
   const fromClub = Number(tournament.club_courts);
-  if (tournament.club_id && Number.isFinite(fromClub)) return fromClub > 0 ? fromClub : 0;
-  return Number(tournament.number_of_courts ?? 1);
+  if (tournament.club_id && Number.isFinite(fromClub) && fromClub > 0) return fromClub;
+  // Sin canchas del club, valen las que cargó el organizador en Gestión.
+  return Number(tournament.number_of_courts ?? (tournament.club_id ? 0 : 1));
+}
+
+/** Canchas activas del club con nombre: [{ id, name }]. Vacío si el club no las cargó. */
+export function canchasConNombre(tournament) {
+  return Array.isArray(tournament?.club_court_list) ? tournament.club_court_list : [];
+}
+
+/** Nombre de la cancha número n: el del club o el número. */
+export function courtName(tournament, n) {
+  return canchasConNombre(tournament)[n - 1]?.name ?? String(n);
+}
+
+/** Id de la cancha del club para el número n; null si no tiene nombre. */
+export function courtIdDe(tournament, n) {
+  return n == null ? null : (canchasConNombre(tournament)[n - 1]?.id ?? null);
 }
 
 // Etiqueta de cancha a mostrar para un partido.
@@ -462,7 +491,7 @@ export function tournamentCourts(tournament) {
 // - Si no, null (no se muestra badge).
 export function courtLabel(tournament, court) {
   if (tournamentCourts(tournament) === 0) return '-';
-  return court != null ? String(court) : null;
+  return court != null ? courtName(tournament, court) : null;
 }
 
 /**
@@ -578,18 +607,15 @@ export function winnerLabelOf(tournament) {
 
 export function countPlayed(t) {
   if (!t) return 0;
-  const bracketPlayed = t.bracket
-    ? [...(t.bracket?.octavos ?? []), ...(t.bracket?.cuartos ?? []),
-       ...(t.bracket?.semis ?? []), ...(t.bracket?.final ? [t.bracket.final] : [])]
-      .filter((m) => m.winner_id != null).length
-    : 0;
+  const bracketPlayed = [...bracketNodes(t.bracket), ...bracketNodes(t.bracket_plata)]
+    .filter((m) => m.winner_id != null).length;
   return playedMatches(t.matches ?? []).length + bracketPlayed;
 }
 
 export const PHASE_LABEL = {
-  previa: 'FASE PREVIA', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL',
+  previa: 'FASE PREVIA', dieciseisavos: '16AVOS', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL', tercer: 'TERCER PUESTO',
 };
-export const BRACKET_PHASES = new Set(['octavos', 'cuartos', 'semis', 'final']);
+export const BRACKET_PHASES = new Set(['dieciseisavos', 'octavos', 'cuartos', 'semis', 'final', 'tercer']);
 
 /** Etiqueta de la fase del cuadro, o null si el partido no es del cuadro. */
 export const bracketPhaseLabel = (phase) =>
@@ -618,13 +644,14 @@ export function adaptTournament(t) {
   return {
     ...t,
     createdAt: t.created_at ?? t.createdAt,
-    mode: t.format === 'americano' ? 'pairs' : t.mode,
+    mode: t.format === 'americano' || t.format === 'copa' ? 'pairs' : t.mode,
     players,
     pairs,
     matches: (t.matches ?? []).map(adaptMatch),
     scheduled_matches: (t.scheduled_matches ?? []).map(adaptScheduled),
     fechas: t.fechas ?? [],
     bracket: patchBracketNames(t.bracket, pairs, players),
+    ...(t.bracket_plata ? { bracket_plata: patchBracketNames(t.bracket_plata, pairs, players) } : {}),
   };
 }
 
@@ -685,7 +712,8 @@ export function isLigaDraft({ format, playerCount }) {
 
 // Borrador de cualquier formato. `playerCount` cuenta sólo jugadores activos
 // (sin los `removed: true` que arrastra un partido ya jugado).
-export function isDraftTournament({ format, pairCount, playerCount }) {
+export function isDraftTournament({ format, pairCount, playerCount, copaConfig = null }) {
+  if (format === 'copa') return (pairCount ?? 0) < copaMinPairs(copaConfig);
   return isAmericanoDraft({ format, pairCount }) || isLigaDraft({ format, playerCount });
 }
 
@@ -726,6 +754,11 @@ export function managementWarnings(tournament) {
   if (format === 'liga') {
     const missing = LIGA_MIN_PLAYERS - activePlayers.length;
     if (missing > 0) warnings.push({ id: 'liga-min-players', missing });
+  }
+
+  if (format === 'copa') {
+    const missing = copaMinPairs(tournament.copa_config) - pairs.filter((p) => p.status !== 'withdrawn').length;
+    if (missing > 0) warnings.push({ id: 'copa-min-pairs', missing });
   }
 
   if (mode === 'pairs') {

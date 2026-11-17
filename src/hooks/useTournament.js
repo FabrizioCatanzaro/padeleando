@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { api } from '../utils/api';
-import { adaptTournament, adaptMatch, adaptScheduled, patchBracketNames, getTournamentWinnerLabel } from '../utils/helpers';
+import { adaptTournament, adaptMatch, adaptScheduled, patchBracketNames, getTournamentWinnerLabel, courtIdDe } from '../utils/helpers';
 import { useAuth } from '../context/useAuth';
 import { useToast } from '../context/useToast';
 
@@ -95,6 +95,7 @@ export function useTournament(groupId, tournamentId) {
       signup_closes_at:     extra.signup_closes_at ?? null,
       rules:                extra.rules ?? null,
       ...(format === 'liga' && extra.liga ? extra.liga : {}),
+      ...(format === 'copa' && extra.copa ? extra.copa : {}),
     });
     setTournament(adaptTournament(t));
     return t.id; // para que App.js pueda navegar al torneo
@@ -118,6 +119,7 @@ export function useTournament(groupId, tournamentId) {
       sets_format:  matchData.sets_format ?? null,
       sets:         matchData.sets ?? [],
       court:        matchData.court ?? null,
+      court_id:     courtIdDe(tournament, matchData.court),
       // Si venía programado, el backend lo saca del fixture en la misma
       // llamada: en dos viajes, un fallo entre medio lo dejaría duplicado.
       scheduledId:  matchData.scheduledId ?? null,
@@ -141,6 +143,7 @@ export function useTournament(groupId, tournamentId) {
       team1: data.team1,
       team2: data.team2,
       court: data.court ?? null,
+      court_id: courtIdDe(tournament, data.court),
       scheduled_at: data.scheduled_at ?? null,
       ...(data.round != null ? { round: data.round } : {}),
       ...(data.scheduled_date !== undefined ? { scheduled_date: data.scheduled_date } : {}),
@@ -154,7 +157,8 @@ export function useTournament(groupId, tournamentId) {
   }
 
   async function handleEditScheduled(id, data) {
-    const updated = await api.scheduled.update(id, data);
+    const body = 'court' in data ? { ...data, court_id: courtIdDe(tournament, data.court) } : data;
+    const updated = await api.scheduled.update(id, body);
     setTournament((prev) => (prev ? {
       ...prev,
       scheduled_matches: (prev.scheduled_matches ?? []).map(
@@ -203,6 +207,7 @@ export function useTournament(groupId, tournamentId) {
       sets_format:      matchData.sets_format ?? null,
       sets:             matchData.sets ?? [],
       court:            matchData.court ?? null,
+      court_id:         courtIdDe(tournament, matchData.court),
     });
     setTournament((prev) =>
       prev
@@ -224,9 +229,8 @@ export function useTournament(groupId, tournamentId) {
   // ── Jugadores ───────────────────────────────────────────────────────
   async function syncMode() {
     const t = await api.tournaments.get(tournamentId);
-    // El americano es siempre por parejas: nunca se cambia el modo. Si se hiciera,
-    // desaparecería el gestor de parejas y no habría toggle para volver a activarlo.
-    if (t.format === 'americano') return;
+    // Americano, copa y liga en varios días se juegan siempre con parejas fijas.
+    if (t.format === 'americano' || t.format === 'copa' || t.liga_mode === 'temporada') return;
     const count = (t.players ?? []).filter((p) => !p.removed).length;
     // Solo forzar 'free' si el count es impar (no se pueden tener parejas fijas con impar)
     if (count % 2 !== 0 && t.mode === 'pairs') {
@@ -243,7 +247,7 @@ export function useTournament(groupId, tournamentId) {
 
   async function handleAddPlayer(name) {
     await api.players.resolve(name, groupId, tournamentId);
-    await syncMode();
+    try { await syncMode(); } catch { /* el jugador ya se agregó: igual se refresca */ }
     await reload(true);
     flash();
     showToast('Jugador agregado');
@@ -264,7 +268,7 @@ export function useTournament(groupId, tournamentId) {
       showToast(err.message, 'error');
       return;
     }
-    await syncMode();
+    try { await syncMode(); } catch { /* el jugador ya se eliminó: igual se refresca */ }
     await reload(true);
     showToast('Jugador eliminado', 'error');
   }
@@ -420,6 +424,52 @@ export function useTournament(groupId, tournamentId) {
     }
   }
 
+  // ── Copa: grupos, premios y datos de los jugadores ─────────────────────
+  async function handleSorteoGrupos(cabezas) {
+    return api.tournaments.zonas.sorteo(tournament.id, cabezas);
+  }
+
+  async function handleSaveGrupos(assignment, cabezas) {
+    await api.tournaments.zonas.save(tournament.id, assignment, cabezas);
+    await reload(true);
+    showToast('Grupos guardados');
+  }
+
+  async function handleUndoGrupos() {
+    try {
+      await api.tournaments.zonas.undo(tournament.id);
+      await reload(true);
+      showToast('Grupos deshechos', 'info');
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
+  }
+
+  async function handleUpdateCopa(body) {
+    await api.tournaments.update(tournament.id, body);
+    await reload(true);
+    showToast('Opciones de la copa guardadas');
+  }
+
+  async function handleSavePrizes(prizes) {
+    const { prizes: saved } = await api.tournaments.prizes.save(tournament.id, prizes);
+    setTournament((prev) => (prev ? { ...prev, prizes: saved } : prev));
+    showToast('Premios guardados');
+  }
+
+  async function handlePrizeWinner(prizeId, body) {
+    const saved = await api.tournaments.prizes.winner(tournament.id, prizeId, body);
+    setTournament((prev) => (prev ? {
+      ...prev, prizes: (prev.prizes ?? []).map((p) => (p.id === prizeId ? saved : p)),
+    } : prev));
+  }
+
+  async function handleUpdatePlayerDatos(playerId, body) {
+    await api.players.datos(playerId, tournament.id, body);
+    await reload(true);
+    showToast('Datos del jugador guardados');
+  }
+
   async function handleUpdateSignup({ open, price, unit, contacts, level, capacity, capacity_unit, closes_at, rules }) {
     const updated = await api.tournaments.update(tournament.id, {
       signup_open:       open,
@@ -492,33 +542,35 @@ export function useTournament(groupId, tournamentId) {
   // Los tres endpoints del cuadro devuelven el bracket ya actualizado: se aplica al
   // estado local como con los partidos de la previa, sin volver a pedir el torneo
   // (eso disparaba el skeleton y hacía "parpadear" toda la página tras cada carga).
-  function applyBracket(bracket) {
+  // `cup` elige el cuadro: el principal o, en la copa, el de plata.
+  const colCuadro = (cup) => (cup === 'plata' ? 'bracket_plata' : 'bracket');
+  function applyBracket(bracket, cup) {
     setTournament((prev) =>
-      prev ? { ...prev, bracket: patchBracketNames(bracket, prev.pairs, prev.players) } : prev
+      prev ? { ...prev, [colCuadro(cup)]: patchBracketNames(bracket, prev.pairs, prev.players) } : prev
     );
   }
 
-  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false, setsData = {}) {
+  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false, setsData = {}, cup) {
     const res = await api.tournaments.updateBracket(tournament.id, matchId, {
       score1, score2, duration_seconds, court,
       sets_format: setsData.sets_format ?? null,
       sets:        setsData.sets ?? [],
-    });
-    applyBracket(res.bracket);
+    }, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast(isEdit ? 'Partido actualizado' : 'Partido registrado');
   }
 
-  async function handleClearBracketMatch(matchId) {
-    const res = await api.tournaments.clearBracketMatch(tournament.id, matchId);
-    applyBracket(res.bracket);
+  async function handleClearBracketMatch(matchId, cup) {
+    const res = await api.tournaments.clearBracketMatch(tournament.id, matchId, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast('Resultado borrado');
   }
 
-  async function handleSetBracket(bracket) {
-    const res = await api.tournaments.setBracket(tournament.id, bracket);
-    applyBracket(res.bracket);
+  async function handleSetBracket(bracket, cup) {
+    const res = await api.tournaments.setBracket(tournament.id, bracket, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast('Cruces actualizados');
   }
@@ -526,8 +578,49 @@ export function useTournament(groupId, tournamentId) {
   async function handleDeleteBracket() {
     await api.tournaments.deleteBracket(tournament.id);
     localStorage.removeItem(`bracket_live_${tournament.id}`);
-    setTournament((prev) => (prev ? { ...prev, bracket: null, live_match: null } : prev));
+    localStorage.removeItem(`bracket_live_${tournament.id}:plata`);
+    setTournament((prev) => (prev ? { ...prev, bracket: null, bracket_plata: null, live_match: null } : prev));
     showToast('Cuadro borrado');
+  }
+
+  async function handleProgramarCruce(matchId, body, cup) {
+    try {
+      const res = await api.tournaments.programarCruce(tournament.id, matchId, body, cup);
+      applyBracket(res[colCuadro(cup)], cup);
+      showToast('Partido programado');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  }
+
+  // Copa: propuesta de cruces (no guarda nada) y armado de los cuadros.
+  // Sin toast: ArmarCuadro muestra el motivo en la solapa, y se pide cada vez que se abre.
+  async function handlePropuestaCopa() {
+    try {
+      return await api.tournaments.copaCuadro.propuesta(tournament.id);
+    } catch (err) {
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return { error: err.message };
+    }
+  }
+
+  async function handleArmarCopa(oro, plata) {
+    try {
+      const res = await api.tournaments.copaCuadro.armar(tournament.id, oro, plata);
+      setTournament((prev) => (prev ? {
+        ...prev,
+        bracket: patchBracketNames(res.bracket, prev.pairs, prev.players),
+        bracket_plata: patchBracketNames(res.bracket_plata, prev.pairs, prev.players),
+      } : prev));
+      showToast(tournament.copa_config?.mode === 'cuadro' ? 'Cuadro armado' : 'Playoffs armados');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return false;
+    }
   }
 
   function getShareLink() {
@@ -550,6 +643,8 @@ export function useTournament(groupId, tournamentId) {
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer,
+    handleProgramarCruce, handlePropuestaCopa, handleArmarCopa,
+    handleSorteoGrupos, handleSaveGrupos, handleUndoGrupos, handleUpdateCopa, handleSavePrizes, handlePrizeWinner, handleUpdatePlayerDatos,
     refresh: () => reload(true),
   };
 }

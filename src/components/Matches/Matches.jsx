@@ -11,6 +11,7 @@ import Modal from "../shared/Modal";
 import { esTemporada, fechaEnCurso, rangoDeFecha, libresDeFecha } from "../../utils/fechas";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
 import { Share2, CalendarPlus, Pencil } from "lucide-react";
+import { esCopaZonas, gruposArmados } from "../../utils/copa";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -25,6 +26,8 @@ export default function Matches({
   const isPairs = tournament.mode === "pairs";
   const canEdit = isOwner && tournament.status !== 'finished';
   const temporada = esTemporada(tournament);
+  // Copa con grupos: sin grupos armados todavía no hay fechas.
+  const sinGrupos = esCopaZonas(tournament) && !gruposArmados(tournament);
   const fechas = tournament.fechas ?? [];
   const [fechaSel, setFechaSel] = useState(() => fechaEnCurso(fechas));
   const fecha = temporada ? (fechas.find((f) => f.number === fechaSel) ?? null) : null;
@@ -463,7 +466,7 @@ export default function Matches({
           tournament={tournament}
           selected={fechaSel}
           onSelect={(n) => { setFechaSel(n); setArmando(null); }}
-          onArmar={canEdit ? () => setArmando('nueva') : null}
+          onArmar={canEdit && !sinGrupos && !tournament.bracket ? () => setArmando('nueva') : null}
         />
       )}
 
@@ -486,7 +489,9 @@ export default function Matches({
 
       {temporada && !fecha && !armando && (
         <div className="text-center text-dim py-10 px-5 font-sans leading-relaxed">
-          {canEdit
+          {sinGrupos
+            ? <>Primero se arman los grupos.{canEdit && <><br />Andá a la solapa <span className="text-white font-semibold">Grupos</span> para sortearlos.</>}</>
+            : canEdit
             ? <>Todavía no hay fechas.<br />Tocá <span className="text-white font-semibold">+ Fecha 1</span> para armar la primera.</>
             : <>Todavía no hay fechas armadas.</>}
         </div>

@@ -1,6 +1,7 @@
 import { Clock, Pencil, Trash2, Play, Radio } from 'lucide-react';
 import { getPairLabel, courtLabel, fmtHora } from '../../utils/helpers';
 import { diaCorto } from '../../utils/fechas';
+import { grupoNombre } from '../../utils/copa';
 import { TeamName } from './MatchCard';
 
 /**
@@ -26,6 +27,10 @@ export default function ScheduledCard({
   }
 
   const cancha = courtLabel(tournament, match.court);
+  // Copa con grupos: el grupo del cruce, que es el de cualquiera de las dos parejas.
+  const zona = tournament.format === 'copa'
+    ? pairs?.find((p) => [p.p1, p.p2].includes(match.team1?.[0]))?.zona ?? null
+    : null;
   const hora = match.scheduled_at ? fmtHora(match.scheduled_at) : null;
   const dia = match.scheduled_date ? diaCorto(match.scheduled_date) : null;
 
@@ -65,6 +70,7 @@ export default function ScheduledCard({
             Cancha {cancha}
           </span>
         )}
+        {zona != null && <span className="text-[12px] text-secondary">{grupoNombre(zona)}</span>}
         {/* Lo que el fixture le resuelve al que viene a jugar: cuál es el suyo. */}
         {esMio && !isOwner && (
           <span className="inline-flex items-center text-[12px] font-bold px-2 py-0.5 rounded-full bg-brand text-base">

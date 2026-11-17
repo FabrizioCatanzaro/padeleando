@@ -7,7 +7,7 @@ export default function FechaBar({ tournament, selected, onSelect, onArmar }) {
   const siguiente = (fechas[fechas.length - 1]?.number ?? 0) + 1;
 
   return (
-    <nav aria-label="Fechas de la liga" className="flex gap-1.5 overflow-x-auto pb-1 mb-4 -mx-1 px-1">
+    <nav aria-label="Fechas del torneo" className="flex gap-1.5 overflow-x-auto pb-1 mb-4 -mx-1 px-1">
       {fechas.map((f) => {
         const on = f.number === selected;
         const estado = estadoDeFecha(tournament, f);

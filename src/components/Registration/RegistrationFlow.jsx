@@ -4,7 +4,7 @@ import { X, ArrowLeft, Users, User, Search, Check, Bell, AlertTriangle } from 'l
 import RulesModal from '../shared/RulesModal';
 import AvailabilityEditor from '../shared/AvailabilityEditor';
 import { resumenDisponibilidad, disponibilidadInvalida, sinDisponibilidad } from '../../utils/disponibilidad';
-import { esTemporada } from '../../utils/fechas';
+import { pideDatos, whatsappDePerfil } from '../../utils/copa';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { formatPrice } from '../../utils/signup';
@@ -17,13 +17,17 @@ const OPTION = 'w-full text-left rounded-xl p-4 flex gap-3.5 items-start cursor-
 const INPUT  = 'h-12 w-full box-border bg-surface border border-border-strong rounded-lg px-3.5 text-white font-sans text-[15px] outline-none focus:border-brand';
 const LABEL  = 'text-[11px] tracking-wide text-dim font-semibold';
 
-// Formulario de inscripción: tipo → compañero → horarios (liga en varios días) → resumen.
+// Formulario de inscripción: tipo → compañero → contacto y horarios (torneos por fechas y copas) → resumen.
 // Pantalla completa en el teléfono, ventana centrada en escritorio.
 export default function RegistrationFlow({ tournament, groupName = null, signup, contactos = [], onClose, onDone }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [paso, setPaso]       = useState('tipo');
   const [disp, setDisp]       = useState({ slots: [], note: '' });
+  const [dispCompa, setDispCompa] = useState({ slots: [], note: '' });
+  const [dispDe, setDispDe]   = useState('yo');
+  const [whatsapp, setWhatsapp] = useState(() => whatsappDePerfil(user?.social_links));
+  const [mostrarWa, setMostrarWa] = useState(false);
   const [kind, setKind]       = useState('pair');
   const [hasAccount, setHasAccount] = useState(true);
   const [query, setQuery]     = useState('');
@@ -47,9 +51,12 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   }, [query, hasAccount, user?.id]);
 
   const sinCategoria = !user?.category;
-  const temporada = esTemporada(tournament);
-  const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
-  const NOMBRES = { tipo: 'Tipo', companero: 'Compañero', disp: 'Horarios', resumen: 'Resumen' };
+  const temporada = pideDatos(tournament);
+  const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(temporada ? ['contacto'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
+  const NOMBRES = { tipo: 'Tipo', companero: 'Compañero', contacto: 'Contacto', disp: 'Horarios', resumen: 'Resumen' };
+  const waPerfil = whatsappDePerfil(user?.social_links);
+  const waValido = /^[+\d][\d\s()-]{5,24}$/.test(whatsapp.trim());
+  const nombreCompa = hasAccount ? (partner?.name ?? 'tu compañero') : (guest.name.trim() || 'tu compañero');
   const pasos = orden.map((p) => NOMBRES[p]);
   const pasoActual = orden.indexOf(paso) + 1;
   const companeroListo = kind === 'solo' || (hasAccount ? !!partner : guest.name.trim().length >= 2 && guest.phone.trim().length >= 6);
@@ -77,6 +84,8 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         kind,
         ...(signup.rules ? { accept_rules: acepto } : {}),
         ...(temporada && !sinDisponibilidad(disp) ? { availability: disp } : {}),
+        ...(temporada && kind === 'pair' && !sinDisponibilidad(dispCompa) ? { partner_availability: dispCompa } : {}),
+        ...(temporada ? { whatsapp: whatsapp.trim(), whatsapp_visible: mostrarWa } : {}),
         partner: kind === 'solo' ? undefined
           : hasAccount ? { username: partner.username } : { name: guest.name, phone: guest.phone },
       });
@@ -199,11 +208,40 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                     <input id="reg-nombre" className={INPUT} maxLength={40} value={guest.name} onChange={(e) => setGuest((g) => ({ ...g, name: e.target.value }))} />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="reg-tel" className={LABEL}>TELÉFONO</label>
+                    <label htmlFor="reg-tel" className={LABEL}>{temporada ? 'WHATSAPP' : 'TELÉFONO'}</label>
                     <input id="reg-tel" type="tel" className={INPUT} maxLength={25} placeholder="+54 9 11 1234-5678" value={guest.phone} onChange={(e) => setGuest((g) => ({ ...g, phone: e.target.value }))} />
-                    <span className="text-[12px] text-dim">Solo lo ve el organizador.</span>
+                    <span className="text-[12px] text-dim">Solo lo ven el organizador y vos.</span>
                   </div>
                 </>
+              )}
+            </>
+          )}
+
+          {paso === 'contacto' && (
+            <>
+              <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">Tu WhatsApp</h1>
+              <p className="m-0 text-[14px] text-soft leading-snug">El organizador lo usa para coordinar los partidos.</p>
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="reg-wa" className={LABEL}>WHATSAPP</label>
+                <input id="reg-wa" type="tel" inputMode="tel" className={INPUT} maxLength={25} placeholder="+54 9 11 1234-5678"
+                  value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} />
+                {waPerfil && whatsapp.trim() !== waPerfil && (
+                  <button type="button" onClick={() => setWhatsapp(waPerfil)}
+                    className="self-start bg-transparent border-0 p-0 min-h-[32px] text-[13px] text-brand font-semibold cursor-pointer hover:underline">
+                    Usar el de mi perfil ({waPerfil})
+                  </button>
+                )}
+                {waPerfil && whatsapp.trim() === waPerfil && <span className="text-[12px] text-dim">Es el de tu perfil.</span>}
+              </div>
+              <label className="flex items-start gap-3 p-3.5 rounded-xl border border-border-strong bg-surface cursor-pointer">
+                <input type="checkbox" checked={mostrarWa} onChange={(e) => setMostrarWa(e.target.checked)} className="w-5 h-5 mt-0.5 accent-brand cursor-pointer shrink-0" />
+                <span className="text-[14px] text-content leading-snug">
+                  Mostrarlo a los demás jugadores del torneo
+                  <span className="block text-[12px] text-secondary mt-0.5">Así tus rivales te escriben para coordinar. Los organizadores lo ven siempre. Lo podés cambiar después.</span>
+                </span>
+              </label>
+              {kind === 'pair' && hasAccount && partner && (
+                <p className="m-0 text-[13px] text-secondary leading-snug">{partner.name} carga su WhatsApp desde su inscripción.</p>
               )}
             </>
           )}
@@ -212,9 +250,21 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
             <>
               <h1 id="reg-titulo" className="m-0 font-condensed font-bold text-[22px] text-white">¿Cuándo pueden jugar?</h1>
               <p className="m-0 text-[14px] text-soft leading-snug">
-                La liga se juega en varios días. Marcá los días y horarios en que {kind === 'pair' ? 'pueden jugar los dos' : 'podés jugar'}. El organizador los usa para programar los partidos.
+                El torneo se juega en varios días. Marcá los días y horarios de cada uno. El organizador los usa para programar los partidos.
               </p>
-              <AvailabilityEditor value={disp} onChange={setDisp} />
+              {kind === 'pair' && (
+                <div role="group" aria-label="De quién son los horarios" className="grid grid-cols-2 gap-1 p-1 bg-surface border border-border-strong rounded-lg">
+                  {[{ v: 'yo', l: 'Vos' }, { v: 'compa', l: nombreCompa }].map((o) => (
+                    <button key={o.v} type="button" aria-pressed={dispDe === o.v} onClick={() => setDispDe(o.v)}
+                      className={`h-10 rounded-md border-0 font-sans text-[13px] cursor-pointer truncate px-2 ${dispDe === o.v ? 'bg-brand text-black font-bold' : 'bg-transparent text-soft font-semibold'}`}>
+                      {o.l}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {kind === 'pair' && dispDe === 'compa'
+                ? <AvailabilityEditor key="compa" value={dispCompa} onChange={setDispCompa} />
+                : <AvailabilityEditor key="yo" value={disp} onChange={setDisp} />}
             </>
           )}
 
@@ -228,7 +278,9 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                   ...(kind === 'pair' ? [['Compañero', hasAccount
                     ? `${partner?.name ?? ''}${partner?.category ? ` · ${partner.category}` : ''}`
                     : `${guest.name} · sin cuenta`]] : []),
-                  ...(temporada ? [['Horarios', resumenDisponibilidad(disp) || 'Sin cargar']] : []),
+                  ...(temporada ? [['WhatsApp', `${whatsapp.trim()}${mostrarWa ? ' · visible' : ' · solo organizadores'}`]] : []),
+                  ...(temporada ? [['Tus horarios', resumenDisponibilidad(disp) || 'Sin cargar']] : []),
+                  ...(temporada && kind === 'pair' ? [[`Horarios de ${nombreCompa}`, resumenDisponibilidad(dispCompa) || 'Sin cargar']] : []),
                   ...(precio ? [['A pagar', `${precio}`]] : []),
                 ].map(([k, v], i, arr) => (
                   <div key={k} className={`flex justify-between gap-3 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
@@ -273,8 +325,9 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         <footer className="p-4 border-t border-border shrink-0">
           {paso !== 'resumen' ? (
             <Btn variant="primary" size="lg" full onClick={siguiente}
-              disabled={(paso === 'companero' && !companeroListo) || (paso === 'disp' && disponibilidadInvalida(disp))}>
-              {paso === 'disp' && sinDisponibilidad(disp) ? 'SEGUIR SIN CARGAR' : 'SIGUIENTE'}
+              disabled={(paso === 'companero' && !companeroListo) || (paso === 'contacto' && !waValido)
+                || (paso === 'disp' && (disponibilidadInvalida(disp) || disponibilidadInvalida(dispCompa)))}>
+              {paso === 'disp' && sinDisponibilidad(disp) && sinDisponibilidad(dispCompa) ? 'SEGUIR SIN CARGAR' : 'SIGUIENTE'}
             </Btn>
           ) : (
             <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria || (!!signup.rules && !acepto)}>ENVIAR INSCRIPCIÓN</Btn>

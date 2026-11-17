@@ -37,7 +37,7 @@ export default function ClubesSection() {
         Si tu club no está
       </h3>
       <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-        Si sos el dueño de un club, podés pedir que lo demos de alta desde el selector de club en el formulario de creación de torneos o de categorías. Cargás los datos y la solicitud queda pendiente de revisión; cuando la resolvemos te llega una notificación. Otra forma de hacerlo es enviandonos un mail a <a href="mailto:soporte@hola.padeleando.ar" className='text-brand hover:underline'>soporte@hola.padeleando.ar</a> con el asunto "ALTA DE CLUB" y los siguientes datos en el cuerpo del correo: Nombre del club, dirección (calle, altura y localidad), número de teléfono (si tiene), número de WhatsApp (si tiene), cantidad de canchas, horarios y redes sociales.
+        Si sos el dueño de un club, podés pedir que lo demos de alta desde el selector de club en el formulario de creación de torneos o de categorías. Cargás los datos y la solicitud queda pendiente de revisión; cuando la resolvemos te llega una notificación. Otra forma de hacerlo es enviandonos un mail a <a href="mailto:soporte@padeleando.ar" className='text-brand hover:underline'>soporte@padeleando.ar</a> con el asunto "ALTA DE CLUB" y los siguientes datos en el cuerpo del correo: Nombre del club, dirección (calle, altura y localidad), número de teléfono (si tiene), número de WhatsApp (si tiene), cantidad de canchas, horarios y redes sociales.
       </p>
 
       <Note>

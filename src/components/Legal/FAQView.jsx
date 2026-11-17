@@ -40,7 +40,7 @@ const faqs = [
   },
   {
     q: '¿Cómo puedo contactarlos?',
-    a: 'Podés escribirnos a soporte@hola.padeleando.ar. También encontrás más formas de contacto en la sección Contacto de este sitio.',
+    a: 'Podés escribirnos a soporte@padeleando.ar. También encontrás más formas de contacto en la sección Contacto de este sitio.',
   },
 ]
 

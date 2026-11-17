@@ -18,7 +18,7 @@ const SOCIAL_AVATARS = [
 const FAQS = [
   {
     q: '¿Cómo funciona la prueba gratuita de 7 días?',
-    a: 'La primera vez que quieras ser parte de Premium te regalamos 7 días de prueba. Solicitalo mandándonos un mail a soporte@hola.padeleando.ar.',
+    a: 'La primera vez que quieras ser parte de Premium te regalamos 7 días de prueba. Solicitalo mandándonos un mail a soporte@padeleando.ar.',
   },
   {
     q: '¿Puedo cancelar en cualquier momento?',
@@ -219,8 +219,8 @@ export default function PremiumModal({ onClose, reason }) {
             )}
             {!error && (
               <p className="text-center text-[11px] text-muted mt-2">
-                ¿Primera vez? Mandanos un mail a <a href='mailto:soporte@hola.padeleando.ar' className="text-brand hover:underline">
-                  soporte@hola.padeleando.ar
+                ¿Primera vez? Mandanos un mail a <a href='mailto:soporte@padeleando.ar' className="text-brand hover:underline">
+                  soporte@padeleando.ar
                 </a> y te regalamos 7 días de Premium.
               </p>
             )}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
-import { expandPair, getPairLabel, tournamentCourts, countPairMatches, pairKeyOf, fmtHora } from '../../utils/helpers';
+import { expandPair, getPairLabel, tournamentCourts, countPairMatches, pairKeyOf, fmtHora, courtName } from '../../utils/helpers';
 import { TEAM_SELECT_CLS } from './MatchForm';
 import { diasDeFecha, diaCorto, parejaDeEquipo } from '../../utils/fechas';
 import DisponibilidadParejas from './DisponibilidadParejas';
@@ -60,7 +60,7 @@ export default function ScheduleForm({ tournament, scheduled, fecha = null, onSa
 
   // Sin cruces repetidos, una pareja no se ofrece contra otra con la que ya se cruzó.
   const cruzados = new Set();
-  if (fecha && !tournament.allow_rematch) {
+  if (fecha && !tournament.allow_rematch && !(tournament.format === 'copa' && tournament.copa_config?.ruedas === 2)) {
     for (const m of [...tournament.matches, ...(tournament.scheduled_matches ?? []).filter((x) => x.id !== scheduled?.id)]) {
       const a = parejaDeEquipo(m.team1, tournament.pairs);
       const b = parejaDeEquipo(m.team2, tournament.pairs);
@@ -99,6 +99,10 @@ export default function ScheduleForm({ tournament, scheduled, fecha = null, onSa
       const n = pjDePareja(p.id);
       const lleno = esAmericano && n >= MAX_PREVIA_MATCHES && p.id !== actual;
       const yaCruzo = !!otro && cruzados.has(`${p.id}|${otro}`) && p.id !== actual;
+      // Copa: el rival tiene que ser del mismo grupo.
+      const otroGrupo = tournament.format === 'copa' && !!otro && p.id !== actual
+        && tournament.pairs.find((x) => x.id === otro)?.zona !== p.zona;
+      if (otroGrupo) return null;
       return (
         <option key={p.id} value={p.id} disabled={p.id === otro || lleno || yaCruzo}>
           {getPairLabel(p.id, tournament.pairs, tournament.players)}
@@ -191,14 +195,19 @@ export default function ScheduleForm({ tournament, scheduled, fecha = null, onSa
               {Array.from({ length: canchas }, (_, i) => i + 1).map((n) => (
                 <button
                   key={n} type="button" onClick={() => setCourt(n)}
-                  className={`min-h-[36px] min-w-[44px] rounded-lg border font-condensed font-bold text-[12px] cursor-pointer transition-colors ${
+                  className={`min-h-[36px] min-w-[44px] px-2.5 rounded-lg border font-condensed font-bold text-[12px] cursor-pointer transition-colors ${
                     court === n ? 'bg-white border-white text-base' : 'border-border-strong text-muted hover:text-white'
                   }`}
                 >
-                  {n}
+                  {courtName(tournament, n)}
                 </button>
               ))}
             </div>
+            {canchas === 0 && (
+              <p role="note" className="text-[12px] text-premium mt-1.5 mb-0">
+                No hay canchas cargadas. Cargá la cantidad en Gestión, en Datos del torneo.
+              </p>
+            )}
           </div>
           <div>
             <label className={labelCls} htmlFor="sch-hora">Hora</label>

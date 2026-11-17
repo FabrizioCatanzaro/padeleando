@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 
-function Opcion({ on, onClick, children }) {
+export function Opcion({ on, onClick, children }) {
   return (
     <button
       type="button" aria-pressed={on} onClick={onClick}
@@ -11,7 +11,7 @@ function Opcion({ on, onClick, children }) {
   );
 }
 
-function Puntos({ label, value, min, max, onChange }) {
+export function Puntos({ label, value, min, max, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-sm border border-border-mid">
       <span className="text-[14px] text-white">{label}</span>
@@ -26,9 +26,9 @@ function Puntos({ label, value, min, max, onChange }) {
   );
 }
 
-// Opciones de la Liga: cuándo se juega, cruces repetidos, puntos y cómo se define el campeón.
-// `heredado` son los puntos de la última liga de la categoría, si los hay.
-export default function LigaOpciones({ value, onChange, modoBloqueado = false, heredado = null }) {
+// Opciones de la Liga. `heredado` son los puntos de la última liga; `seccion` muestra uno de LIGA_SECCIONES (utils/fechas).
+export default function LigaOpciones({ value, onChange, modoBloqueado = false, heredado = null, seccion = null }) {
+  const ver = (id) => !seccion || seccion === id;
   const set = (k, v) => onChange({ ...value, [k]: v });
   const win  = value.points_win  ?? heredado?.win  ?? 3;
   const loss = value.points_loss ?? heredado?.loss ?? 0;
@@ -36,8 +36,8 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false, h
   const temporada = value.liga_mode === 'temporada';
   const playoffs = value.winner_format === 'playoffs';
   return (
-    <div className="flex flex-col gap-4 mt-4 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
-      <div>
+    <div className={seccion ? 'flex flex-col gap-6' : 'flex flex-col gap-4 mt-4 pt-4 border-t border-border'} onClick={(e) => e.stopPropagation()}>
+      {ver('cuando') && <div>
         <span className="block text-[13px] font-semibold text-white mb-1.5">¿Cuándo se juega?</span>
         {!modoBloqueado && (
           <div className="flex gap-2">
@@ -50,8 +50,8 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false, h
             ? 'Varios días. Con fechas armadas no se cambia.'
             : temporada ? 'Una temporada dividida en fechas. Las parejas son fijas.' : 'Todos los partidos se juegan el mismo día.'}
         </p>
-      </div>
-      {temporada && (
+      </div>}
+      {ver('cuando') && temporada && (
         <div>
           <span className="block text-[13px] font-semibold text-white mb-1.5">Cruces repetidos</span>
           <div className="flex gap-2">
@@ -63,7 +63,7 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false, h
           </p>
         </div>
       )}
-      <div>
+      {ver('puntos') && <div>
         <span className="block text-[13px] font-semibold text-white mb-1.5">Puntos</span>
         <div className="flex flex-col gap-2">
           <Puntos label="Victoria" value={win} min={0} max={10} onChange={(w) => setPuntos(w, loss)} />
@@ -73,8 +73,8 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false, h
           La tabla se ordena por puntos. La derrota por W.O. no suma.
           {heredado && value.points_win == null ? ' Copiados de la última liga de la categoría.' : ''}
         </p>
-      </div>
-      <div>
+      </div>}
+      {ver('campeon') && <div>
         <span className="block text-[13px] font-semibold text-white mb-1.5">Campeón</span>
         <div className="flex gap-2">
           <Opcion on={!playoffs} onClick={() => onChange({ ...value, winner_format: 'tabla', playoff_size: null })}>Primero de la tabla</Opcion>
@@ -95,7 +95,7 @@ export default function LigaOpciones({ value, onChange, modoBloqueado = false, h
         <p className="m-0 mt-1.5 text-[12px] text-secondary">
           {playoffs ? 'Al terminar la tabla, las primeras parejas juegan un cuadro.' : 'Gana la primera pareja de la tabla.'}
         </p>
-      </div>
+      </div>}
     </div>
   );
 }

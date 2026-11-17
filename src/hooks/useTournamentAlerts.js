@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback } from 'react';
-import { getAllMatches, playedMatches } from '../utils/helpers';
+import { getAllMatches, playedMatches, bracketNodes } from '../utils/helpers';
 
 // Nunca dispara en la primera carga: ahí todo es "nuevo".
 
@@ -33,14 +33,7 @@ function pairHasViewer(pairId, t, playerIds) {
 
 // El bracket guarda ids de pareja, así que no hay labels de por medio.
 function bracketPairIds(bracket) {
-  if (!bracket) return [];
-  const rounds = [
-    ...(bracket.octavos ?? []),
-    ...(bracket.cuartos ?? []),
-    ...(bracket.semis   ?? []),
-    ...(bracket.final   ? [bracket.final] : []),
-  ];
-  const ids = rounds.flatMap((m) => [m?.pair1_id, m?.pair2_id]).filter(Boolean);
+  const ids = bracketNodes(bracket).flatMap((m) => [m?.pair1_id, m?.pair2_id]).filter(Boolean);
   return [...new Set(ids)];
 }
 
@@ -83,7 +76,7 @@ export function detectAlerts(prev, tournament, username) {
 
     if (sig.bracket && !prev.bracket) {
       const mine = playerIds.length > 0 &&
-        bracketPairIds(tournament.bracket).some((pid) => pairHasViewer(pid, tournament, playerIds));
+        [...bracketPairIds(tournament.bracket), ...bracketPairIds(tournament.bracket_plata)].some((pid) => pairHasViewer(pid, tournament, playerIds));
       push(mine
         ? { kind: 'bracket_spot', title: 'Estás en el cuadro', body: 'Se armaron los cruces y tenés tu lugar asegurado.' }
         : { kind: 'bracket', title: 'Se generó el cuadro', body: 'Ya están definidos los cruces.' });

@@ -11,7 +11,10 @@ import { profileContacts, formatPrice } from "../../utils/signup";
 import Btn from "../shared/Btn";
 import LigaOpciones from "../shared/LigaOpciones";
 import FlyerCard from "./FlyerCard";
-import { clubCourts, entityClub, fmtHora, isSaneEventDate } from "../../utils/helpers";
+import CopaOpciones from "../Copa/CopaOpciones";
+import PremiosEditor from "../Copa/PremiosEditor";
+import { copaConfigBody, copaConfigError, premioTitulo, gruposArmados } from "../../utils/copa";
+import { clubCourts, entityClub, fmtHora, isSaneEventDate, canchasConNombre } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
 
 const fechaDe = (t) => (t.event_date ? String(t.event_date).slice(0, 10) : '');
@@ -97,6 +100,7 @@ function DatosDelTorneo({ tournament, onSave }) {
   const [time, setTime] = useState(() => fmtHora(tournament.event_time));
   const [rules, setRules] = useState(() => tournament.rules ?? null);
   const [rulesBase, setRulesBase] = useState(() => tournament.rules ?? null);
+  const [canchas, setCanchas] = useState(() => Number(tournament.number_of_courts ?? 1));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -104,7 +108,12 @@ function DatosDelTorneo({ tournament, onSave }) {
   const requestId   = club?.pending ? club.request_id : null;
   const clubChanged = clubId !== (tournament.club_id ?? null)
     || requestId !== (tournament.pending_club_request_id ?? null);
-  const clubDirty = clubChanged
+  // El club aporta las canchas si tiene: con nombre o con cantidad cargada.
+  const clubSinCanchas = !club || club.pending
+    || (clubChanged ? clubCourts(club) === 0
+      : canchasConNombre(tournament).length === 0 && !(Number(tournament.club_courts) > 0));
+  const canchasDirty = clubSinCanchas && canchas !== Number(tournament.number_of_courts ?? 1);
+  const clubDirty = clubChanged || canchasDirty
     || (date || null) !== (fechaDe(tournament) || null)
     || (time || null) !== (fmtHora(tournament.event_time) || null);
   const rulesDirty = (rules ?? '') !== (rulesBase ?? '');
@@ -119,7 +128,7 @@ function DatosDelTorneo({ tournament, onSave }) {
           club_id: clubId, pending_club_request_id: requestId,
           event_date: date || null, event_time: time || null,
           // Al cambiar de club, las canchas del torneo pasan a ser las del nuevo club.
-          ...(clubChanged ? { number_of_courts: clubCourts(club) } : {}),
+          ...(clubSinCanchas ? { number_of_courts: canchas } : clubChanged ? { number_of_courts: clubCourts(club) } : {}),
         } : null,
         ...(rulesDirty ? { rules: rules?.trim() ? rules : null } : {}),
       });
@@ -162,6 +171,19 @@ function DatosDelTorneo({ tournament, onSave }) {
               />
             </div>
           </div>
+          {clubSinCanchas ? (
+            <div>
+              <label htmlFor="cant-canchas" className="block text-[12px] font-semibold text-soft mb-1.5">Cantidad de canchas</label>
+              <input
+                id="cant-canchas" type="number" inputMode="numeric" min={0} max={30} value={canchas}
+                onChange={(e) => setCanchas(Math.max(0, Math.min(30, Number(e.target.value) || 0)))}
+                className="w-28 bg-surface border border-border-mid text-white px-3 py-2 rounded-sm text-sm outline-none font-sans"
+              />
+              <p className="m-0 mt-1.5 text-[12px] text-secondary">El club no tiene canchas cargadas. Con este número elegís la cancha de cada partido.</p>
+            </div>
+          ) : canchasConNombre(tournament).length > 0 && !clubChanged ? (
+            <p className="m-0 text-[12px] text-secondary">Canchas del club: {canchasConNombre(tournament).map((c) => c.name).join(', ')}.</p>
+          ) : null}
         </div>
       </section>
 
@@ -212,12 +234,64 @@ function OpcionesDeLiga({ tournament, onSave }) {
   );
 }
 
+const copaDe = (t) => ({ ...t.copa_config, points_win: t.points_win ?? 3, points_loss: t.points_loss ?? 0 });
+
+function resumenCopa(t) {
+  const c = t.copa_config ?? {};
+  if (c.mode === 'cuadro') return ['De cuadro', c.tercer_puesto ? 'Tercer puesto jugado' : 'Tercer puesto compartido'].join(' · ');
+  return [
+    `${c.zonas} grupos`, c.ruedas === 2 ? 'Dos ruedas' : 'Una rueda',
+    `Pasan ${c.clasifican}${c.mejores_extra ? ` + ${c.mejores_extra}` : ''}`,
+    c.plata ? 'Con copa de plata' : null,
+  ].filter(Boolean).join(' · ');
+}
+
+// Opciones de la copa: lo que el sorteo, las fechas o el cuadro ya fijaron queda bloqueado.
+function OpcionesDeCopa({ tournament, onSave }) {
+  const [copa, setCopa] = useState(() => copaDe(tournament));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const cambio = JSON.stringify(copa) !== JSON.stringify(copaDe(tournament));
+  const bloqueo = {
+    mode: true,
+    zonas: gruposArmados(tournament),
+    ruedas: (tournament.fechas?.length ?? 0) > 0,
+  };
+  if (tournament.bracket) {
+    return <p className="m-0 text-[13px] text-secondary">El cuadro ya está armado: las opciones de la copa no se cambian.</p>;
+  }
+  async function guardar() {
+    setSaving(true);
+    setError(null);
+    try {
+      await onSave({
+        copa_config: copaConfigBody(copa),
+        ...(copa.mode === 'zonas' ? { points_win: copa.points_win, points_loss: copa.points_loss } : {}),
+      });
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+  return (
+    <>
+      <CopaOpciones value={copa} onChange={setCopa} bloqueo={bloqueo} conPremios={false} />
+      {error && <p role="alert" className="m-0 mt-3 text-[13px] text-danger">{error}</p>}
+      <Btn variant="primary" full className="mt-4" disabled={!cambio || saving || !!copaConfigError(copa)} loading={saving} onClick={guardar}>
+        Guardar opciones
+      </Btn>
+    </>
+  );
+}
+
 export default function Management({
   tournament, isOwner,
   onAddPlayer, onEditPlayer, onDeletePlayer,
   onAddPair, onEditPair, onDeletePair, onWithdrawPair,
   onResetScores, onDeleteTournament, onToggleStatus, onUpdateMode, onUpdateDatos, onUpdateLiga, onGeneratePlayoffs,
   onUploadFlyer, onDeleteFlyer, onRefresh,
+  onUpdateCopa, onSavePrizes, onPrizeWinner, onUpdatePlayerDatos,
 }) {
   const [resetModal, setResetModal]   = useState(false);
   const [resetInput, setResetInput]   = useState('');
@@ -337,7 +411,39 @@ export default function Management({
           onEdit={onEditPair}
           onDelete={onDeletePair}
           onWithdraw={onWithdrawPair}
+          onUpdatePlayerDatos={onUpdatePlayerDatos}
         />
+      )}
+
+      {isOwner && tournament.format === 'copa' && (
+        <>
+          <details className="group bg-surface border border-border-mid rounded-xl mt-6">
+            <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <span className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[15px] font-bold text-white">Opciones de la copa</span>
+                <span className="text-[13px] text-secondary truncate">{resumenCopa(tournament)}</span>
+              </span>
+              <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="px-4 pb-4">
+              <OpcionesDeCopa key={resumenCopa(tournament) + tournament.points_win + tournament.points_loss} tournament={tournament} onSave={onUpdateCopa} />
+            </div>
+          </details>
+          <details className="group bg-surface border border-border-mid rounded-xl mt-3">
+            <summary className="flex items-center justify-between gap-3 px-4 py-3.5 cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+              <span className="flex flex-col gap-0.5 min-w-0">
+                <span className="text-[15px] font-bold text-white">Premios</span>
+                <span className="text-[13px] text-secondary truncate">
+                  {(tournament.prizes ?? []).map(premioTitulo).join(' · ') || 'Sin premios'}
+                </span>
+              </span>
+              <ChevronDown size={18} className="shrink-0 text-soft transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <div className="px-4 pt-4 pb-4 border-t border-border">
+              <PremiosEditor key={JSON.stringify(tournament.prizes ?? [])} tournament={tournament} onSave={onSavePrizes} onWinner={onPrizeWinner} />
+            </div>
+          </details>
+        </>
       )}
 
       {isOwner && tournament.format === 'liga' && (

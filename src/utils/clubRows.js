@@ -1,10 +1,9 @@
-// Partidos del cuadro de un americano: no son filas de `matches`, viven en el
-// JSONB del bracket. Sin esto, un americano cuenta 0 partidos.
+import { bracketNodes } from './helpers';
+
+// Partidos del cuadro de un americano o una copa: viven en el JSONB del bracket, no en `matches`.
 function bracketPlayedCount(t) {
-  if (t.format !== 'americano' || !t.bracket) return 0;
-  return [...(t.bracket.octavos ?? []), ...(t.bracket.cuartos ?? []),
-          ...(t.bracket.semis   ?? []), ...(t.bracket.final ? [t.bracket.final] : [])]
-    .filter((m) => m.winner_id != null).length;
+  if (t.format !== 'americano' && t.format !== 'copa') return 0;
+  return [...bracketNodes(t.bracket), ...bracketNodes(t.bracket_plata)].filter((m) => m.winner_id != null).length;
 }
 
 // Dónde jugó la categoría. Se calcula sobre los torneos del histórico: los que

@@ -3,65 +3,83 @@ import { useParams, useNavigate } from "react-router-dom";
 import { uid, clubCourts, entityClub, isSaneEventDate, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PAIRS, LIGA_MIN_PLAYERS } from "../../utils/helpers";
 import { api } from "../../utils/api";
 import { useTournament } from "../../hooks/useTournament";
-import PlayerInput from "./PlayerInput";
 import PairBuilder from "./PairBuilder";
+import { CargaParejas, CargaJugadores } from "./CargaLista";
 import ClubSelector from "../shared/ClubSelector";
 import SignupEditor from "../shared/SignupEditor";
 import { profileContacts } from "../../utils/signup";
 import { useToast } from "../../context/useToast";
-import { ChevronLeft, Check } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, ListOrdered, Shuffle, Trophy } from "lucide-react";
 import LigaOpciones from "../shared/LigaOpciones";
+import CopaOpciones from "../Copa/CopaOpciones";
+import { LIGA_SECCIONES } from "../../utils/fechas";
+import { COPA_MAX_PAIRS, defaultCopaConfig, copaConfigBody, copaConfigError, copaMinPairs, premiosDePuestos, totalClasificados, copaSecciones } from "../../utils/copa";
 import Btn from "../shared/Btn";
 import StepBar from "../shared/StepBar";
 
-function EventMeta({ club, setClub, eventDate, setEventDate, eventTime, setEventTime, signup, setSignup, inheritedSignup, profile }) {
-  const courts = club ? clubCourts(club) : null;
-  return (
-    <div className="mt-5 flex flex-col gap-5">
-      <div>
-        <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">CLUB (opcional)</label>
-        <ClubSelector value={club} onChange={setClub} />
-        {club && (
-          <p className="text-[11px] font-mono mt-2 text-dim">
-            {courts > 0
-              ? <>Este club tiene <span className="text-brand">{courts} {courts === 1 ? 'cancha' : 'canchas'}</span> — vas a poder asignar la cancha en cada partido.</>
-              : <>Este club no tiene canchas cargadas — los partidos quedarán con cancha <span className="text-brand">"-"</span>.</>}
-          </p>
-        )}
-      </div>
-      <div className="flex gap-3">
-        <div className="flex-1 min-w-0">
-          <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">FECHA DEL EVENTO (opcional)</label>
-          <input
-            type="date"
-            value={eventDate}
-            min="1900-01-01"
-            max="2100-12-31"
-            onChange={(e) => { if (isSaneEventDate(e.target.value)) setEventDate(e.target.value); }}
-            className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none"
-          />
-        </div>
-        <div className="w-32 shrink-0">
-          <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">HORA</label>
-          <input
-            type="time"
-            value={eventTime}
-            onChange={(e) => setEventTime(e.target.value)}
-            className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none"
-          />
-        </div>
-      </div>
+// `img` es la base de /public/formatos/<id>-600.webp y -1200.webp; `pos` centra el motivo en la tarjeta alta.
+const FORMATOS = [
+  { id: 'liga', titulo: 'LIGA', bajada: 'Tabla de posiciones acumulada, en un día o en una temporada por fechas.', datos: ['Libres o parejas fijas', `Desde ${LIGA_MIN_PLAYERS} jugadores`], icono: ListOrdered, img: '/formatos/liga', pos: '56% center' },
+  { id: 'americano', titulo: 'AMERICANO', bajada: 'Fase previa de 2 partidos por pareja y cuadro de eliminación directa.', datos: [`${AMERICANO_MIN_PAIRS} a ${AMERICANO_MAX_PAIRS} parejas`, 'Un solo día'], icono: Shuffle, img: '/formatos/americano', pos: '74% center' },
+  { id: 'copa', titulo: 'COPA', bajada: 'Grupos y playoffs, o cuadro directo. Fixture con día, horario y cancha.', datos: [`Hasta ${COPA_MAX_PAIRS} parejas`, 'Premios por puesto'], icono: Trophy, img: '/formatos/copa', pos: '50% center' },
+];
 
-      <div>
-        <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">INSCRIPCIÓN (opcional)</label>
-        <SignupEditor value={signup} onChange={setSignup} inherited={inheritedSignup} profile={profile} />
-        <p className="text-[11px] font-mono mt-2 text-dim">
-          Lo que cargues vale sólo para este torneo; lo que dejes vacío se hereda de la categoría.
-        </p>
+const INFO_SECCIONES = [
+  { id: 'nombre', label: 'Nombre y fecha' },
+  { id: 'club', label: 'Club' },
+  { id: 'inscripcion', label: 'Inscripción' },
+];
+
+const LABEL = "block text-[11px] tracking-[2px] text-muted font-mono mb-2";
+const INPUT = "w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none focus:border-border-strong";
+
+function TarjetaFormato({ f, activo, onClick }) {
+  const Icono = f.icono;
+  return (
+    <button
+      type="button" aria-pressed={activo} onClick={onClick}
+      className={`group relative overflow-hidden text-left h-40 sm:h-80 rounded-xl border-2 cursor-pointer bg-photo-shade transition-[border-color,transform] duration-200 hover:-translate-y-0.5 ${activo ? 'border-brand' : 'border-border-mid hover:border-border-strong'}`}
+    >
+      {f.img ? (
+        <img
+          src={`${f.img}-600.webp`} srcSet={`${f.img}-600.webp 600w, ${f.img}-1200.webp 1200w`} sizes="(min-width: 640px) 570px, 100vw"
+          width={1200} height={670} alt="" decoding="async" style={{ objectPosition: f.pos }}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${activo ? 'opacity-100' : 'opacity-70 group-hover:opacity-90'}`}
+        />
+      ) : (
+        <>
+          <div className={`absolute inset-0 bg-gradient-to-br from-brand/25 via-brand/5 to-transparent transition-opacity ${activo ? 'opacity-100' : 'opacity-50 group-hover:opacity-80'}`} />
+          <Icono aria-hidden size={150} strokeWidth={1} className="absolute -right-6 -top-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-8 text-brand/25" />
+        </>
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-photo-shade from-10% via-photo-shade/55 via-40% to-transparent to-70%" />
+      {activo && (
+        <span className="absolute top-3 right-3 w-7 h-7 rounded-full bg-brand text-base inline-flex items-center justify-center"><Check size={16} strokeWidth={3} /></span>
+      )}
+      <div className="absolute inset-x-0 bottom-0 p-4 sm:p-5">
+        <div className="font-condensed font-bold text-[20px] sm:text-[22px] text-photo-ink tracking-wide">{f.titulo}</div>
+        <p className="m-0 mt-1 text-[12px] sm:text-[13px] leading-snug text-photo-ink/80">{f.bajada}</p>
+        <div className="hidden sm:flex flex-wrap gap-1.5 mt-3">
+          {f.datos.map((d) => <span key={d} className="px-2 py-0.5 rounded-full border border-photo-ink/25 text-[11px] text-photo-ink/85">{d}</span>)}
+        </div>
       </div>
+    </button>
+  );
+}
+
+function ResumenBloque({ titulo, onEditar, children }) {
+  return (
+    <div className="py-3.5 border-t border-border first:border-t-0 first:pt-0">
+      <div className="flex items-center justify-between mb-1.5">
+        <span className="text-[10px] font-mono tracking-[2px] text-dim">{titulo}</span>
+        {onEditar && <button type="button" onClick={onEditar} className="bg-transparent border-0 p-0 text-[11px] text-muted hover:text-brand cursor-pointer">Editar</button>}
+      </div>
+      <div className="flex flex-col gap-0.5 text-[13px] text-content">{children}</div>
     </div>
   );
 }
+
+const fechaCorta = (d) => d ? new Date(`${d}T12:00:00`).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' }) : null;
 
 export default function Setup() {
   const { groupId } = useParams();
@@ -70,10 +88,12 @@ export default function Setup() {
   const { showToast } = useToast();
   const [format, setFormat]       = useState("liga");
   const [name, setName]           = useState("");
-  const [playerNames, setPlayerNames] = useState(["", "", "", ""]);
-  const [ligaMode, setLigaMode]   = useState("free");
+  const [playerNames, setPlayerNames] = useState([]);
+  const [jugadorPendiente, setJugadorPendiente] = useState("");
+  const [modoElegido, setModoElegido] = useState(null);
   const [pairs, setPairs]         = useState([]);
   const [step, setStep]           = useState("formato");
+  const [sub, setSub]             = useState(0);
   const [error, setError]         = useState(false);
   const [club, setClub]           = useState(null);
   const [eventDate, setEventDate] = useState("");
@@ -83,18 +103,23 @@ export default function Setup() {
   const [signup, setSignup]       = useState({ open: false, price: null, unit: 'player', contacts: [] });
   const [creating, setCreating]   = useState(false);
   const [liga, setLiga] = useState({ liga_mode: 'jornada', allow_rematch: false, winner_format: 'tabla', playoff_size: null });
-  // La liga en varios días se arma con parejas fijas, como el americano.
+  const [copa, setCopa] = useState(() => ({ ...defaultCopaConfig('zonas'), points_win: 3, points_loss: 0, premio1: '', premio2: '', premio3: '' }));
+  const [directPairs, setDirectPairs] = useState([]);
+  const [parejaPendiente, setParejaPendiente] = useState({ p1Name: '', p2Name: '' });
+
+  const esCopa = format === 'copa';
   const temporada = format === 'liga' && liga.liga_mode === 'temporada';
-  const conParejas = format === 'americano' || temporada;
-  const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : 2;
-  const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : 32;
+  const conParejas = format === 'americano' || temporada || esCopa;
+  const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : esCopa ? copaMinPairs(copa) : 2;
+  const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : esCopa ? COPA_MAX_PAIRS : 32;
+  const configSecciones = format === 'liga' ? LIGA_SECCIONES : esCopa ? copaSecciones(copa.mode) : [];
+  const seccion = step === 'config' ? configSecciones[sub] : step === 'info' ? INFO_SECCIONES[sub] : null;
   // Una liga nueva copia los puntos de la última liga de la categoría (lo hace la API).
   const ultimaLiga = (group?.tournaments ?? []).filter((t) => t.format === 'liga')
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
   const puntosHeredados = ultimaLiga ? { win: ultimaLiga.points_win ?? 3, loss: ultimaLiga.points_loss ?? 0 } : null;
 
-  // Heredar el club de la categoría como default (editable por torneo).
-  // Si la categoría no tiene club, se usa el de la última jornada que sí lo tenga.
+  // El club se hereda de la categoría o, si no tiene, de la última jornada con club.
   useEffect(() => {
     api.groups.get(groupId).then((g) => {
       setGroup(g);
@@ -105,80 +130,80 @@ export default function Setup() {
     }).catch(() => {});
   }, [groupId]);
 
-  const [directPairs, setDirectPairs] = useState(() =>
-    Array.from({ length: AMERICANO_MIN_PAIRS }, () => ({ id: uid(), p1Name: "", p2Name: "" }))
-  );
-
-  const filledNames = playerNames.filter((n) => n.trim());
+  // Lo que está escrito en la fila de carga cuenta como cargado.
+  const filledNames = jugadorPendiente.trim() ? [...playerNames, jugadorPendiente.trim()] : playerNames;
   const isEven   = filledNames.length > 0 && filledNames.length % 2 === 0;
-  const hasDupes = new Set(filledNames.map((n) => n.trim().toLowerCase())).size !== filledNames.length;
+  const ligaMode = isEven ? (modoElegido ?? 'pairs') : 'free';
+  const hasDupes = new Set(filledNames.map((n) => n.toLowerCase())).size !== filledNames.length;
   const playersValid = name.trim() && filledNames.length >= LIGA_MIN_PLAYERS && !hasDupes;
-  // Menos jugadores que el mínimo → se crea igual, pero como borrador (no se puede jugar).
-  // Mismo criterio que el americano con menos parejas que AMERICANO_MIN_PAIRS.
   const ligaIsDraft   = filledNames.length < LIGA_MIN_PLAYERS;
   const canCreateLiga = !!name.trim() && !hasDupes;
   const tituloValido = name?.length <= 30 && name?.length >= 2;
   const allPairsFilled = pairs.length === filledNames.length / 2 && pairs.every((p) => p.p1Name && p.p2Name);
 
-  const directPairNames = directPairs.flatMap(p => [p.p1Name.trim(), p.p2Name.trim()]).filter(Boolean);
-  const directHasDupes  = new Set(directPairNames.map(n => n.toLowerCase())).size !== directPairNames.length;
-  // Sólo cuentan las filas con los dos jugadores. Las vacías se descartan al crear;
-  // las que quedaron a medio completar bloquean la creación.
-  const completeDirectPairs = directPairs.filter(p => p.p1Name.trim() && p.p2Name.trim());
-  const directHasPartial    = directPairs.some(p => !!p.p1Name.trim() !== !!p.p2Name.trim());
-  // Menos parejas que el mínimo → se crea igual, pero como borrador (no se puede jugar).
+  const pendA = parejaPendiente.p1Name.trim(), pendB = parejaPendiente.p2Name.trim();
+  const directHasPartial = !!pendA !== !!pendB;
+  const completeDirectPairs = pendA && pendB
+    ? [...directPairs, { id: parejaPendiente.id ?? uid(), p1Name: pendA, p2Name: pendB }]
+    : directPairs;
+  const directPairNames = completeDirectPairs.flatMap((p) => [p.p1Name.toLowerCase(), p.p2Name.toLowerCase()]);
+  const directHasDupes  = new Set(directPairNames).size !== directPairNames.length;
   const directIsDraft    = completeDirectPairs.length < pairsMin;
-  const directPairsValid = !!name.trim() && !directHasPartial && !directHasDupes;
+  const directPairsValid = !!name.trim() && !directHasPartial && !directHasDupes && completeDirectPairs.length <= pairsMax;
 
-  // ── Barra de progreso ────────────────────────────────────────────────────
-  const infoStep = { id: 'info', label: 'INFORMACIÓN' };
-  const flowSteps = conParejas
-    ? [{ id: 'formato', label: 'FORMATO' }, infoStep, { id: 'direct-pairs', label: 'PAREJAS' }]
+  const pasosCarga = conParejas
+    ? [{ id: 'direct-pairs', label: 'PAREJAS' }]
     : (isEven && ligaMode === 'pairs') || step === 'pairs'
-      ? [{ id: 'formato', label: 'FORMATO' }, infoStep, { id: 'players', label: 'JUGADORES' }, { id: 'pairs', label: 'PAREJAS' }]
-      : [{ id: 'formato', label: 'FORMATO' }, infoStep, { id: 'players', label: 'JUGADORES' }];
+      ? [{ id: 'players', label: 'JUGADORES' }, { id: 'pairs', label: 'PAREJAS' }]
+      : [{ id: 'players', label: 'JUGADORES' }];
+  const flowSteps = [
+    { id: 'formato', label: 'FORMATO' },
+    ...(configSecciones.length ? [{ id: 'config', label: 'CONFIGURACIÓN', subs: configSecciones.length }] : []),
+    { id: 'info', label: 'INFORMACIÓN', subs: INFO_SECCIONES.length },
+    ...pasosCarga,
+  ];
+  const currentStepIdx = flowSteps.findIndex((s) => s.id === step);
+  const alcanzado = (id) => flowSteps.findIndex((s) => s.id === id) <= currentStepIdx;
 
-  const currentStepIdx = flowSteps.findIndex(s => s.id === step);
+  function ir(id, s = 0) {
+    setStep(id);
+    setSub(s);
+    window.scrollTo({ top: 0 });
+  }
 
-  // ── Navegación hacia atrás unificada ─────────────────────────────────────
-  function handleBack() {
+  function retroceder() {
     if (step === 'formato') navigate(`/cat/${groupId}`);
-    else if (step === 'info') setStep('formato');
-    else if (step === 'players') setStep('info');
-    else if (step === 'direct-pairs') setStep('info');
-    else if (step === 'pairs') setStep('players');
+    else if (step === 'config') sub > 0 ? ir('config', sub - 1) : ir('formato');
+    else if (step === 'info') sub > 0 ? ir('info', sub - 1) : configSecciones.length ? ir('config', configSecciones.length - 1) : ir('formato');
+    else if (step === 'players' || step === 'direct-pairs') ir('info', INFO_SECCIONES.length - 1);
+    else if (step === 'pairs') ir('players');
   }
 
-  function addPlayer()         { setPlayerNames([...playerNames, ""]); }
-  function removePlayer(i)     {
-    const updated = playerNames.filter((_, idx) => idx !== i);
-    setPlayerNames(updated);
-    const newFilled = updated.filter((n) => n.trim()).length;
-    if (newFilled % 2 !== 0) setLigaMode('free');
-    else if (newFilled > 0)  setLigaMode('pairs');
-  }
-  function updatePlayer(i, v)  {
-    const p = [...playerNames];
-    const wasEmpty = !p[i].trim();
-    p[i] = v;
-    setPlayerNames(p);
-    const isNowFilled = !!v.trim();
-    if (wasEmpty !== !isNowFilled) {
-      const newFilled = p.filter((n) => n.trim()).length;
-      if (newFilled > 0 && newFilled % 2 === 0) setLigaMode('pairs');
-      else setLigaMode('free');
+  function avanzar() {
+    if (step === 'formato') return ir(configSecciones.length ? 'config' : 'info');
+    if (step === 'config') return sub < configSecciones.length - 1 ? ir('config', sub + 1) : ir('info');
+    if (step === 'info') {
+      if (sub === 0 && !tituloValido) return setError(true);
+      return sub < INFO_SECCIONES.length - 1 ? ir('info', sub + 1) : ir(conParejas ? 'direct-pairs' : 'players');
     }
+    if (step === 'players') return handleNext();
+    if (step === 'pairs') return handleCreate();
+    if (step === 'direct-pairs') return handleCreateDirect();
   }
 
-  function updateDirectPair(id, field, value) {
-    setDirectPairs(directPairs.map(p => p.id === id ? { ...p, [field]: value } : p));
-  }
-  function addDirectPair() {
-    if (directPairs.length < pairsMax) setDirectPairs([...directPairs, { id: uid(), p1Name: "", p2Name: "" }]);
-  }
-  function removeDirectPair(id) {
-    if (directPairs.length > 1) setDirectPairs(directPairs.filter(p => p.id !== id));
-  }
+  const copaError = esCopa && seccion?.id === 'playoffs' ? copaConfigError(copa) : null;
+  const faltaPremio = esCopa && seccion?.id === 'premios' && !copa.premio1.trim();
+  const siguienteBloqueado =
+    (step === 'config' && (!!copaError || faltaPremio)) ||
+    (step === 'info' && sub === 0 && !name.trim()) ||
+    (step === 'players' && !canCreateLiga) ||
+    (step === 'pairs' && !allPairsFilled) ||
+    (step === 'direct-pairs' && !directPairsValid);
+  const siguienteTexto =
+    step === 'players' ? (playersValid && isEven && ligaMode === 'pairs' ? 'SIGUIENTE' : ligaIsDraft ? 'CREAR BORRADOR' : 'CREAR TORNEO')
+    : step === 'pairs' ? 'CREAR TORNEO'
+    : step === 'direct-pairs' ? (directIsDraft ? 'CREAR BORRADOR' : 'CREAR TORNEO')
+    : 'SIGUIENTE';
 
   async function onCreate(tournamentName, players, pairsInput, fmt) {
     setCreating(true);
@@ -198,11 +223,15 @@ export default function Setup() {
         signup_closes_at:     signup.closes_at ?? null,
         rules:                signup.rules ?? null,
         liga: fmt === 'liga' ? liga : null,
+        copa: fmt === 'copa' ? {
+          copa_config: copaConfigBody(copa),
+          prizes: premiosDePuestos([copa.premio1, copa.premio2, copa.premio3]),
+          ...(copa.mode === 'zonas' ? { points_win: copa.points_win, points_loss: copa.points_loss } : {}),
+        } : null,
       });
       navigate(`/cat/${groupId}/torneo/${tId}`);
     } catch (e) {
-      // Sin esto el rechazo (cupo mensual lleno, club inexistente) sólo apagaba
-      // el botón y el formulario quedaba mudo.
+      // El rechazo (cupo mensual lleno, club inexistente) se muestra; si no, el formulario queda mudo.
       showToast(e.message, 'error');
     } finally {
       setCreating(false);
@@ -212,8 +241,10 @@ export default function Setup() {
   function handleNext() {
     if (!canCreateLiga) return;
     if (playersValid && isEven && ligaMode === 'pairs') {
+      setPlayerNames(filledNames);
+      setJugadorPendiente('');
       setPairs(Array.from({ length: filledNames.length / 2 }, () => ({ id: uid(), p1Name: "", p2Name: "" })));
-      setStep("pairs");
+      ir("pairs");
     } else {
       onCreate(name.trim(), filledNames, null, 'liga');
     }
@@ -226,236 +257,232 @@ export default function Setup() {
 
   function handleCreateDirect() {
     if (!directPairsValid) return;
-    const players = completeDirectPairs.flatMap(p => [p.p1Name.trim(), p.p2Name.trim()]);
-    const cleanPairs = completeDirectPairs.map(p => ({ ...p, p1Name: p.p1Name.trim(), p2Name: p.p2Name.trim() }));
-    onCreate(name.trim(), players, cleanPairs, format);
+    const players = completeDirectPairs.flatMap((p) => [p.p1Name, p.p2Name]);
+    onCreate(name.trim(), players, completeDirectPairs, format);
   }
 
   function infoBox() {
     if (filledNames.length === 0) {
-      return `✦ Sin jugadores todavía — se crea como borrador. Vas a poder sumarlos después desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo de ${LIGA_MIN_PLAYERS}.`;
+      return `Sin jugadores todavía. Se crea como borrador: los sumás después desde GESTIÓN, pero no se cargan partidos hasta llegar a ${LIGA_MIN_PLAYERS}.`;
     }
     if (ligaIsDraft) {
       const missing = LIGA_MIN_PLAYERS - filledNames.length;
-      return `✦ ${filledNames.length} ${filledNames.length === 1 ? 'jugador' : 'jugadores'} — falta${missing === 1 ? '' : 'n'} ${missing} para el mínimo de ${LIGA_MIN_PLAYERS}. Se crea como borrador: vas a poder sumar los que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.`;
+      return `Falta${missing === 1 ? '' : 'n'} ${missing} para el mínimo de ${LIGA_MIN_PLAYERS}. Se crea como borrador: los sumás después desde GESTIÓN.`;
     }
-    if (!isEven) return `✦ ${filledNames.length} jugadores — número impar, los equipos se armarán partido a partido.`;
-    if (ligaMode === 'pairs') return `✦ ${filledNames.length} jugadores — en el siguiente paso armás las ${filledNames.length / 2} parejas fijas.`;
-    return `✦ ${filledNames.length} jugadores — equipos libres, se armarán partido a partido.`;
+    if (!isEven) return 'Número impar: los equipos se arman partido a partido.';
+    if (ligaMode === 'pairs') return `En el siguiente paso armás las ${filledNames.length / 2} parejas fijas.`;
+    return 'Equipos libres: se arman partido a partido.';
   }
 
-  return (
-    <div className="bg-base text-content font-sans pb-15">
-      <div className="max-w-125 mx-auto px-4 sm:px-7 py-8 sm:py-10">
+  const titulos = {
+    formato: 'Elegí el formato',
+    config: esCopa ? 'Configurá la copa' : 'Configurá la liga',
+    info: 'Datos del torneo',
+    players: 'Cargá los jugadores',
+    pairs: 'Armá las parejas',
+    'direct-pairs': 'Cargá las parejas',
+  };
+  const courts = club ? clubCourts(club) : null;
+  const formatoActual = FORMATOS.find((f) => f.id === format);
+  const conResumen = step !== 'formato';
+  const cargadas = conParejas ? completeDirectPairs.length : filledNames.length;
 
-        {/* Volver unificado */}
+  return (
+    <div className="bg-base text-content font-sans">
+      <div className={`mx-auto px-4 sm:px-7 pt-8 sm:pt-10 ${conResumen ? 'max-w-2xl lg:max-w-5xl' : 'max-w-5xl'}`}>
         <div className="mb-6">
-          <Btn size="sm" icon={ChevronLeft} onClick={handleBack}>
-            {step === 'formato' ? 'Volver' : 'Paso anterior'}
-          </Btn>
+          <p className="m-0 text-[11px] font-mono tracking-[2px] text-dim truncate">NUEVO TORNEO{group?.name ? ` · ${group.name.toUpperCase()}` : ''}</p>
+          <h1 className="m-0 mt-1 font-condensed font-bold text-[22px] sm:text-[26px] text-white">{titulos[step]}</h1>
         </div>
 
-        {/* Barra de progreso */}
-        <StepBar steps={flowSteps} currentIdx={currentStepIdx} />
+        <StepBar steps={flowSteps} currentIdx={currentStepIdx} subIdx={sub} subLabel={seccion?.label} />
 
-        {/* ── STEP: formato ── */}
-        {step === "formato" && (
-          <>
-            <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-4">FORMATO DEL TORNEO</label>
-            <div className="flex flex-col gap-3">
-              <div
-                onClick={() => setFormat('liga')}
-                className={`bg-surface border rounded-lg p-4 cursor-pointer card-link ${format === 'liga' ? 'border-brand' : 'border-border-mid'}`}
-              >
-                <div className="font-condensed font-bold text-[16px] text-white mb-1">LIGA</div>
-                <div className="text-[12px] text-muted font-sans">Partidos libres o por parejas fijas. Tabla de posiciones acumulada.</div>
-                {format === 'liga' && <LigaOpciones value={liga} onChange={setLiga} heredado={puntosHeredados} />}
-              </div>
-              <div
-                onClick={() => setFormat('americano')}
-                className={`bg-surface border rounded-lg p-4 cursor-pointer card-link ${format === 'americano' ? 'border-brand' : 'border-border-mid'}`}
-              >
-                <div className="font-condensed font-bold text-[16px] text-white mb-1">AMERICANO</div>
-                <div className="text-[12px] text-muted font-sans">Fase previa (2 partidos por pareja) + cuadro de eliminación directa. Se juega con 8–16 parejas (16–32 jugadores); podés crearlo antes como borrador.</div>
-              </div>
-            </div>
-            <Btn variant="primary" full size="lg" onClick={() => setStep('info')} className="mt-7">
-              SIGUIENTE → INFORMACIÓN
-            </Btn>
-          </>
-        )}
-
-        {/* ── STEP: info (nombre + club + fecha) ── */}
-        {step === "info" && (
-          <>
-            <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">NOMBRE DEL TORNEO</label>
-            <input
-              className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none mb-2"
-              placeholder={temporada ? "ej: 1ERA EDICIÓN 2026" : "ej: Fecha 1 - 24/03"}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              maxLength={30}
-              minLength={2}
-              autoFocus
-            />
-
-            <EventMeta
-              club={club} setClub={setClub}
-              eventDate={eventDate} setEventDate={setEventDate}
-              eventTime={eventTime} setEventTime={setEventTime}
-              signup={signup} setSignup={setSignup}
-              inheritedSignup={{
-                open:     group?.signup_open ?? false,
-                price:    group?.signup_price ?? null,
-                unit:     group?.signup_price_unit ?? 'player',
-                contacts: group?.signup_contacts ?? [],
-                level:    group?.level ?? null,
-                capacity: group?.signup_capacity ?? null,
-                capacity_unit: group?.signup_capacity_unit ?? null,
-                rules:    group?.rules ?? null,
-              }}
-              profile={profileContacts(group?.owner_social_links)}
-            />
-
-            {error && <p className="text-danger text-xs font-mono mt-3">El nombre del torneo debe tener entre 2 y 30 caracteres</p>}
-            <Btn
-              variant="primary"
-              full
-              size="lg"
-              onClick={() => tituloValido ? setStep(conParejas ? 'direct-pairs' : 'players') : setError(true)}
-              className="mt-7"
-            >
-              {conParejas ? 'SIGUIENTE → PAREJAS' : 'SIGUIENTE → JUGADORES'}
-            </Btn>
-          </>
-        )}
-
-        {/* ── STEP: players (liga) ── */}
-        {step === "players" && (
-          <>
-            <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-1">
-              JUGADORES <span className="text-muted">(mínimo {LIGA_MIN_PLAYERS} para jugar)</span>
-            </label>
-            <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado. Podés dejar menos y sumarlos después.</p>
-            <div className="flex flex-col gap-2.5">
-              {playerNames.map((p, i) => (
-                <div key={i} className="flex gap-2">
-                  <PlayerInput value={p} onChange={(v) => updatePlayer(i, v)} placeholder={`Jugador ${i + 1}`} searchMine />
-                  {playerNames.length > 4 && (
-                    <button onClick={() => removePlayer(i)} className="bg-surface border border-border-mid text-muted px-3 py-2.5 cursor-pointer rounded-sm text-[12px] shrink-0 hover:text-danger hover:border-danger/40 transition-colors">✕</button>
-                  )}
-                </div>
-              ))}
-            </div>
-
-            {hasDupes && <p className="text-danger text-[11px] font-mono mt-2">Hay nombres duplicados.</p>}
-
-            <button onClick={addPlayer} className="bg-transparent border border-dashed border-border-strong text-muted px-4 py-2 cursor-pointer font-condensed tracking-wide text-[13px] rounded-sm w-full mt-2">
-              + Agregar jugador
-            </button>
-
-            {filledNames.length >= LIGA_MIN_PLAYERS && (
-              <div className="mt-4">
-                <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">MODO DE JUEGO</label>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setLigaMode('free')}
-                    className={`flex-1 py-2.5 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition cursor-pointer ${ligaMode === 'free' ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border-mid text-muted hover:border-border-strong'}`}
-                  >
-                    EQUIPOS LIBRES
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { if (isEven) setLigaMode('pairs'); }}
-                    disabled={!isEven}
-                    className={`flex-1 py-2.5 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition ${
-                      !isEven
-                        ? 'border-border-mid text-dim cursor-not-allowed opacity-40'
-                        : ligaMode === 'pairs'
-                          ? 'bg-brand/15 border-brand text-brand cursor-pointer'
-                          : 'bg-surface border-border-mid text-muted hover:border-border-strong cursor-pointer'
-                    }`}
-                  >
-                    PAREJAS FIJAS
-                  </button>
-                </div>
-                {!isEven && <p className="text-[10px] text-dim font-mono mt-1.5">Número impar de jugadores — parejas fijas no disponible.</p>}
+        <div className={conResumen ? 'lg:grid lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-10 lg:items-start' : ''}>
+          <div className="min-w-0">
+            <div className={step === 'formato' ? '' : 'min-h-[300px]'}>
+            {step === "formato" && (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                {FORMATOS.map((f) => <TarjetaFormato key={f.id} f={f} activo={format === f.id} onClick={() => setFormat(f.id)} />)}
               </div>
             )}
 
-            {infoBox() && (
-              <div className="bg-surface-alt border border-border-strong rounded-md px-3.5 py-2.5 text-[12px] text-soft font-mono leading-relaxed mt-4">
-                {infoBox()}
-              </div>
+            {step === "config" && format === 'liga' && (
+              <LigaOpciones value={liga} onChange={setLiga} heredado={puntosHeredados} seccion={seccion?.id} />
+            )}
+            {step === "config" && esCopa && (
+              <>
+                <CopaOpciones value={copa} onChange={setCopa} seccion={seccion?.id} />
+                {faltaPremio && <p className="text-secondary text-[12px] mt-3 mb-0">Cargá el premio del campeón para seguir.</p>}
+              </>
             )}
 
-            <Btn variant="primary" full size="lg" onClick={handleNext} disabled={!canCreateLiga} loading={creating} className="mt-7">
-              {playersValid && isEven && ligaMode === 'pairs' ? "SIGUIENTE → PAREJAS" : ligaIsDraft ? "CREAR BORRADOR" : "CREAR TORNEO"}
-            </Btn>
-          </>
-        )}
-
-        {/* ── STEP: direct-pairs (americano) ── */}
-        {step === "direct-pairs" && (
-          <>
-            <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-1">
-              PAREJAS <span className="text-muted">(mínimo {pairsMin} para jugar, máximo {pairsMax})</span>
-            </label>
-            <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado. Podés dejar filas vacías y completarlas después.</p>
-
-            <div className="flex flex-col gap-3">
-              {directPairs.map((pair, i) => (
-                <div key={pair.id} className="bg-surface border border-border-mid rounded-lg p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="text-dim text-[11px] font-mono w-5 shrink-0 text-right">{i + 1}</span>
-                    <PlayerInput value={pair.p1Name} onChange={(v) => updateDirectPair(pair.id, 'p1Name', v)} placeholder="Jugador 1" searchMine />
+            {step === "info" && seccion?.id === 'nombre' && (
+              <div className="flex flex-col gap-5">
+                <div>
+                  <label htmlFor="setup-nombre" className={LABEL}>NOMBRE DEL TORNEO</label>
+                  <input
+                    id="setup-nombre" className={INPUT}
+                    placeholder={temporada || esCopa ? "ej: 1ERA EDICIÓN 2026" : "ej: Fecha 1 - 24/03"}
+                    value={name} maxLength={30} minLength={2} autoFocus
+                    onChange={(e) => { setName(e.target.value); setError(false); }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) avanzar(); }}
+                  />
+                  {error && <p className="text-danger text-xs font-mono mt-2 mb-0">El nombre del torneo debe tener entre 2 y 30 caracteres.</p>}
+                </div>
+                <div className="flex gap-3">
+                  <div className="flex-1 min-w-0">
+                    <label htmlFor="setup-fecha" className={LABEL}>FECHA (opcional)</label>
+                    <input
+                      id="setup-fecha" type="date" value={eventDate} min="1900-01-01" max="2100-12-31" className={INPUT}
+                      onChange={(e) => { if (isSaneEventDate(e.target.value)) setEventDate(e.target.value); }}
+                    />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-muted font-condensed font-bold text-[11px] w-5 shrink-0 text-center">&amp;</span>
-                    <PlayerInput value={pair.p2Name} onChange={(v) => updateDirectPair(pair.id, 'p2Name', v)} placeholder="Jugador 2" searchMine />
-                    {directPairs.length > 1 && (
-                      <button onClick={() => removeDirectPair(pair.id)} className="bg-transparent border border-border-mid text-muted px-2.5 py-2.5 cursor-pointer rounded-sm text-[12px] shrink-0 hover:text-danger hover:border-danger/40 transition-colors">✕</button>
-                    )}
+                  <div className="w-32 shrink-0">
+                    <label htmlFor="setup-hora" className={LABEL}>HORA</label>
+                    <input id="setup-hora" type="time" value={eventTime} onChange={(e) => setEventTime(e.target.value)} className={INPUT} />
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {directHasDupes  && <p className="text-danger text-[11px] font-mono mt-2">Hay nombres duplicados.</p>}
-            {directHasPartial && <p className="text-danger text-[11px] font-mono mt-2">Hay parejas incompletas — cargá los dos jugadores o dejá la fila vacía.</p>}
-
-            {directPairs.length < pairsMax && (
-              <button onClick={addDirectPair} className="bg-transparent border border-dashed border-border-strong text-muted px-4 py-2 cursor-pointer font-condensed tracking-wide text-[13px] rounded-sm w-full mt-2">
-                + Agregar pareja
-              </button>
+              </div>
             )}
 
-            <div className="bg-surface-alt border border-border-strong rounded-md px-3.5 py-2.5 text-[12px] text-soft font-mono leading-relaxed mt-4">
-              ✦ {completeDirectPairs.length} {completeDirectPairs.length === 1 ? 'pareja completa' : 'parejas completas'} — {completeDirectPairs.length * 2} jugadores.
-              {directIsDraft && (
-                <span className="block text-brand mt-1">
-                  Faltan {pairsMin - completeDirectPairs.length} para el mínimo de {pairsMin}. Se crea como <strong>borrador</strong>: vas a poder sumar las parejas que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.
-                </span>
+            {step === "info" && seccion?.id === 'club' && (
+              <div>
+                <label className={LABEL}>CLUB (opcional)</label>
+                <ClubSelector value={club} onChange={setClub} />
+                {club && (
+                  <p className="text-[12px] mt-2 mb-0 text-secondary">
+                    {courts > 0
+                      ? <>Este club tiene <span className="text-brand">{courts} {courts === 1 ? 'cancha' : 'canchas'}</span>. Vas a poder asignar la cancha en cada partido.</>
+                      : <>Este club no tiene canchas cargadas. Las definís después en Gestión.</>}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {step === "info" && seccion?.id === 'inscripcion' && (
+              <div>
+                <label className={LABEL}>INSCRIPCIÓN (opcional)</label>
+                <SignupEditor
+                  value={signup} onChange={setSignup}
+                  inherited={{
+                    open:     group?.signup_open ?? false,
+                    price:    group?.signup_price ?? null,
+                    unit:     group?.signup_price_unit ?? 'player',
+                    contacts: group?.signup_contacts ?? [],
+                    level:    group?.level ?? null,
+                    capacity: group?.signup_capacity ?? null,
+                    capacity_unit: group?.signup_capacity_unit ?? null,
+                    rules:    group?.rules ?? null,
+                  }}
+                  profile={profileContacts(group?.owner_social_links)}
+                />
+                <p className="text-[12px] mt-2 mb-0 text-secondary">Lo que cargues vale sólo para este torneo. Lo que dejes vacío se hereda de la categoría.</p>
+              </div>
+            )}
+
+            {step === "players" && (
+              <>
+                <p className="m-0 mb-3 text-[13px] text-secondary">
+                  <span className="text-white font-semibold">{filledNames.length}</span> {filledNames.length === 1 ? 'jugador' : 'jugadores'} · mínimo {LIGA_MIN_PLAYERS} para jugar. Podés sumar más después.
+                </p>
+                <CargaJugadores value={playerNames} onChange={setPlayerNames} pendiente={jugadorPendiente} onPendiente={setJugadorPendiente} />
+                {hasDupes && <p className="text-danger text-[12px] mt-2 mb-0">Ese jugador ya está cargado.</p>}
+
+                {filledNames.length >= LIGA_MIN_PLAYERS && (
+                  <div className="mt-5">
+                    <label className={LABEL}>MODO DE JUEGO</label>
+                    <div className="flex gap-2">
+                      <button
+                        type="button" aria-pressed={ligaMode === 'free'} onClick={() => setModoElegido('free')}
+                        className={`flex-1 min-h-11 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition cursor-pointer ${ligaMode === 'free' ? 'bg-brand/15 border-brand text-brand' : 'bg-surface border-border-mid text-muted hover:border-border-strong'}`}
+                      >
+                        EQUIPOS LIBRES
+                      </button>
+                      <button
+                        type="button" aria-pressed={ligaMode === 'pairs'} onClick={() => setModoElegido('pairs')} disabled={!isEven}
+                        className={`flex-1 min-h-11 text-[12px] font-condensed font-bold tracking-wide rounded-sm border transition ${
+                          !isEven ? 'border-border-mid text-dim cursor-not-allowed opacity-40'
+                            : ligaMode === 'pairs' ? 'bg-brand/15 border-brand text-brand cursor-pointer'
+                              : 'bg-surface border-border-mid text-muted hover:border-border-strong cursor-pointer'
+                        }`}
+                      >
+                        PAREJAS FIJAS
+                      </button>
+                    </div>
+                  </div>
+                )}
+                <p className="m-0 mt-4 text-[12px] text-secondary">{infoBox()}</p>
+              </>
+            )}
+
+            {step === "direct-pairs" && (
+              <>
+                <p className="m-0 mb-3 text-[13px] text-secondary">
+                  <span className="text-white font-semibold">{completeDirectPairs.length}</span> {completeDirectPairs.length === 1 ? 'pareja' : 'parejas'} · {pairsMin} para jugar, máximo {pairsMax}.
+                  {esCopa ? ' La copa se puede crear sin parejas: se suman por inscripción o desde Gestión.' : ''}
+                </p>
+                <CargaParejas value={directPairs} onChange={setDirectPairs} pendiente={parejaPendiente} onPendiente={setParejaPendiente} max={pairsMax} />
+                {directHasDupes && <p className="text-danger text-[12px] mt-2 mb-0">Ese jugador ya está cargado en otra pareja.</p>}
+                {directHasPartial && <p className="text-danger text-[12px] mt-2 mb-0">La pareja en carga está incompleta. Completala o vaciá la fila.</p>}
+                {directIsDraft && (
+                  <p className="m-0 mt-4 text-[12px] text-secondary">
+                    Faltan {pairsMin - completeDirectPairs.length} para el mínimo de {pairsMin}. Se crea como <span className="text-brand">borrador</span>: las sumás después desde Gestión.
+                    {esCopa && copa.mode === 'zonas' ? ' Los grupos se sortean con las parejas confirmadas.' : ''}
+                  </p>
+                )}
+              </>
+            )}
+
+            {step === "pairs" && (
+              <>
+                <p className="m-0 mb-4 text-[13px] text-secondary">{name} · {filledNames.length} jugadores · LIGA</p>
+                <PairBuilder players={filledNames} pairs={pairs} onChange={setPairs} />
+              </>
+            )}
+            </div>
+
+            <div className="sticky bottom-0 z-30 -mx-4 sm:-mx-7 lg:mx-0 mt-8 px-4 sm:px-7 lg:px-0 py-3 bg-base/95 backdrop-blur border-t border-border flex gap-3">
+              <Btn size="lg" icon={ChevronLeft} onClick={retroceder}>{step === 'formato' ? 'VOLVER' : 'ATRÁS'}</Btn>
+              <Btn variant="primary" size="lg" full onClick={avanzar} disabled={siguienteBloqueado} loading={creating}>
+                {siguienteTexto}{siguienteTexto === 'SIGUIENTE' && <ChevronRight size={17} />}
+              </Btn>
+            </div>
+          </div>
+
+          {conResumen && (
+            <aside className="hidden lg:block sticky top-6 bg-surface border border-border-mid rounded-xl p-5" aria-label="Resumen del torneo">
+              <p className="m-0 mb-4 font-condensed font-bold text-[13px] tracking-widest text-white">RESUMEN</p>
+              <ResumenBloque titulo="FORMATO" onEditar={() => ir('formato')}>
+                <span className="font-semibold text-white">{formatoActual.titulo}{esCopa ? (copa.mode === 'zonas' ? ' con grupos' : ' de cuadro') : ''}</span>
+              </ResumenBloque>
+              {format === 'liga' && (
+                <ResumenBloque titulo="CONFIGURACIÓN" onEditar={alcanzado('config') ? () => ir('config') : null}>
+                  <span>{temporada ? `Varios días${liga.allow_rematch ? ', con cruces repetidos' : ''}` : 'Un solo día'}</span>
+                  <span>Victoria {liga.points_win ?? puntosHeredados?.win ?? 3} · Derrota {liga.points_loss ?? puntosHeredados?.loss ?? 0}</span>
+                  <span>{liga.winner_format === 'playoffs' ? `Playoffs de ${liga.playoff_size} parejas` : 'Campeón: primero de la tabla'}</span>
+                </ResumenBloque>
               )}
-            </div>
-
-            <Btn variant="primary" full size="lg" onClick={handleCreateDirect} disabled={!directPairsValid} loading={creating} className="mt-7">
-              {directIsDraft ? 'CREAR BORRADOR' : 'CREAR TORNEO'}
-            </Btn>
-          </>
-        )}
-
-        {/* ── STEP: pairs (liga con número par de jugadores) ── */}
-        {step === "pairs" && (
-          <>
-            <div className="text-[12px] text-muted font-mono mb-4">{name} · {filledNames.length} jugadores · LIGA</div>
-            <PairBuilder players={filledNames} pairs={pairs} onChange={setPairs} />
-            <Btn variant="primary" full size="lg" onClick={handleCreate} disabled={!allPairsFilled} loading={creating} className="mt-6">
-              CREAR TORNEO
-            </Btn>
-          </>
-        )}
+              {esCopa && (
+                <ResumenBloque titulo="CONFIGURACIÓN" onEditar={alcanzado('config') ? () => ir('config') : null}>
+                  {copa.mode === 'zonas' && <span>{copa.zonas} grupos · {copa.ruedas === 2 ? 'dos ruedas' : 'una rueda'}</span>}
+                  {copa.mode === 'zonas' && <span>{totalClasificados(copa)} parejas a playoffs</span>}
+                  {copa.mode === 'zonas' && copa.plata && <span>Con copa de plata</span>}
+                  <span>Tercer puesto {copa.tercer_puesto ? 'se juega' : 'compartido'}</span>
+                  {copa.premio1.trim() && <span className="truncate">Campeón: {copa.premio1.trim()}</span>}
+                </ResumenBloque>
+              )}
+              <ResumenBloque titulo="INFORMACIÓN" onEditar={alcanzado('info') ? () => ir('info') : null}>
+                <span className={name.trim() ? 'font-semibold text-white truncate' : 'text-dim'}>{name.trim() || 'Sin nombre'}</span>
+                {eventDate && <span>{fechaCorta(eventDate)}{eventTime ? ` · ${eventTime} h` : ''}</span>}
+                <span className="truncate">{club?.name ?? 'Sin club'}</span>
+                <span>Inscripción {signup.open ? 'abierta' : 'cerrada'}</span>
+              </ResumenBloque>
+              <ResumenBloque titulo={conParejas ? 'PAREJAS' : 'JUGADORES'}>
+                <span>{cargadas} {conParejas ? (cargadas === 1 ? 'pareja' : 'parejas') : (cargadas === 1 ? 'jugador' : 'jugadores')}</span>
+              </ResumenBloque>
+            </aside>
+          )}
+        </div>
       </div>
     </div>
   );

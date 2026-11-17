@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { calcStandings, adaptTournament, getTournamentWinnerLabel, getTournamentWinners, tournamentDate, normalize, fmt,
-  getAllMatches, playedMatches, calcPartnerships, tiedLabel, topStandingRows, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS } from "../../utils/helpers";
+  getAllMatches, playedMatches, calcPartnerships, tiedLabel, topStandingRows, fmtMMSS, fmtDuracion, TIED_NAMES_PAIRS, TIED_NAMES_PLAYERS, bracketNodes } from "../../utils/helpers";
 import { Bomb, CalendarDays, Clock, Crown, Flame, Gem, Handshake, Hourglass, Scale, Swords, Target, Timer, Trophy } from "lucide-react";
 import { api } from "../../utils/api";
 import {
@@ -797,10 +797,8 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
   const champLabel    = tiedLabel(topChamps.map((c) => c.name));
 
   function bracketPlayedCount(t) {
-    if (t.format !== 'americano' || !t.bracket) return 0;
-    return [...(t.bracket.octavos ?? []), ...(t.bracket.cuartos ?? []),
-            ...(t.bracket.semis   ?? []), ...(t.bracket.final ? [t.bracket.final] : [])]
-      .filter(m => m.winner_id != null).length;
+    if (t.format !== 'americano' && t.format !== 'copa') return 0;
+    return [...bracketNodes(t.bracket), ...bracketNodes(t.bracket_plata)].filter(m => m.winner_id != null).length;
   }
   const totalMatches = playedTournaments.reduce((acc, t) => acc + t.matches.length + bracketPlayedCount(t), 0);
   const canShowPairs  = hasPairMode && pairRows.length > 0;

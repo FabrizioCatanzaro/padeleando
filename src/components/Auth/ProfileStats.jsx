@@ -39,7 +39,7 @@ export default function ProfileStats({ stats, clubStats = [], partners = [] }) {
         <StatTile
           value={stats?.titulos ?? 0}
           label="Títulos"
-          sub={`${stats?.titulos_liga ?? 0} de liga · ${stats?.campeon_americano ?? 0} americanos`}
+          sub={`${stats?.titulos_liga ?? 0} de liga · ${stats?.campeon_americano ?? 0} americanos${stats?.campeon_copa > 0 ? ` · ${stats.campeon_copa} ${stats.campeon_copa === 1 ? 'copa' : 'copas'}` : ''}`}
           tone={(stats?.titulos ?? 0) > 0 ? 'gold' : 'off'}
         />
         <StatTile

@@ -1,10 +1,11 @@
 // Liga por fechas: la temporada se divide en fechas con sus días de juego.
-import { fmtHora } from './helpers';
+import { fmtHora, courtName } from './helpers';
 
 const DIAS_CORTOS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
 
-/** ¿Es una liga que se juega en varios días? */
-export const esTemporada = (t) => t?.format === 'liga' && t?.liga_mode === 'temporada';
+/** ¿El torneo se juega por fechas? Liga en varios días o copa con grupos. */
+export const esTemporada = (t) => (t?.format === 'liga' && t?.liga_mode === 'temporada')
+  || (t?.format === 'copa' && t?.copa_config?.mode === 'zonas');
 
 const aFecha = (iso) => new Date(`${String(iso).slice(0, 10)}T00:00`);
 
@@ -89,9 +90,18 @@ export function estadoDeFecha(tournament, fecha, hoy = hoyIso()) {
 
 /** Fechas que lleva la temporada sin cruces repetidos, o null si no se sabe. */
 export function totalDeFechas(t) {
-  const activas = (t.pairs ?? []).filter((p) => p.status !== 'withdrawn').length;
-  if (t.allow_rematch || activas < 2) return null;
-  return Math.max((t.fechas ?? []).length, activas % 2 ? activas : activas - 1);
+  const activas = (t.pairs ?? []).filter((p) => p.status !== 'withdrawn');
+  // Copa: todos contra todos dentro del grupo más grande, por la cantidad de ruedas.
+  if (t.format === 'copa') {
+    const porGrupo = new Map();
+    for (const p of activas) if (p.zona != null) porGrupo.set(p.zona, (porGrupo.get(p.zona) ?? 0) + 1);
+    if (porGrupo.size === 0) return null;
+    const mayor = Math.max(...porGrupo.values());
+    const ruedas = t.copa_config?.ruedas === 2 ? 2 : 1;
+    return Math.max((t.fechas ?? []).length, (mayor % 2 ? mayor : mayor - 1) * ruedas);
+  }
+  if (t.allow_rematch || activas.length < 2) return null;
+  return Math.max((t.fechas ?? []).length, activas.length % 2 ? activas.length : activas.length - 1);
 }
 
 // Encabezado: "Fecha 3 de 9 · sáb 22 y dom 23/11" y el partido del que mira.
@@ -112,7 +122,7 @@ export function resumenTemporada(t, mios = []) {
     const cuando = [
       diaCorto(programado.scheduled_date),
       programado.scheduled_at ? fmtHora(programado.scheduled_at) : null,
-      programado.court != null ? `Cancha ${programado.court}` : null,
+      programado.court != null ? `Cancha ${courtName(t, programado.court)}` : null,
     ].filter(Boolean).join(' · ');
     return { linea, miPartido: `Tu partido: ${cuando || 'a programar'}${programado.postponed ? ' (postergado)' : ''}` };
   }
@@ -121,3 +131,10 @@ export function resumenTemporada(t, mios = []) {
   if (miPareja && libresDeFecha(t, n).some((p) => p.id === miPareja.id)) return { linea, miPartido: 'Libre esta fecha' };
   return { linea, miPartido: null };
 }
+
+// Mini pasos del alta de una liga.
+export const LIGA_SECCIONES = [
+  { id: 'cuando', label: 'Cuándo se juega' },
+  { id: 'puntos', label: 'Puntos' },
+  { id: 'campeon', label: 'Campeón' },
+];

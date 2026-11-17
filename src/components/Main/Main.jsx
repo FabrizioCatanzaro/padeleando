@@ -29,6 +29,8 @@ export default function Main() {
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer, refresh,
+    handleSorteoGrupos, handleSaveGrupos, handleUndoGrupos, handleUpdateCopa, handleSavePrizes, handlePrizeWinner, handleUpdatePlayerDatos,
+    handleProgramarCruce, handlePropuestaCopa, handleArmarCopa,
   } = useTournament(groupId, tournamentId);
 
   // El que entra a esta ruta y no puede gestionar ve la misma página en modo
@@ -88,6 +90,10 @@ export default function Main() {
     onUpdateBracketMatch: handleUpdateBracketMatch, onClearBracketMatch: handleClearBracketMatch,
     onSetBracket: handleSetBracket, onDeleteBracket: handleDeleteBracket,
     onUpdateMode: handleUpdateMode, onUpdateLiga: handleUpdateLiga, onGeneratePlayoffs: handleGeneratePlayoffs, onUploadFlyer: handleUploadFlyer, onDeleteFlyer: handleDeleteFlyer, onRefresh: refresh,
+    onSorteoGrupos: handleSorteoGrupos, onSaveGrupos: handleSaveGrupos, onUndoGrupos: handleUndoGrupos,
+    onUpdateCopa: handleUpdateCopa, onSavePrizes: handleSavePrizes, onPrizeWinner: handlePrizeWinner,
+    onUpdatePlayerDatos: handleUpdatePlayerDatos,
+    onProgramarCruce: handleProgramarCruce, onPropuestaCopa: handlePropuestaCopa, onArmarCopa: handleArmarCopa,
   } : null;
 
   return (
