@@ -166,6 +166,7 @@ export default function PlayerInput({ value, onChange, placeholder, className, g
           value={value}
           onChange={(e) => { onChange(e.target.value); setOpen(true); setActiveIdx(-1); }}
           onFocus={() => setOpen(true)}
+          onBlur={() => setOpen(false)}
           onKeyDown={handleKeyDown}
           autoComplete="off"
         />
@@ -178,7 +179,7 @@ export default function PlayerInput({ value, onChange, placeholder, className, g
       </div>
 
       {showDropdown && (
-        <div ref={listRef} className="absolute top-full left-0 right-0 z-100 bg-surface-alt border border-border-strong border-t-0 rounded-b-sm max-h-52 overflow-y-auto">
+        <div ref={listRef} onMouseDown={(e) => e.preventDefault()} className="absolute top-full left-0 right-0 z-100 bg-surface-alt border border-border-strong border-t-0 rounded-b-sm max-h-52 overflow-y-auto">
           {sections.map((section) => (
             <div key={section.label ?? '__root'}>
               {section.label && (
