@@ -274,7 +274,7 @@ export default function CopaGrupos({ tournament, puedeGestionar, acciones, myPai
     <div className="flex flex-col gap-4">
       {editable && nuevas.length > 0 && <UbicarNuevas tournament={tournament} nuevas={nuevas} onSave={acciones.onSaveGrupos} />}
       <p className="m-0 text-[13px] text-secondary">
-        Pasan {config.clasifican} por grupo{config.mejores_extra > 0 ? ` y los ${config.mejores_extra} mejores ${config.clasifican + 1}°` : ''}.
+        Pasan {config.clasifican} por grupo{config.mejores_extra === 1 ? ` y el mejor ${config.clasifican + 1}°` : config.mejores_extra > 1 ? ` y los ${config.mejores_extra} mejores ${config.clasifican + 1}°` : ''}.
         Orden: puntos, partidos ganados, diferencia de sets y diferencia de games.
       </p>
       <div className="grid lg:grid-cols-2 gap-4">

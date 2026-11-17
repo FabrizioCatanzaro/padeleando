@@ -155,7 +155,7 @@ export default function TournamentPage({
   const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament));
   const TABS = tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro });
   // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
-  const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : TABS[0].id;
+  const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : TABS[0].id);
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
 
   const playedCount = countPlayed(tournament);
