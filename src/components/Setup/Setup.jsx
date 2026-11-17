@@ -21,7 +21,7 @@ import StepBar from "../shared/StepBar";
 const FORMATOS = [
   { id: 'liga', titulo: 'LIGA', bajada: 'Tabla de posiciones acumulada, en un día o en una temporada por fechas.', datos: ['Libres o parejas fijas', `Desde ${LIGA_MIN_PLAYERS} jugadores`], icono: ListOrdered, img: '/formatos/liga', pos: '56% center' },
   { id: 'americano', titulo: 'AMERICANO', bajada: 'Fase previa de 2 partidos por pareja y cuadro de eliminación directa.', datos: [`${AMERICANO_MIN_PAIRS} a ${AMERICANO_MAX_PAIRS} parejas`, 'Un solo día'], icono: Shuffle, img: '/formatos/americano', pos: '74% center' },
-  { id: 'copa', titulo: 'COPA', bajada: 'Grupos y playoffs, o cuadro directo. Fixture con día, horario y cancha.', datos: [`Hasta ${COPA_MAX_PAIRS} parejas`, 'Premios por puesto'], icono: Trophy, img: '/formatos/copa', pos: '64% center' },
+  { id: 'copa', titulo: 'COPA', bajada: 'Grupos y playoffs, o cuadro directo. Fixture con día, horario y cancha.', datos: [`Hasta ${COPA_MAX_PAIRS} parejas`, 'Premios por puesto'], icono: Trophy, img: '/formatos/copa', pos: '50% center' },
 ];
 
 const INFO_SECCIONES = [
