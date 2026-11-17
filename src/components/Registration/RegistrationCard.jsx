@@ -11,7 +11,7 @@ import RegistrationFlow from './RegistrationFlow';
 import RulesModal from '../shared/RulesModal';
 import EditAvailability from './EditAvailability';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
-import { pideDatos, esCopa } from '../../utils/copa';
+import { pideDatos } from '../../utils/copa';
 import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
 
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
@@ -132,10 +132,10 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
                 <span className="flex-1 min-w-0 text-[13px] text-content leading-snug flex flex-col gap-1">
                   <span><span className="text-secondary">Horarios: </span>{resumenDisponibilidad(miDisp) || 'sin cargar'}</span>
                   {miDisp?.note && <span className="text-secondary">{miDisp.note}</span>}
-                  {esCopa(tournament) && <span className="inline-flex items-center gap-1.5">
+                  <span className="inline-flex items-center gap-1.5">
                     <MessageCircle size={13} className="text-soft" aria-hidden="true" />
                     {miWa || 'WhatsApp sin cargar'}{miWa ? (visible ? ' · lo ven los jugadores' : ' · solo organizadores') : ''}
-                  </span>}
+                  </span>
                 </span>
                 <button type="button" onClick={() => setEditarHorarios(true)}
                   className="shrink-0 min-h-[32px] bg-transparent border-0 p-0 text-[13px] text-brand font-semibold cursor-pointer hover:underline">
@@ -148,7 +148,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
             <EditAvailability
               registration={reg}
               userId={user?.id}
-              conContacto={esCopa(tournament)}
+              conContacto
               onClose={() => setEditarHorarios(false)}
               onSaved={() => {
                 setEditarHorarios(false);

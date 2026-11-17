@@ -4,7 +4,7 @@ import { X, ArrowLeft, Users, User, Search, Check, Bell, AlertTriangle } from 'l
 import RulesModal from '../shared/RulesModal';
 import AvailabilityEditor from '../shared/AvailabilityEditor';
 import { resumenDisponibilidad, disponibilidadInvalida, sinDisponibilidad } from '../../utils/disponibilidad';
-import { pideDatos, esCopa, whatsappDePerfil } from '../../utils/copa';
+import { pideDatos, whatsappDePerfil } from '../../utils/copa';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { formatPrice } from '../../utils/signup';
@@ -52,7 +52,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
 
   const sinCategoria = !user?.category;
   const temporada = pideDatos(tournament);
-  const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(esCopa(tournament) ? ['contacto'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
+  const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(temporada ? ['contacto'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
   const NOMBRES = { tipo: 'Tipo', companero: 'Compañero', contacto: 'Contacto', disp: 'Horarios', resumen: 'Resumen' };
   const waPerfil = whatsappDePerfil(user?.social_links);
   const waValido = /^[+\d][\d\s()-]{5,24}$/.test(whatsapp.trim());
@@ -85,7 +85,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         ...(signup.rules ? { accept_rules: acepto } : {}),
         ...(temporada && !sinDisponibilidad(disp) ? { availability: disp } : {}),
         ...(temporada && kind === 'pair' && !sinDisponibilidad(dispCompa) ? { partner_availability: dispCompa } : {}),
-        ...(esCopa(tournament) ? { whatsapp: whatsapp.trim(), whatsapp_visible: mostrarWa } : {}),
+        ...(temporada ? { whatsapp: whatsapp.trim(), whatsapp_visible: mostrarWa } : {}),
         partner: kind === 'solo' ? undefined
           : hasAccount ? { username: partner.username } : { name: guest.name, phone: guest.phone },
       });
@@ -208,7 +208,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                     <input id="reg-nombre" className={INPUT} maxLength={40} value={guest.name} onChange={(e) => setGuest((g) => ({ ...g, name: e.target.value }))} />
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <label htmlFor="reg-tel" className={LABEL}>{esCopa(tournament) ? 'WHATSAPP' : 'TELÉFONO'}</label>
+                    <label htmlFor="reg-tel" className={LABEL}>{temporada ? 'WHATSAPP' : 'TELÉFONO'}</label>
                     <input id="reg-tel" type="tel" className={INPUT} maxLength={25} placeholder="+54 9 11 1234-5678" value={guest.phone} onChange={(e) => setGuest((g) => ({ ...g, phone: e.target.value }))} />
                     <span className="text-[12px] text-dim">Solo lo ven el organizador y vos.</span>
                   </div>
@@ -278,7 +278,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                   ...(kind === 'pair' ? [['Compañero', hasAccount
                     ? `${partner?.name ?? ''}${partner?.category ? ` · ${partner.category}` : ''}`
                     : `${guest.name} · sin cuenta`]] : []),
-                  ...(esCopa(tournament) ? [['WhatsApp', `${whatsapp.trim()}${mostrarWa ? ' · visible' : ' · solo organizadores'}`]] : []),
+                  ...(temporada ? [['WhatsApp', `${whatsapp.trim()}${mostrarWa ? ' · visible' : ' · solo organizadores'}`]] : []),
                   ...(temporada ? [['Tus horarios', resumenDisponibilidad(disp) || 'Sin cargar']] : []),
                   ...(temporada && kind === 'pair' ? [[`Horarios de ${nombreCompa}`, resumenDisponibilidad(dispCompa) || 'Sin cargar']] : []),
                   ...(precio ? [['A pagar', `${precio}`]] : []),
