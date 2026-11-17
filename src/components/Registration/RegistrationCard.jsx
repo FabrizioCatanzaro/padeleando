@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, AlertTriangle, Ticket, ChevronDown, FileText, Clock } from 'lucide-react';
+import { Check, AlertTriangle, Ticket, ChevronDown, FileText, Clock, MessageCircle } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -11,7 +11,7 @@ import RegistrationFlow from './RegistrationFlow';
 import RulesModal from '../shared/RulesModal';
 import EditAvailability from './EditAvailability';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
-import { esTemporada } from '../../utils/fechas';
+import { pideDatos, esCopa } from '../../utils/copa';
 import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
 
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
@@ -120,28 +120,40 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
             {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
             {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
           </p>
-          {activo && esTemporada(tournament) && tournament.status !== 'finished' && (
-            <div className="flex items-start gap-2.5 rounded-lg bg-surface-alt px-3 py-2.5">
-              <Clock size={15} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
-              <span className="flex-1 min-w-0 text-[13px] text-content leading-snug">
-                <span className="text-secondary">Horarios: </span>
-                {resumenDisponibilidad(reg.availability) || 'sin cargar'}
-                {reg.availability?.note && <span className="block text-secondary">{reg.availability.note}</span>}
-              </span>
-              <button type="button" onClick={() => setEditarHorarios(true)}
-                className="shrink-0 min-h-[32px] bg-transparent border-0 p-0 text-[13px] text-brand font-semibold cursor-pointer hover:underline">
-                {reg.availability ? 'Editar' : 'Cargar'}
-              </button>
-            </div>
-          )}
+          {activo && pideDatos(tournament) && tournament.status !== 'finished' && (() => {
+            // Cada jugador ve y edita sus propios datos: el titular es el 1, el compañero con cuenta el 2.
+            const soyP1 = reg.p1_user_id === user?.id;
+            const miDisp = soyP1 ? reg.availability : reg.p2_availability;
+            const miWa = soyP1 ? reg.p1_whatsapp : reg.p2_phone;
+            const visible = soyP1 ? reg.p1_whatsapp_visible : reg.p2_whatsapp_visible;
+            return (
+              <div className="flex items-start gap-2.5 rounded-lg bg-surface-alt px-3 py-2.5">
+                <Clock size={15} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
+                <span className="flex-1 min-w-0 text-[13px] text-content leading-snug flex flex-col gap-1">
+                  <span><span className="text-secondary">Horarios: </span>{resumenDisponibilidad(miDisp) || 'sin cargar'}</span>
+                  {miDisp?.note && <span className="text-secondary">{miDisp.note}</span>}
+                  {esCopa(tournament) && <span className="inline-flex items-center gap-1.5">
+                    <MessageCircle size={13} className="text-soft" aria-hidden="true" />
+                    {miWa || 'WhatsApp sin cargar'}{miWa ? (visible ? ' · lo ven los jugadores' : ' · solo organizadores') : ''}
+                  </span>}
+                </span>
+                <button type="button" onClick={() => setEditarHorarios(true)}
+                  className="shrink-0 min-h-[32px] bg-transparent border-0 p-0 text-[13px] text-brand font-semibold cursor-pointer hover:underline">
+                  Editar
+                </button>
+              </div>
+            );
+          })()}
           {editarHorarios && (
             <EditAvailability
               registration={reg}
+              userId={user?.id}
+              conContacto={esCopa(tournament)}
               onClose={() => setEditarHorarios(false)}
-              onSaved={(availability) => {
+              onSaved={() => {
                 setEditarHorarios(false);
-                setData((d) => ({ ...d, registration: { ...d.registration, availability } }));
-                showToast('Horarios guardados');
+                load();
+                showToast('Datos guardados');
               }}
             />
           )}

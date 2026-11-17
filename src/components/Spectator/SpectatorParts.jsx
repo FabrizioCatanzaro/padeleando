@@ -25,8 +25,9 @@ import PlayerAvatar, { PairAvatar } from "../shared/PlayerAvatar";
 import { AuthContext, useAuth } from '../../context/useAuth';
 import { myPlayerIds, isMyMatch, groupMatchesByDate } from '../../utils/helpers';
 import { categoryLabel } from '../../utils/category';
+import { whatsappHref, grupoNombre } from '../../utils/copa';
 import SignupPricePill from '../shared/SignupPricePill';
-import { ChartNoAxesCombined, ChevronLeft, ChevronRight, Eye, Flame, Lock, Share2, QrCode, Split, List, Trophy, User, Users, Building2, Zap, Tv, Pause, Play, Volume2, VolumeX, Maximize, Minimize, Clock, X, Calendar, MapPin, Hourglass, Timer } from "lucide-react";
+import { ChartNoAxesCombined, ChevronLeft, ChevronRight, Eye, Flame, Lock, Share2, QrCode, Split, List, Trophy, User, Users, Building2, Zap, Tv, Pause, Play, Volume2, VolumeX, Maximize, Minimize, Clock, X, Calendar, MapPin, Hourglass, Timer, MessageCircle } from "lucide-react";
 import courtSvg from "../../assets/padel-court.svg";
 import appLogo from "../../assets/padeleando.svg";
 import Badge from "../shared/Badge";
@@ -1283,7 +1284,22 @@ export function ReadonlyMatches({ tournament, groupName }) {
 }
 
 // Una fila de jugador: avatar, nombre, categoría y @usuario.
+// El WhatsApp llega solo si el jugador eligió mostrarlo, o si es el del que mira.
 function JugadorFila({ p, onPerfil }) {
+  const wa = whatsappHref(p?.whatsapp);
+  if (!wa) return <JugadorDatos p={p} onPerfil={onPerfil} />;
+  return (
+    <div className="flex items-center gap-2">
+      <div className="flex-1 min-w-0"><JugadorDatos p={p} onPerfil={onPerfil} /></div>
+      <a href={wa} target="_blank" rel="noopener noreferrer" aria-label={`Escribirle a ${p?.name ?? 'este jugador'} por WhatsApp`}
+        className="shrink-0 inline-flex items-center gap-1.5 min-h-[36px] px-3 rounded-full border border-green/40 bg-green/10 text-green text-[13px] font-semibold no-underline hover:border-green">
+        <MessageCircle size={14} aria-hidden="true" /> WhatsApp
+      </a>
+    </div>
+  );
+}
+
+function JugadorDatos({ p, onPerfil }) {
   const username = p?.linked_username ?? null;
   const cat = categoryLabel(p?.linked_category);
   const Tag = username ? 'button' : 'div';
@@ -1329,10 +1345,10 @@ export function ReadonlyPlayers({ tournament }) {
         <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">
           Parejas <span className="font-sans font-normal text-[13px] text-secondary">{pairs.length}</span>
         </h2>
-        {pairs.map((pair, i) => (
+        {(tournament.format === 'copa' ? [...pairs].sort((x, y) => (x.zona ?? 99) - (y.zona ?? 99)) : pairs).map((pair, i) => (
           <article key={pair.id} className="bg-surface border border-border-mid rounded-xl px-3.5 py-3 flex flex-col gap-2.5">
             <span className="text-[12px] font-semibold text-secondary">
-              Pareja {i + 1}{pair.status === 'withdrawn' ? ' · Se retiró' : ''}
+              Pareja {i + 1}{pair.zona != null ? ` · ${grupoNombre(pair.zona)}` : ''}{pair.status === 'withdrawn' ? ' · Se retiró' : ''}
             </span>
             <JugadorFila p={porId[String(pair.p1)]} onPerfil={irAPerfil} />
             <JugadorFila p={porId[String(pair.p2)]} onPerfil={irAPerfil} />

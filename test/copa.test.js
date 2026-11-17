@@ -75,3 +75,13 @@ test('formatos', () => {
   assert.deepEqual([zonas, cuadro, { format: 'liga', liga_mode: 'temporada' }, { format: 'americano' }].map(usaFechas), [true, false, true, false]);
   assert.deepEqual([zonas, cuadro].map(esCopaCuadro), [false, true]);
 });
+
+test('whatsapp: del perfil y como link', async () => {
+  const { whatsappDePerfil, whatsappHref, pideDatos } = await import('../src/utils/copa.js');
+  assert.equal(whatsappDePerfil([{ network: 'instagram', url: 'x' }, { network: 'whatsapp', url: 'https://wa.me/541125031107', private: true }]), '+541125031107');
+  assert.equal(whatsappDePerfil([{ network: 'whatsapp', url: '' }]), '');
+  assert.equal(whatsappDePerfil(null), '');
+  assert.equal(whatsappHref('+54 11 5555-0101'), 'https://wa.me/541155550101');
+  assert.equal(whatsappHref(''), null);
+  assert.deepEqual([{ format: 'copa', copa_config: { mode: 'cuadro' } }, { format: 'liga', liga_mode: 'jornada' }].map(pideDatos), [true, false]);
+});

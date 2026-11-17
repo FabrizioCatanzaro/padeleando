@@ -33,6 +33,7 @@ import { resolveSignup } from "../../utils/signup";
 import { api } from "../../utils/api";
 import RegistrationCard from "../Registration/RegistrationCard";
 import RegistrationsPanel from "../Registration/RegistrationsPanel";
+import PremiosCard from "../Copa/PremiosCard";
 import { esCopa as esCopaDe, esCopaZonas, copaMinPairs } from "../../utils/copa";
 // La solapa Grupos solo existe en la copa: se carga al abrirla.
 const CopaGrupos = lazy(() => import("../Copa/CopaGrupos"));
@@ -288,6 +289,8 @@ export default function TournamentPage({
 
       {/* Inscripción: el que no organiza se inscribe desde acá. La tarjeta
           trae su propio estado; sin inscripción abierta no muestra nada. */}
+      {esCopa && <PremiosCard tournament={tournament} />}
+
       {puedeGestionar ? null : <RegistrationCard tournament={tournament} groupName={groupName} signup={signup} onEstado={setMiInscripcion} />}
       {espectador?.joinBanner}
       {espectador && enJuegoAhora && <LiveTicker tournament={tournament} isAmericano={esAmericano} />}

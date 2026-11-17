@@ -135,3 +135,20 @@ export function tablasPorGrupo(pairs, matches, puntos) {
 
 /** ¿Ya se armaron los grupos? */
 export const gruposArmados = (t) => (t?.pairs ?? []).some((p) => p.zona != null);
+
+/** WhatsApp del perfil, privado o público: '+5491112345678', o '' si no cargó. */
+export function whatsappDePerfil(socialLinks) {
+  const link = (Array.isArray(socialLinks) ? socialLinks : []).find((l) => l?.network === 'whatsapp' && String(l.url ?? '').trim());
+  if (!link) return '';
+  const digits = (String(link.url).match(/wa\.me\/(\d+)/)?.[1] ?? link.url).replace(/\D/g, '');
+  return digits ? `+${digits}` : '';
+}
+
+/** Link de WhatsApp para un número cargado a mano. null si no tiene dígitos. */
+export function whatsappHref(numero) {
+  const digits = String(numero ?? '').replace(/\D/g, '');
+  return digits ? `https://wa.me/${digits}` : null;
+}
+
+/** ¿El torneo pide WhatsApp y disponibilidad a cada jugador? */
+export const pideDatos = (t) => usaFechas(t) || esCopa(t);

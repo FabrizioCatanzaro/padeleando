@@ -182,6 +182,14 @@ function SocialLinksEditor({ value, onChange }) {
                 <X size={14} />
               </button>
             )}
+            {/* El WhatsApp puede quedar privado: solo lo usás para inscribirte. */}
+            {link.network === 'whatsapp' && link.url && (
+              <label className="shrink-0 flex items-center gap-1.5 text-[11px] text-secondary cursor-pointer whitespace-nowrap">
+                <input type="checkbox" checked={link.private === true} className="accent-brand cursor-pointer"
+                  onChange={(e) => onChange(value.map((l, idx) => (idx === i ? { ...l, private: e.target.checked } : l)))} />
+                Privado
+              </label>
+            )}
           </div>
         );
       })}
@@ -195,7 +203,8 @@ function SocialLinksEditor({ value, onChange }) {
 // sobra ancho, así que se conserva el handle visible.
 function SocialLinksDisplay({ links }) {
   if (!links?.length) return null;
-  const filtered = links.filter(l => l.url?.trim());
+  // Las privadas solo las ve el dueño en el editor; el resto nunca las recibe.
+  const filtered = links.filter(l => l.url?.trim() && l.private !== true);
   if (!filtered.length) return null;
 
   const items = filtered.map((l, i) => {

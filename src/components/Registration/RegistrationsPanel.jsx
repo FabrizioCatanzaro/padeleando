@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, Settings, FileCheck, Clock } from 'lucide-react';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
+import { whatsappHref } from '../../utils/copa';
 import { api } from '../../utils/api';
 import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
@@ -142,15 +143,24 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
             {issues.join('. ')}{signup.level ? ` (${levelLabel(signup.level)})` : ''}.
           </p>
         )}
-        {r.availability && (
-          <p className="m-0 flex items-start gap-1.5 text-[13px] text-content leading-snug">
+        {[
+          { nombre: r.p1_name, disp: r.availability, wa: r.p1_whatsapp, visible: r.p1_whatsapp_visible },
+          ...(r.kind === 'pair' ? [{ nombre: r.p2_user_name ?? r.p2_name, disp: r.p2_availability, wa: r.p2_user_id ? r.p2_phone : null, visible: r.p2_whatsapp_visible }] : []),
+        ].filter((j) => j.disp || j.wa).map((j) => (
+          <div key={j.nombre} className="m-0 flex items-start gap-1.5 text-[13px] text-content leading-snug">
             <Clock size={13} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
-            <span>
-              {resumenDisponibilidad(r.availability) || 'Sin horarios'}
-              {r.availability.note && <span className="block text-secondary">“{r.availability.note}”</span>}
+            <span className="min-w-0">
+              {r.kind === 'pair' && <span className="font-semibold text-white">{j.nombre}: </span>}
+              {resumenDisponibilidad(j.disp) || 'Sin horarios'}
+              {j.disp?.note && <span className="block text-secondary">“{j.disp.note}”</span>}
+              {j.wa && (
+                <a href={whatsappHref(j.wa)} target="_blank" rel="noopener noreferrer" className="block text-green no-underline hover:underline">
+                  WhatsApp {j.wa}{j.visible ? ' · visible para los jugadores' : ''}
+                </a>
+              )}
             </span>
-          </p>
-        )}
+          </div>
+        ))}
         {r.rules_accepted_at && (
           <span className="inline-flex items-center gap-1.5 text-[12px] text-secondary">
             <FileCheck size={13} className="text-green" aria-hidden="true" /> Aceptó el reglamento
