@@ -8,19 +8,19 @@ const ADS = {
   sidebar: [
     {
       src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776916486/Skycraper_canchas_zi0c5c.png',
-      href: 'mailto:soporte@hola.padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
+      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
     },
     {
       src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776917142/skycraper_carniceria_xmkjpv.png',
-      href: 'mailto:soporte@hola.padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
+      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
     },
     {
       src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776916486/skycraper_indumentaria_asbock.png',
-      href: 'mailto:soporte@hola.padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
+      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
     },
     {
       src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776917143/skycraper_hamburguesa_jqoxkj.png',
-      href: 'mailto:soporte@hola.padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
+      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
     },
   ],
   'mobile-top':    [],

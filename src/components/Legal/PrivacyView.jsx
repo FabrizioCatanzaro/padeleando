@@ -75,8 +75,8 @@ export default function PrivacyView() {
             El responsable del tratamiento de tus datos personales es Padeleando, desarrollado y
             operado por Fabrizio Catanzaro, con domicilio en Buenos Aires, República Argentina. Podés contactarnos
             en{' '}
-            <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">
-              soporte@hola.padeleando.ar
+            <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">
+              soporte@padeleando.ar
             </a>
             .
           </p>
@@ -181,8 +181,8 @@ export default function PrivacyView() {
           </ul>
           <p>
             Para ejercer cualquiera de estos derechos, escribinos a{' '}
-            <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">
-              soporte@hola.padeleando.ar
+            <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">
+              soporte@padeleando.ar
             </a>{' '}
             indicando tu nombre de usuario y el derecho que querés ejercer. Responderemos en un
             plazo máximo de 30 días hábiles.
@@ -214,8 +214,8 @@ export default function PrivacyView() {
         <Section title="12. Contacto y reclamos">
           <p>
             Para consultas o reclamos relacionados con esta política, escribinos a{' '}
-            <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">
-              soporte@hola.padeleando.ar
+            <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">
+              soporte@padeleando.ar
             </a>
           </p>
         </Section>

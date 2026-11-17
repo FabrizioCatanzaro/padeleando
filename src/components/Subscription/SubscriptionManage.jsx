@@ -492,7 +492,7 @@ export default function SubscriptionManage() {
               </button>
               <p className="text-center text-[11px] text-muted mt-2.5">
                 ¿Primera vez? Escribinos a{' '}
-                <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">soporte@hola.padeleando.ar</a>
+                <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">soporte@padeleando.ar</a>
                 {' '}y te regalamos 7 días.
               </p>
             </div>
@@ -619,13 +619,13 @@ export default function SubscriptionManage() {
             </Faq>
             {isPremium ? (
               <Faq q="¿Puedo pasar de mensual a anual?">
-                Sí. Escribinos a <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">soporte@hola.padeleando.ar</a>{' '}
+                Sí. Escribinos a <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">soporte@padeleando.ar</a>{' '}
                 y lo cambiamos sin que pierdas los días que ya pagaste.
               </Faq>
             ) : (
               <Faq q="¿Cómo funciona la prueba de 7 días?">
                 La primera vez que quieras ser parte de Premium te regalamos 7 días de prueba. Pedilos por mail a{' '}
-                <a href="mailto:soporte@hola.padeleando.ar" className="text-brand hover:underline">soporte@hola.padeleando.ar</a>.
+                <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">soporte@padeleando.ar</a>.
               </Faq>
             )}
           </div>
