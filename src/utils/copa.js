@@ -152,3 +152,10 @@ export function whatsappHref(numero) {
 
 /** ¿El torneo pide WhatsApp y disponibilidad a cada jugador? */
 export const pideDatos = (t) => usaFechas(t) || esCopa(t);
+
+// Mini pasos del alta de una copa, según el tipo.
+export function copaSecciones(mode) {
+  return mode === 'zonas'
+    ? [{ id: 'tipo', label: 'Tipo de copa' }, { id: 'grupos', label: 'Grupos' }, { id: 'playoffs', label: 'Playoffs' }, { id: 'puntos', label: 'Puntos' }, { id: 'premios', label: 'Premios' }]
+    : [{ id: 'tipo', label: 'Tipo de copa' }, { id: 'tercer', label: 'Tercer puesto' }, { id: 'premios', label: 'Premios' }];
+}

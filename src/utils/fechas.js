@@ -131,3 +131,10 @@ export function resumenTemporada(t, mios = []) {
   if (miPareja && libresDeFecha(t, n).some((p) => p.id === miPareja.id)) return { linea, miPartido: 'Libre esta fecha' };
   return { linea, miPartido: null };
 }
+
+// Mini pasos del alta de una liga.
+export const LIGA_SECCIONES = [
+  { id: 'cuando', label: 'Cuándo se juega' },
+  { id: 'puntos', label: 'Puntos' },
+  { id: 'campeon', label: 'Campeón' },
+];

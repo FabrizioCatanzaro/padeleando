@@ -66,7 +66,8 @@ padeliando/
     │   │   └── GroupView.jsx       # Group landing: info, tournament history, edit, location
     │   │
     │   ├── Setup/
-    │   │   ├── Setup.jsx           # Tournament creation wizard (format → players → pairs)
+    │   │   ├── Setup.jsx           # Tournament creation wizard (format → config → info → players/pairs), sub-steps + summary aside
+    │   │   ├── CargaLista.jsx      # One-row loader + compact list for pairs (CargaParejas) and players (CargaJugadores)
     │   │   ├── PlayerInput.jsx     # Player name input row
     │   │   └── PairBuilder.jsx     # Assign players to fixed pairs
     │   │

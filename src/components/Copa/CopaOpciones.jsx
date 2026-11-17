@@ -32,17 +32,18 @@ const PREMIOS = [
   { key: 'premio3', label: 'Tercer puesto (opcional)', placeholder: 'ej: tubos de pelotas' },
 ];
 
-// Opciones de la Copa al crearla. `bloqueo` apaga lo que ya no se puede cambiar; `conPremios` suma los premios por puesto.
-export default function CopaOpciones({ value, onChange, bloqueo = {}, conPremios = true }) {
+// Opciones de la Copa. `bloqueo` apaga lo que no se cambia; `conPremios` suma los premios; `seccion` muestra uno de copaSecciones.
+export default function CopaOpciones({ value, onChange, bloqueo = {}, conPremios = true, seccion = null }) {
   const set = (k, v) => onChange({ ...value, [k]: v });
   const zonas = value.mode === 'zonas';
+  const ver = (...ids) => !seccion || ids.includes(seccion);
   const win = value.points_win ?? 3;
   const loss = value.points_loss ?? 0;
   const error = copaConfigError(value);
   const setZonas = (n) => onChange({ ...value, zonas: n, mejores_extra: Math.min(value.mejores_extra, n - 1) });
   return (
-    <div className="flex flex-col gap-4 mt-4 pt-4 border-t border-border" onClick={(e) => e.stopPropagation()}>
-      <Bloque
+    <div className={seccion ? 'flex flex-col gap-6' : 'flex flex-col gap-4 mt-4 pt-4 border-t border-border'} onClick={(e) => e.stopPropagation()}>
+      {ver('tipo') && <Bloque
         titulo="Tipo de copa"
         ayuda={bloqueo.mode
           ? (zonas ? 'Con grupos. El tipo de copa no se cambia.' : 'De cuadro. El tipo de copa no se cambia.')
@@ -54,46 +55,46 @@ export default function CopaOpciones({ value, onChange, bloqueo = {}, conPremios
             <Opcion on={!zonas} onClick={() => set('mode', 'cuadro')}>De cuadro</Opcion>
           </div>
         )}
-      </Bloque>
+      </Bloque>}
 
       {zonas && (
         <>
-          <Bloque titulo="Grupos" ayuda={bloqueo.zonas ? 'Con los grupos armados, la cantidad no se cambia.' : `Cada grupo tiene de 3 a ${ZONA_MAX_PAIRS} parejas. Se sortean con las parejas confirmadas.`}>
+          {ver('grupos') && <Bloque titulo="Grupos" ayuda={bloqueo.zonas ? 'Con los grupos armados, la cantidad no se cambia.' : `Cada grupo tiene de 3 a ${ZONA_MAX_PAIRS} parejas. Se sortean con las parejas confirmadas.`}>
             {!bloqueo.zonas && (
               <Cantidad label="Cantidad de grupos" value={value.zonas} min={ZONAS_MIN} max={ZONAS_MAX} unidad={() => 'grupos'} onChange={setZonas} />
             )}
-          </Bloque>
-          <Bloque titulo="Ruedas" ayuda={bloqueo.ruedas ? 'Con fechas armadas, las ruedas no se cambian.' : value.ruedas === 2 ? 'Cada pareja enfrenta dos veces a las demás de su grupo.' : 'Cada pareja enfrenta una vez a las demás de su grupo.'}>
+          </Bloque>}
+          {ver('grupos') && <Bloque titulo="Ruedas" ayuda={bloqueo.ruedas ? 'Con fechas armadas, las ruedas no se cambian.' : value.ruedas === 2 ? 'Cada pareja enfrenta dos veces a las demás de su grupo.' : 'Cada pareja enfrenta una vez a las demás de su grupo.'}>
             {!bloqueo.ruedas && (
               <div className="flex gap-2">
                 <Opcion on={value.ruedas !== 2} onClick={() => set('ruedas', 1)}>Una rueda</Opcion>
                 <Opcion on={value.ruedas === 2} onClick={() => set('ruedas', 2)}>Dos ruedas</Opcion>
               </div>
             )}
-          </Bloque>
-          <Bloque titulo="Playoffs" ayuda={error ?? `A playoffs pasan ${totalClasificados(value)} parejas.`}>
+          </Bloque>}
+          {ver('playoffs') && <Bloque titulo="Playoffs" ayuda={error ?? `A playoffs pasan ${totalClasificados(value)} parejas.`}>
             <div className="flex flex-col gap-2">
               <Cantidad label="Pasan por grupo" value={value.clasifican} min={1} max={ZONA_MAX_PAIRS - 1} unidad={(n) => (n === 1 ? 'pareja' : 'parejas')} onChange={(n) => set('clasifican', n)} />
               <Cantidad label="Mejores siguientes" value={value.mejores_extra} min={0} max={value.zonas - 1} unidad={(n) => (n === 1 ? 'pareja' : 'parejas')} onChange={(n) => set('mejores_extra', n)} />
             </div>
-          </Bloque>
-          <Bloque titulo="Copa de plata" ayuda={value.plata ? 'Las parejas que no clasifican juegan su propio cuadro.' : 'Las parejas que no clasifican terminan en la fase de grupos.'}>
+          </Bloque>}
+          {ver('playoffs') && <Bloque titulo="Copa de plata" ayuda={value.plata ? 'Las parejas que no clasifican juegan su propio cuadro.' : 'Las parejas que no clasifican terminan en la fase de grupos.'}>
             <div className="flex gap-2">
               <Opcion on={!value.plata} onClick={() => set('plata', false)}>No</Opcion>
               <Opcion on={value.plata} onClick={() => set('plata', true)}>Sí</Opcion>
             </div>
-          </Bloque>
+          </Bloque>}
         </>
       )}
 
-      <Bloque titulo="Tercer puesto" ayuda={value.tercer_puesto ? 'Los perdedores de las semifinales juegan un partido.' : 'Los dos perdedores de las semifinales comparten el tercer puesto.'}>
+      {ver('playoffs', 'tercer') && <Bloque titulo="Tercer puesto" ayuda={value.tercer_puesto ? 'Los perdedores de las semifinales juegan un partido.' : 'Los dos perdedores de las semifinales comparten el tercer puesto.'}>
         <div className="flex gap-2">
           <Opcion on={!value.tercer_puesto} onClick={() => set('tercer_puesto', false)}>Se comparte</Opcion>
           <Opcion on={value.tercer_puesto} onClick={() => set('tercer_puesto', true)}>Se juega</Opcion>
         </div>
-      </Bloque>
+      </Bloque>}
 
-      {zonas && (
+      {zonas && ver('puntos') && (
         <Bloque titulo="Puntos" ayuda="La tabla de cada grupo se ordena por puntos. La derrota por W.O. no suma.">
           <div className="flex flex-col gap-2">
             <Puntos label="Victoria" value={win} min={0} max={10} onChange={(w) => onChange({ ...value, points_win: w, points_loss: Math.min(loss, w) })} />
@@ -102,7 +103,7 @@ export default function CopaOpciones({ value, onChange, bloqueo = {}, conPremios
         </Bloque>
       )}
 
-      {conPremios && (
+      {conPremios && ver('premios') && (
         <Bloque titulo="Premios" ayuda="El premio del campeón es obligatorio. Después podés sumar premios especiales desde Gestión.">
           <div className="flex flex-col gap-2">
             {PREMIOS.map((p) => (
