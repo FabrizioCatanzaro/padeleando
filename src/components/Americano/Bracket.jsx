@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { Trophy, Pencil, Trash2, Info } from "lucide-react";
+import { Trophy, Pencil, Trash2, Info, CalendarClock } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
-import { courtLabel, AMERICANO_MIN_PAIRS, MAX_PREVIA_MATCHES, previaPendingPairs, isPreviaComplete, setWinner, visibleSetsCount, scoreFromSets } from "../../utils/helpers";
+import { courtLabel, AMERICANO_MIN_PAIRS, MAX_PREVIA_MATCHES, previaPendingPairs, isPreviaComplete, setWinner, visibleSetsCount, scoreFromSets, bracketNodes, courtName, courtIdDe, tournamentCourts, fmtHora } from "../../utils/helpers";
 import MatchForm from "../Matches/MatchForm";
 import Modal from "../shared/Modal";
 import ShareStoryButton from "../Snapshot/ShareStoryButton";
@@ -9,8 +9,8 @@ import SnapshotModal from "../Snapshot/SnapshotModal";
 import BracketStory from "../Snapshot/BracketStory";
 import { ScoreRow } from "../Matches/MatchCard";
 
-const PHASE_TITLE = { octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL" };
-const SLOT_LABEL  = { octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final" };
+const PHASE_TITLE = { dieciseisavos: "16AVOS DE FINAL", octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL", tercer: "TERCER PUESTO" };
+const SLOT_LABEL  = { dieciseisavos: "16avos", octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final", tercer: "el tercer puesto" };
 
 // Asigna una pareja a un slot del draft. Si esa pareja ya jugaba en otro cruce,
 // intercambia ambas en vez de duplicarla, así no hay que vaciar un slot primero.
@@ -35,7 +35,7 @@ function assignDraftPair(draft, phaseKey, matchId, slot, pair) {
 
 // Dónde está asignada una pareja dentro del draft: { match, slot } o null.
 function findDraftSlot(draft, pairId) {
-  const rounds = [...(draft.octavos ?? []), ...(draft.cuartos ?? []), ...(draft.semis ?? [])];
+  const rounds = [...(draft.dieciseisavos ?? []), ...(draft.octavos ?? []), ...(draft.cuartos ?? []), ...(draft.semis ?? [])];
   if (draft.final) rounds.push(draft.final);
   for (const m of rounds) {
     if (m.pair1_id != null && String(m.pair1_id) === String(pairId)) return { match: m, slot: 'pair1' };
@@ -88,17 +88,12 @@ const getLiveKey  = (id) => `bracket_live_${id}`;
  * todavía no se jugó: si el resultado ya está cargado, `live_match` quedó viejo
  * y no hay nada que reabrir.
  */
-function recuperarVivosDelServidor(tournament) {
-  const bracket = tournament?.bracket;
-  const entradas = Array.isArray(tournament?.live_match) ? tournament.live_match : [];
+function recuperarVivosDelServidor(tournament, bracket, cup) {
+  const entradas = (Array.isArray(tournament?.live_match) ? tournament.live_match : [])
+    .filter((e) => (e.cup ?? 'oro') === cup);
   if (!bracket || entradas.length === 0) return [];
 
-  const cruces = [
-    ...(bracket.octavos ?? []).map((m) => ({ m, phase: 'octavos' })),
-    ...(bracket.cuartos ?? []).map((m) => ({ m, phase: 'cuartos' })),
-    ...(bracket.semis   ?? []).map((m) => ({ m, phase: 'semis'   })),
-    ...(bracket.final ? [{ m: bracket.final, phase: 'final' }] : []),
-  ];
+  const cruces = bracketNodes(bracket).map((m) => ({ m, phase: m.phase }));
 
   const usados = new Set();
   const out = [];
@@ -125,15 +120,7 @@ function recuperarVivosDelServidor(tournament) {
 
 // Inverso de la propagación del ganador: qué partido se alimenta del ganador de matchId.
 function findChildMatch(bracket, matchId) {
-  for (const qm of bracket.cuartos ?? []) {
-    if (qm.slot1_source === matchId || qm.slot2_source === matchId) return qm;
-  }
-  for (const sm of bracket.semis ?? []) {
-    if (sm.source1 === matchId || sm.source2 === matchId) return sm;
-  }
-  const f = bracket.final;
-  if (f && (f.source1 === matchId || f.source2 === matchId)) return f;
-  return null;
+  return bracketNodes(bracket).find((m) => [m.slot1_source, m.slot2_source, m.source1, m.source2].includes(matchId)) ?? null;
 }
 
 // Cuántos partidos posteriores ya jugados se deshacen en cascada al borrar este resultado.
@@ -152,7 +139,7 @@ function countDependentResults(bracket, matchId) {
 function BracketMatchCard({
   match, phase, isOwner, standings, tournament,
   editMode, draftMatch, allPairs, onPairChange, pairLocations,
-  anuncio, onToggleLive,
+  anuncio, onToggleLive, onProgramar,
 }) {
   // Un cruce anunciado puede estar todavía por jugarse (próximo, con su cancha)
   // o ya jugándose. En el cuadro no se arma fixture de cruces sin parejas
@@ -227,6 +214,7 @@ function BracketMatchCard({
       isPlayed ? 'border-brand/50' :
                  'border-border-mid'
     }`}>
+      {match.programado && !isPlayed && <ProgramadoLinea tournament={tournament} programado={match.programado} />}
       {(cancha != null || anunciado) && (
         <div className="flex items-center gap-1.5 mb-2 flex-wrap">
           {enVivo && (
@@ -279,11 +267,68 @@ function BracketMatchCard({
           >
             {enVivo ? 'DEJAR DE MARCAR EN VIVO'
               : proximo ? 'SACAR DE PRÓXIMOS'
-              : 'PROGRAMAR'}
+              : onProgramar ? 'ANUNCIAR' : 'PROGRAMAR'}
           </button>
         </div>
       )}
+      {isOwner && !isPlayed && onProgramar && (
+        <button type="button" onClick={onProgramar}
+          className="mt-1.5 w-full inline-flex items-center justify-center gap-1.5 bg-transparent border-0 py-1 text-[12px] text-secondary hover:text-white cursor-pointer">
+          <CalendarClock size={13} aria-hidden="true" /> {match.programado ? 'Cambiar día y cancha' : 'Día, hora y cancha'}
+        </button>
+      )}
     </div>
+  );
+}
+
+const diaCorto = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('es-AR', { weekday: 'short', day: 'numeric', month: 'numeric' });
+
+// Día, hora y cancha de un cruce de la copa.
+function ProgramadoLinea({ tournament, programado: p }) {
+  const nombre = p.court != null ? courtName(tournament, p.court) : null;
+  const partes = [p.date && diaCorto(p.date), p.time && `${fmtHora(p.time)} h`, nombre && (/^\d+$/.test(nombre) ? `Cancha ${nombre}` : nombre)].filter(Boolean);
+  if (partes.length === 0) return null;
+  return (
+    <div className="flex items-center gap-1.5 mb-2 text-[12px] text-content">
+      <CalendarClock size={13} className="text-soft shrink-0" aria-hidden="true" />
+      <span className="truncate">{partes.join(' · ')}</span>
+    </div>
+  );
+}
+
+function ProgramarModal({ tournament, match, onGuardar, onCerrar }) {
+  const p = match.programado ?? {};
+  const [date, setDate] = useState(p.date ?? '');
+  const [time, setTime] = useState(p.time ?? '');
+  const [court, setCourt] = useState(p.court ?? null);
+  const [guardando, setGuardando] = useState(false);
+  const canchas = tournamentCourts(tournament) ?? 0;
+  const chip = (on) => `min-h-[36px] min-w-[44px] px-2.5 rounded-lg border font-condensed font-bold text-[12px] cursor-pointer transition-colors ${on ? 'bg-white border-white text-base' : 'border-border-strong text-muted hover:text-white'}`;
+  const input = "w-full bg-base border border-border-mid text-white px-3 py-2.5 text-[14px] rounded-sm outline-none";
+  async function guardar() {
+    setGuardando(true);
+    const ok = await onGuardar({ date: date || null, time: time || null, court, court_id: courtIdDe(tournament, court) });
+    setGuardando(false);
+    if (ok) onCerrar();
+  }
+  return (
+    <Modal title="Día y cancha" confirmText={guardando ? 'Guardando...' : 'Guardar'} confirmDisabled={guardando} onConfirm={guardar} onCancel={onCerrar}>
+      <p className="m-0 mb-3 text-[13px] text-content">{match.pair1_name ?? 'A confirmar'} vs {match.pair2_name ?? 'A confirmar'}</p>
+      <div className="flex gap-3 mb-3">
+        <label className="flex-1 min-w-0"><span className="block text-[12px] text-secondary mb-1">Día</span>
+          <input type="date" value={date} min="2000-01-01" max="2100-12-31" onChange={(e) => setDate(e.target.value)} className={input} /></label>
+        <label className="w-28 shrink-0"><span className="block text-[12px] text-secondary mb-1">Hora</span>
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={input} /></label>
+      </div>
+      <span className="block text-[12px] text-secondary mb-1">Cancha</span>
+      <div className="flex gap-1.5 flex-wrap">
+        <button type="button" onClick={() => setCourt(null)} className={chip(court == null)}>SIN ASIGNAR</button>
+        {Array.from({ length: canchas }, (_, i) => i + 1).map((n) => (
+          <button key={n} type="button" onClick={() => setCourt(n)} className={chip(court === n)}>{courtName(tournament, n)}</button>
+        ))}
+      </div>
+      {canchas === 0 && <p role="note" className="text-[12px] text-premium mt-1.5 mb-0">No hay canchas cargadas. Cargá la cantidad en Gestión, en Datos del torneo.</p>}
+    </Modal>
   );
 }
 
@@ -404,8 +449,12 @@ function BracketPlayedCard({ match, tournament, isOwner, onEdit, onClear, phase 
 
 
 // ── Componente principal ───────────────────────────────────────────────────────
-export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpdateMatch, onClearMatch, onSetBracket, onDeleteBracket, onSetLiveMatch }) {
-  const bracket = tournament.bracket;
+// `cup` elige el cuadro de la copa: 'oro' (el principal) o 'plata'. `onProgramar` sólo llega en la copa.
+export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpdateMatch, onClearMatch, onSetBracket, onDeleteBracket, onSetLiveMatch, onProgramar, cup = 'oro' }) {
+  const bracket = cup === 'plata' ? tournament.bracket_plata : tournament.bracket;
+  const liveId = cup === 'plata' ? `${tournament.id}:plata` : tournament.id;
+  const esPlata = cup === 'plata';
+  const esCopa = tournament.format === 'copa';
 
   const [liveMatches,  setLiveMatches]  = useState(() => {
     // En modo readOnly NUNCA se leen partidos en curso: el localStorage se
@@ -413,7 +462,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     if (!isOwner) return [];
     let guardados = [];
     try {
-      const raw = localStorage.getItem(getLiveKey(tournament.id));
+      const raw = localStorage.getItem(getLiveKey(liveId));
       const parsed = raw ? JSON.parse(raw) : [];
       if (Array.isArray(parsed)) guardados = parsed;
     } catch { guardados = []; }
@@ -421,7 +470,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     // Este navegador no sabe del partido, pero el servidor sí: el organizador
     // lo arrancó desde otro dispositivo, o limpió los datos del sitio. Sin esto
     // el encabezado decía EN VIVO y el cuadro no mostraba nada.
-    return recuperarVivosDelServidor(tournament);
+    return recuperarVivosDelServidor(tournament, bracket, cup);
   });
   // Each entry: { matchId, timer: {...}, score: { score1, score2, duration_seconds } }
 
@@ -440,17 +489,13 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
   const [clearTarget,  setClearTarget]  = useState(null);
   const [clearing,     setClearing]     = useState(false);
   const [reorgBlocked, setReorgBlocked] = useState(false);
+  const [programando, setProgramando] = useState(null);
 
   // Persist liveMatches + sync onSetLiveMatch
   const prevLiveRef = useRef(liveMatches);
   const findBracketMatchWithPhase = useCallback((matchId) => {
-    if (!bracket) return null;
-    if (bracket.final?.id === matchId) return { match: bracket.final, phase: 'final' };
-    for (const phase of ['octavos', 'cuartos', 'semis']) {
-      const found = bracket[phase]?.find(m => m.id === matchId);
-      if (found) return { match: found, phase };
-    }
-    return null;
+    const found = bracketNodes(bracket).find((m) => m.id === matchId);
+    return found ? { match: found, phase: found.phase } : null;
   }, [bracket]);
 
   useEffect(() => {
@@ -460,7 +505,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     // pestaña del mismo navegador: era exactamente eso lo que hacía desaparecer
     // el partido en vivo del cuadro mientras el encabezado lo seguía anunciando.
     if (!isOwner) return;
-    const key = getLiveKey(tournament.id);
+    const key = getLiveKey(liveId);
     if (liveMatches.length > 0) localStorage.setItem(key, JSON.stringify(liveMatches));
     else                        localStorage.removeItem(key);
 
@@ -483,22 +528,27 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       const labels = liveMatches.map(lm => {
         const result = findBracketMatchWithPhase(lm.matchId);
         if (!result) return null;
-        return { team1Label: result.match.pair1_name, team2Label: result.match.pair2_name, phase: result.phase, court: lm.score.court ?? null, startedAt: lm.timer?.startedAt ?? null };
+        return { team1Label: result.match.pair1_name, team2Label: result.match.pair2_name, phase: result.phase, court: lm.score.court ?? null, startedAt: lm.timer?.startedAt ?? null, ...(esPlata ? { cup } : {}) };
       }).filter(Boolean);
-      onSetLiveMatch?.(labels.length > 0 ? labels : null);
+      // Los anuncios del otro cuadro de la copa se conservan.
+      const otros = (Array.isArray(tournament.live_match) ? tournament.live_match : []).filter((x) => (x.cup ?? 'oro') !== cup && x.phase !== 'previa' && esCopa);
+      const todos = [...otros, ...labels];
+      onSetLiveMatch?.(todos.length > 0 ? todos : null);
     }
     prevLiveRef.current = liveMatches;
-  }, [liveMatches, tournament.id, isOwner, findBracketMatchWithPhase, onSetLiveMatch]);
+  }, [liveMatches, liveId, isOwner, findBracketMatchWithPhase, onSetLiveMatch, tournament.live_match, cup, esPlata, esCopa]);
 
   function handleToggleLive(matchId) {
     const existing = liveMatches.find(m => m.matchId === matchId);
     if (existing) {
       setLiveMatches(prev => prev.filter(m => m.matchId !== matchId));
     } else {
+      // La cancha programada del cruce de la copa llega como valor inicial.
+      const court = findBracketMatchWithPhase(matchId)?.match.programado?.court ?? null;
       setLiveMatches(prev => [...prev, {
         matchId,
         timer: EMPTY_TIMER,
-        score: { score1: 0, score2: 0, duration_seconds: null, court: null, sets_format: null, sets: [] },
+        score: { score1: 0, score2: 0, duration_seconds: null, court, sets_format: null, sets: [] },
       }]);
     }
   }
@@ -533,7 +583,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     // Cerrar la card ANTES del await para evitar que un remount restaure desde localStorage
     const remaining = liveMatches.filter(m => m.matchId !== matchId);
     setLiveMatches(remaining);
-    const key = getLiveKey(tournament.id);
+    const key = getLiveKey(liveId);
     if (remaining.length > 0) localStorage.setItem(key, JSON.stringify(remaining));
     else localStorage.removeItem(key);
     setSaving(matchId);
@@ -541,7 +591,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       await onUpdateMatch(matchId, s1, s2, duration ?? null, lm.score.court ?? null, false, {
         sets_format: fmt,
         sets: nv > 0 ? (lm.score.sets ?? []).slice(0, nv) : [],
-      });
+      }, cup);
     } finally {
       setSaving(null);
     }
@@ -568,7 +618,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       await onUpdateMatch(editMatchId, s1, s2, editScore.duration_seconds ?? null, editScore.court ?? null, true, {
         sets_format: fmt,
         sets: nv > 0 ? (editScore.sets ?? []).slice(0, nv) : [],
-      });
+      }, cup);
       setEditMatchId(null);
     } finally {
       setSaving(null);
@@ -579,7 +629,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     if (!clearTarget) return;
     setClearing(true);
     try {
-      await onClearMatch?.(clearTarget.id);
+      await onClearMatch?.(clearTarget.id, cup);
       setClearTarget(null);
       if (editMatchId === clearTarget.id) setEditMatchId(null);
     } finally { setClearing(false); }
@@ -603,7 +653,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
   async function confirmEditMode() {
     setSavingLayout(true);
-    try { await onSetBracket(draftBracket); setEditMode(false); setDraftBracket(null); }
+    try { await onSetBracket(draftBracket, cup); setEditMode(false); setDraftBracket(null); }
     finally { setSavingLayout(false); }
   }
 
@@ -628,7 +678,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       if (m.pair1_id) map.set(m.pair1_id, label);
       if (m.pair2_id) map.set(m.pair2_id, label);
     };
-    ['octavos', 'cuartos', 'semis'].forEach(k =>
+    ['dieciseisavos', 'octavos', 'cuartos', 'semis'].forEach(k =>
       (draftBracket[k] ?? []).forEach((m, i) => add(m, `${SLOT_LABEL[k]} ${i + 1}`))
     );
     add(draftBracket.final, SLOT_LABEL.final);
@@ -706,7 +756,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     }
     if (!match.pair1_name || !match.pair2_name) return null;
     const e = liveEntries.find(x =>
-      x.phase === phase &&
+      x.phase === phase && (x.cup ?? 'oro') === cup &&
       ((x.team1Label === match.pair1_name && x.team2Label === match.pair2_name) ||
        (x.team1Label === match.pair2_name && x.team2Label === match.pair1_name))
     );
@@ -714,14 +764,11 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
     return { estado: e.startedAt != null ? 'vivo' : 'proximo', court: e.court ?? null };
   }
 
-  const hasResults = bracket.octavos?.some(m => m.winner_id) ||
-                     bracket.cuartos?.some(m => m.winner_id) ||
-                     bracket.semis?.some(m => m.winner_id)   ||
-                     bracket.final?.winner_id;
+  const hasResults = bracketNodes(bracket).some((m) => m.winner_id);
 
   // La primera ronda se ordena según la siguiente y suma los "byes" para balancear el árbol.
   const wrapMatches = (arr) => arr.map(m => ({ type: "match", data: m }));
-  const RONDAS = [["octavos", "OCTAVOS"], ["cuartos", "CUARTOS DE FINAL"], ["semis", "SEMIFINALES"], ["final", "FINAL"]];
+  const RONDAS = [["dieciseisavos", "16AVOS"], ["octavos", "OCTAVOS"], ["cuartos", "CUARTOS DE FINAL"], ["semis", "SEMIFINALES"], ["final", "FINAL"]];
   const delaRonda = (k) => (k === "final" ? (bracket.final ? [bracket.final] : []) : (bracket[k] ?? []));
   const presentes = RONDAS.filter(([k]) => delaRonda(k).length > 0);
   const fuente = (m, n) => m[`slot${n}_source`] ?? m[`source${n}`] ?? null;
@@ -752,15 +799,18 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
   }));
 
   // Partidos jugados del bracket (para mostrar como cards)
-  const playedBracketMatches = phases
-    .flatMap(p => p.items.filter(it => it.type === "match").map(it => ({ ...it.data, phase: p.key })))
-    .filter(m => m.winner_id !== null && m.pair1_name && m.pair2_name);
+  const playedBracketMatches = [
+    ...phases.flatMap(p => p.items.filter(it => it.type === "match").map(it => ({ ...it.data, phase: p.key }))),
+    ...(bracket.tercer ? [{ ...bracket.tercer, phase: 'tercer' }] : []),
+  ].filter(m => m.winner_id !== null && m.pair1_name && m.pair2_name);
+  const programar = (m) => (esCopa && isOwner && onProgramar ? () => setProgramando(m) : undefined);
+  const tituloCuadro = esPlata ? 'Copa de plata' : 'Cuadro';
 
   return (
     <div>
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
-        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">Cuadro</h2>
+        <h2 className="m-0 font-condensed font-semibold text-[15px] text-white">{tituloCuadro}</h2>
         {!editMode && (
           <div className="flex gap-2">
             <ShareStoryButton onClick={() => setShowStory(true)} />
@@ -776,7 +826,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                 <Pencil size={15} />
               </button>
             )}
-            {isOwner && (
+            {isOwner && !esPlata && (
               <button
                 onClick={() => setConfirmDelete(true)}
                 aria-label="Borrar cuadro"
@@ -832,7 +882,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
             </span>
           )}
           <div className="flex flex-col gap-0.5 min-w-0">
-            <span className="text-[12px] font-semibold text-brand">Campeones</span>
+            <span className="text-[12px] font-semibold text-brand">{esPlata ? 'Campeones de la copa de plata' : 'Campeones'}</span>
             <span className="text-[16px] sm:text-[18px] font-bold text-white leading-snug">{bracket.final.winner_name}</span>
             {bracket.final.score1 != null && bracket.final.score2 != null && (
               <span className="text-[13px] text-soft">
@@ -906,6 +956,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                         pairLocations={pairLocations}
                         anuncio={anuncioDelCruce(item.data, sel.key)}
                         onToggleLive={() => handleToggleLive(item.data.id)}
+                        onProgramar={programar(item.data)}
                       />
                     ) : (
                       <BracketByeCard bye={item.data} next={next ? nombre(next).toLowerCase() : null} />
@@ -921,7 +972,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       <div className={`${editMode ? '' : 'hidden sm:block'} overflow-auto max-h-[75vh] lg:overflow-visible lg:max-h-none`}>
         <div
           className="flex gap-10 pb-4 items-stretch"
-          style={{ minHeight: `${Math.max(...phases.map(p => p.items.length)) * 140}px` }}
+          style={{ minHeight: `${Math.max(...phases.map(p => p.items.length)) * (esCopa ? 180 : 140)}px` }}
         >
           {phases.map((phase, phaseIdx) => {
             const isFirst    = phaseIdx === 0;
@@ -949,6 +1000,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
                       pairLocations={pairLocations}
                       anuncio={anuncioDelCruce(item.data, phase.key)}
                       onToggleLive={() => handleToggleLive(item.data.id)}
+                      onProgramar={programar(item.data)}
                     />
                   ) : (
                     <BracketByeCard bye={item.data} next={phases[phaseIdx + 1] ? sentence(phases[phaseIdx + 1].key === 'cuartos' ? 'CUARTOS' : phases[phaseIdx + 1].label).toLowerCase() : null} />
@@ -1006,6 +1058,26 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
           })}
         </div>
       </div>
+
+      {!editMode && bracket.tercer && (
+        <section aria-label="Tercer puesto" className="mt-2 max-w-sm">
+          <h3 className="m-0 mb-2 text-[12px] font-semibold text-brand">Tercer puesto</h3>
+          {bracket.tercer.pair1_name || bracket.tercer.pair2_name || isOwner ? (
+            <BracketMatchCard
+              match={bracket.tercer}
+              phase="tercer"
+              isOwner={isOwner}
+              standings={standings}
+              tournament={tournament}
+              editMode={false}
+              anuncio={anuncioDelCruce(bracket.tercer, 'tercer')}
+              onToggleLive={() => handleToggleLive(bracket.tercer.id)}
+              onProgramar={programar(bracket.tercer)}
+            />
+          ) : null}
+          <p className="m-0 mt-1.5 text-[12px] text-secondary">Lo juegan los perdedores de las semifinales.</p>
+        </section>
+      )}
 
       {/* Cards EN VIVO (debajo del cuadro) — sólo para el owner */}
       {isOwner && liveMatches.length > 0 && (
@@ -1110,6 +1182,15 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
         );
       })()}
 
+      {programando && (
+        <ProgramarModal
+          tournament={tournament}
+          match={programando}
+          onGuardar={(body) => onProgramar(programando.id, body, cup)}
+          onCerrar={() => setProgramando(null)}
+        />
+      )}
+
       {confirmDelete && (
         <Modal
           title="¿Borrar el cuadro?"
@@ -1120,8 +1201,9 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
           onCancel={() => !deleting && setConfirmDelete(false)}
         >
           Se eliminará el cuadro eliminatorio completo{hasResults ? ", incluyendo los resultados de los partidos ya jugados en él" : ""}.
-          La fase previa y sus resultados no se tocan. Esta acción no se puede deshacer;
-          después podrás volver a generar el cuadro.
+          {esCopa
+            ? <>{tournament.bracket_plata ? ' También se borra la copa de plata.' : ''} La fase de grupos y sus resultados no se tocan. Esta acción no se puede deshacer; después podés volver a armar los cruces.</>
+            : ' La fase previa y sus resultados no se tocan. Esta acción no se puede deshacer; después podrás volver a generar el cuadro.'}
         </Modal>
       )}
     </div>

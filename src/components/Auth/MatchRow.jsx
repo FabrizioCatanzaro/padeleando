@@ -1,7 +1,7 @@
 import { Lock } from 'lucide-react';
 
 const ROUND_LABEL = {
-  octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semifinal', final: 'Final',
+  dieciseisavos: '16avos', octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semifinal', final: 'Final', tercer: 'Tercer puesto',
 };
 
 // Un empate no es ni victoria ni derrota: va con la marca, que en el sistema

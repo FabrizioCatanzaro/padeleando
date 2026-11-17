@@ -73,6 +73,9 @@ function imageForm(file, extraFields = {}) {
   return fd
 }
 
+// Los endpoints del cuadro eligen el de plata con ?copa=plata.
+const copaQ = (cup) => (cup === 'plata' ? '?copa=plata' : '')
+
 export const api = {
   auth: {
     register:       (body) => req('POST', '/auth/register', body),
@@ -190,10 +193,16 @@ export const api = {
     schedule:     (id)         => req('POST',   `/tournaments/${id}/schedule`),
     bracket:      (id)         => req('POST',   `/tournaments/${id}/bracket`),
     playoffs:     (id)         => req('POST',   `/tournaments/${id}/playoffs`),
-    updateBracket:(id, mId, b) => req('PATCH',  `/tournaments/${id}/bracket/${mId}`, b),
-    setBracket:   (id, b)     => req('PATCH',  `/tournaments/${id}/bracket`, { bracket: b }),
+    updateBracket:(id, mId, b, cup) => req('PATCH',  `/tournaments/${id}/bracket/${mId}${copaQ(cup)}`, b),
+    setBracket:   (id, b, cup)     => req('PATCH',  `/tournaments/${id}/bracket${copaQ(cup)}`, { bracket: b }),
     deleteBracket:(id)         => req('DELETE', `/tournaments/${id}/bracket`),
-    clearBracketMatch: (id, mId) => req('DELETE', `/tournaments/${id}/bracket/${mId}`),
+    clearBracketMatch: (id, mId, cup) => req('DELETE', `/tournaments/${id}/bracket/${mId}${copaQ(cup)}`),
+    programarCruce:    (id, mId, body, cup) => req('PATCH', `/tournaments/${id}/bracket/${mId}/programar${copaQ(cup)}`, body),
+    // Copa: propuesta de cruces y armado de los cuadros de oro y plata.
+    copaCuadro: {
+      propuesta: (id)              => req('POST', `/tournaments/${id}/copa/cuadro`),
+      armar:     (id, oro, plata)  => req('PUT',  `/tournaments/${id}/copa/cuadro`, { oro, plata }),
+    },
     // Liga por fechas: armar, cambiar y deshacer una fecha.
     fechas: {
       create: (id, body)         => req('POST',   `/tournaments/${id}/fechas`, body),

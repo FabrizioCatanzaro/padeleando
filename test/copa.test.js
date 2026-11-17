@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  defaultCopaConfig, copaConfigBody, copaConfigError, totalClasificados, copaMinPairs, premiosDePuestos, premioTitulo,
+  crucesPrimeraRonda, defaultCopaConfig, copaConfigBody, copaConfigError, totalClasificados, copaMinPairs, premiosDePuestos, premioTitulo,
   copaStandings, compareCopaRows, tablasPorGrupo, grupoNombre, usaFechas, esCopaCuadro, gruposArmados,
 } from '../src/utils/copa.js';
 
@@ -84,4 +84,12 @@ test('whatsapp: del perfil y como link', async () => {
   assert.equal(whatsappHref('+54 11 5555-0101'), 'https://wa.me/541155550101');
   assert.equal(whatsappHref(''), null);
   assert.deepEqual([{ format: 'copa', copa_config: { mode: 'cuadro' } }, { format: 'liga', liga_mode: 'jornada' }].map(pideDatos), [true, false]);
+});
+
+test('primera ronda: cruces por siembra y pases directos', () => {
+  assert.deepEqual(crucesPrimeraRonda(4), [[1, 4], [2, 3]]);
+  assert.deepEqual(crucesPrimeraRonda(6), [[1, null], [4, 5], [2, null], [3, 6]]);
+  assert.deepEqual(crucesPrimeraRonda(2), [[1, 2]]);
+  assert.equal(crucesPrimeraRonda(32).length, 16);
+  assert.deepEqual(crucesPrimeraRonda(1), []);
 });

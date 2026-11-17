@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye, Ticket, LayoutGrid,
+  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye, Ticket, LayoutGrid, Medal,
 } from "lucide-react";
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
@@ -34,7 +34,8 @@ import { api } from "../../utils/api";
 import RegistrationCard from "../Registration/RegistrationCard";
 import RegistrationsPanel from "../Registration/RegistrationsPanel";
 import PremiosCard from "../Copa/PremiosCard";
-import { esCopa as esCopaDe, esCopaZonas, copaMinPairs } from "../../utils/copa";
+import { esCopa as esCopaDe, esCopaZonas, copaMinPairs, gruposArmados } from "../../utils/copa";
+import ArmarCuadro from "../Copa/ArmarCuadro";
 // La solapa Grupos solo existe en la copa: se carga al abrirla.
 const CopaGrupos = lazy(() => import("../Copa/CopaGrupos"));
 
@@ -68,7 +69,7 @@ function miEstadoDe(e) {
 
 // CUADRO aparece cuando hay cuadro o la previa ya terminó (para generarlo):
 // antes era una solapa vacía en la barra de abajo (auditoría UI).
-function tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro }) {
+function tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro, conPlata }) {
   const tabs = [];
   if (esCopa) {
     // Copa con grupos: grupos y fechas, y el cuadro al final. Copa de cuadro: solo el cuadro.
@@ -76,6 +77,7 @@ function tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro }) {
       tabs.push({ id: 'standings', label: 'GRUPOS', corto: 'Grupos', icon: LayoutGrid });
       tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
       if (conCuadro) tabs.push({ id: 'bracket', label: 'PLAYOFFS', corto: 'Playoffs', icon: Split });
+      if (conPlata) tabs.push({ id: 'plata', label: 'COPA DE PLATA', corto: 'Plata', icon: Medal });
     } else {
       tabs.push({ id: 'bracket', label: 'CUADRO', corto: 'Cuadro', icon: Split });
     }
@@ -153,8 +155,9 @@ export default function TournamentPage({
   const esCopa = esCopaDe(tournament);
   const copaZonas = esCopaZonas(tournament);
   const isPairs = esAmericano || esCopa || tournament.mode === 'pairs';
-  const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament));
-  const TABS = tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro });
+  // En la copa con grupos, PLAYOFFS aparece con los grupos armados: ahí se arman los cruces.
+  const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament)) || (copaZonas && gruposArmados(tournament));
+  const TABS = tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro, conPlata: !!tournament.bracket_plata });
   // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
   const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : TABS[0].id);
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
@@ -407,11 +410,12 @@ export default function TournamentPage({
         )}
 
         {activeTab === 'bracket' && esCopa && !tournament.bracket && (
-          <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
-            {copaZonas
-              ? 'Los playoffs se arman cuando termine la fase de grupos.'
-              : 'El cuadro se arma con las parejas confirmadas.'}
-          </div>
+          <ArmarCuadro
+            tournament={tournament}
+            isOwner={canEditMatches}
+            onPropuesta={acciones?.onPropuestaCopa}
+            onArmar={acciones?.onArmarCopa}
+          />
         )}
 
         {activeTab === 'bracket' && !(esCopa && !tournament.bracket) && (
@@ -428,8 +432,22 @@ export default function TournamentPage({
               onSetBracket={acciones?.onSetBracket}
               onDeleteBracket={acciones?.onDeleteBracket}
               onSetLiveMatch={acciones?.onSetLiveMatch}
+              onProgramar={esCopa ? acciones?.onProgramarCruce : undefined}
             />
           </>
+        )}
+
+        {activeTab === 'plata' && tournament.bracket_plata && (
+          <Bracket
+            tournament={tournament}
+            cup="plata"
+            isOwner={canEditMatches}
+            onUpdateMatch={acciones?.onUpdateBracketMatch}
+            onClearMatch={acciones?.onClearBracketMatch}
+            onSetBracket={acciones?.onSetBracket}
+            onSetLiveMatch={acciones?.onSetLiveMatch}
+            onProgramar={acciones?.onProgramarCruce}
+          />
         )}
 
         {activeTab === 'registrations' && puedeGestionar && (

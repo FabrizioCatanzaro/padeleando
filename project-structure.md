@@ -89,8 +89,16 @@ padeliando/
     │   │   └── PhotoGallery.jsx    # Tournament photo gallery (premium upload, public view)
     │   │
     │   ├── Americano/
-    │   │   ├── Bracket.jsx         # Bracket visualization + winner advancement
+    │   │   ├── Bracket.jsx         # Bracket visualization + winner advancement (americano, copa; cup="plata" for the consolation draw)
     │   │   └── Previa.jsx          # Americano match schedule/preview
+    │   │
+    │   ├── Copa/
+    │   │   ├── CopaOpciones.jsx    # Copa options (Setup sub-steps and Gestión)
+    │   │   ├── CopaGrupos.jsx      # GRUPOS tab: draw, manual edit, group tables (lazy)
+    │   │   ├── ArmarCuadro.jsx     # Playoffs/cuadro proposal, reorder and confirm
+    │   │   ├── PremiosEditor.jsx   # Prizes by place and special prizes
+    │   │   ├── PremiosCard.jsx     # Prizes shown to everyone
+    │   │   └── DatosJugadorModal.jsx # Organizer edits a player's availability and WhatsApp
     │   │
     │   ├── ReadonlyView/
     │   │   └── ReadonlyView.jsx    # Public shareable tournament view (no auth required)
@@ -140,6 +148,7 @@ padeliando/
     └── utils/
         ├── api.js                  # Fetch wrapper: all API endpoints, auto token refresh on 401
         ├── auth.js                 # Auth helper functions
+        ├── copa.js                 # Copa rules mirrored from the API: options, group tables, seeding, labels
         ├── helpers.js              # Pure utility functions (see table below)
         └── storage.js              # localStorage read/write helpers
 ```
@@ -162,7 +171,9 @@ padeliando/
 | `MatchForm` | (modal in Matches) | Add/edit a match result |
 | `Standings` | (tab in Main) | Leaderboard table |
 | `Stats` | (tab in Main) | Player stats + history |
-| `Bracket` | (tab in Main — Americano) | Bracket visualization |
+| `Bracket` | (tab in Main — Americano, Copa PLAYOFFS/CUADRO and COPA DE PLATA) | Bracket visualization |
+| `CopaGrupos` | (GRUPOS tab — Copa con grupos) | Draw and group tables |
+| `ArmarCuadro` | (PLAYOFFS/CUADRO tab before the bracket exists) | Arm the copa bracket |
 | `Previa` | (tab in Main — Americano) | Match schedule |
 | `Management` | (tab in Main) | Admin: reset, finalize |
 | `PhotoGallery` | (tab in Main) | Tournament photos (premium upload) |
@@ -306,7 +317,11 @@ File uploads use `reqMultipart()` (no `Content-Type` header; browser sets multip
 - `schedule(id)` — POST /tournaments/:id/schedule
 - `bracket(id)` — POST /tournaments/:id/bracket
 - `updateBracket(id, matchId, body)` — PATCH /tournaments/:id/bracket/:matchId
-- `setBracket(id, bracket)` — PATCH /tournaments/:id/bracket
+- `setBracket(id, bracket, cup)` — PATCH /tournaments/:id/bracket (`cup = 'plata'` adds `?copa=plata`, also on updateBracket/clearBracketMatch)
+- `programarCruce(id, matchId, body, cup)` — PATCH /tournaments/:id/bracket/:matchId/programar
+- `copaCuadro.propuesta(id)` / `copaCuadro.armar(id, oro, plata)` — POST / PUT /tournaments/:id/copa/cuadro
+- `zonas.sorteo / save / undo` — POST /:id/zonas/sorteo, PUT and DELETE /:id/zonas
+- `prizes.save / winner` — PUT /:id/prizes, PATCH /:id/prizes/:prizeId/winner
 
 **matches**
 - `create(body)` — POST /matches
@@ -470,9 +485,11 @@ padeliando-api/
 | group_id | TEXT FK → groups | |
 | name | TEXT | |
 | mode | TEXT | `free` or `pairs` |
-| format | TEXT | `liga` or `americano` |
+| format | TEXT | `liga`, `americano` or `copa` |
 | status | TEXT | `active` or `finished` |
-| bracket | JSONB | bracket state for Americano format; names are patched client-side via `patchBracketNames` |
+| bracket | JSONB | bracket state (americano, copa, liga playoffs); names are patched client-side via `patchBracketNames` |
+| bracket_plata | JSONB | copa consolation draw (copa de plata) |
+| copa_config | JSONB | copa options: mode `zonas`/`cuadro`, zonas, ruedas, clasifican, mejores_extra, plata, tercer_puesto |
 | live_match | JSONB | currently active match timer data |
 | created_at | TIMESTAMPTZ | |
 

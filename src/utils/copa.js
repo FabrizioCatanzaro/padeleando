@@ -159,3 +159,18 @@ export function copaSecciones(mode) {
     ? [{ id: 'tipo', label: 'Tipo de copa' }, { id: 'grupos', label: 'Grupos' }, { id: 'playoffs', label: 'Playoffs' }, { id: 'puntos', label: 'Puntos' }, { id: 'premios', label: 'Premios' }]
     : [{ id: 'tipo', label: 'Tipo de copa' }, { id: 'tercer', label: 'Tercer puesto' }, { id: 'premios', label: 'Premios' }];
 }
+
+// Primera ronda de un cuadro de n parejas por número de siembra: [a, b], con b null si a pasa directo.
+export function crucesPrimeraRonda(n) {
+  if (n < 2) return [];
+  let size = 2;
+  while (size < n) size *= 2;
+  let pos = [1, 2];
+  while (pos.length < size) pos = pos.flatMap((x) => [x, pos.length * 2 + 1 - x]);
+  const out = [];
+  for (let i = 0; i < pos.length; i += 2) {
+    const [a, b] = [pos[i], pos[i + 1]].sort((x, y) => x - y);
+    out.push([a, b <= n ? b : null]);
+  }
+  return out;
+}

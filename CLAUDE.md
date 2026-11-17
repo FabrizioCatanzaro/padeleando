@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports two tournament formats (Liga/Americano), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries, avatar uploads). An admin dashboard is available to users with `role = 'admin'`.
+PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports three tournament formats (Liga/Americano/Copa), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries, avatar uploads). An admin dashboard is available to users with `role = 'admin'`.
 
 ---
 
@@ -138,10 +138,10 @@ Three surfaces, all fed from the same primitives — keep them consistent with e
 
 Rules that keep the three from drifting:
 
-- **Americano knockout matches are not in the `matches` table** — they live inside `tournaments.bracket` (JSONB). Any stat that counts matches must expand them: `getAllMatches` on the client, `expandBracketMatches` on the profile. Forgetting this is why the profile used to show a championship whose matches didn't exist.
+- **Knockout matches are not in the `matches` table** — americano and copa keep them inside `tournaments.bracket` (JSONB), and the copa's consolation draw inside `tournaments.bracket_plata`. Any stat that counts matches must expand them: `bracketNodes` (every round, including `dieciseisavos` and `tercer`) and `getAllMatches` on the client, `expandBracketMatches` on the profile. Forgetting this is why the profile used to show a championship whose matches didn't exist.
 - **Group historical stats must key on player identity, not on `players.id` or on the name.** The same person gets a new `players` row per jornada, and names repeat: use `linked_username` when the slot is linked, the normalized name otherwise (`playerKey` in `Stats.jsx`).
 - **Never re-derive a winner by parsing a label** — `getTournamentWinners(t)` returns the winning player ids; `getTournamentWinnerLabel` is just its join. Names contain `&`.
-- **Titles count every format.** `stats.titulos` = `titulos_liga` (derived from each finished tournament's standings) + `campeon_americano` (from the bracket final).
+- **Titles count every format.** `stats.titulos` = `titulos_liga` (finished liga standings, or the liga playoffs final) + `campeon_americano` + `campeon_copa` (both from `bracket.final`). Winning the copa de plata is not a title.
 - **The winrate ranking is smoothed** (`rankedWinRate`, prior of 2 matches toward the category mean) so a 1-0 record doesn't outrank an 18-4 one. The table still displays the real percentage.
 - Neon returns `DATE` columns as JS `Date` objects: use `dayKey()` before comparing or sorting them as strings.
 - **A tournament's date is `tournamentDate(t)`**, not `created_at` — the jornada is usually loaded a few days after it was played (13 of 28 tournaments differ, by up to 13 days). Order is `event_date` → first `played_at` → `created_at`.
@@ -157,6 +157,16 @@ Rules that keep the three from drifting:
 - Leagues run on a fixed weekday: the profile's weekday chart only renders with 3+ active days, otherwise it is five empty bars.
 
 **The profile's advanced stats are gated server-side.** `GET /groups/user/:username` returns them only to the owner, or to anyone if a premium user opted in via `users.advanced_stats_public` (default `false`). The queries that only feed that block are skipped entirely when it won't render. The frontend's `canSeeAdvanced` mirrors the same rule for the UI and the profile snapshot, but it is cosmetic — the payload is the source of truth, so don't put those fields back into the public response.
+
+### Copa
+
+- Two variants in `copa_config.mode`: `zonas` (groups by fechas, then playoffs) and `cuadro` (direct elimination). Always fixed pairs, up to 32.
+- **The API calls the groups `zonas`; the UI always says "grupos".** `pairs.zona` is 1-8; `grupoNombre(n)` renders "Grupo A".
+- Group tables use `copaStandings` (points → wins → set diff → game diff → games for → pair id), not `calcStandings`. `src/utils/copa.js` mirrors `src/lib/copa.js` in the API.
+- Playoffs: `ArmarCuadro` asks `POST /tournaments/:id/copa/cuadro` for a proposal (seeds, `pendientes`, `sin_grupo`), lets the organizer reorder, and confirms with `PUT`. `crucesPrimeraRonda(n)` must match the API's `primeraRonda`. Once armed, the group phase is frozen (409).
+- `Bracket` takes `cup="plata"` for the consolation draw; every bracket endpoint selects it with `?copa=plata`. Bracket matches carry day, time and court in `programado`.
+- Per-player availability and WhatsApp live in `tournament_players` (one row per tournament), not `players`. The API filters them by viewer: organizer sees all, a player in the tournament sees visible WhatsApps, nobody else sees any.
+- Quota: free owners get 1 copa per month per category, and it also counts toward the 2 monthly tournaments.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.
@@ -228,7 +238,8 @@ Do not claim an improvement without measuring it — reading the code is not eno
 - **Don't use a `tailwind.config.js`** — Tailwind 4 doesn't use one; extend the theme via `@theme {}` in `index.css`.
 - **Don't calculate standings server-side** — standings are always derived client-side.
 - **Don't allow or model draws** — padel has no draws; a match with `score1 === score2` is invalid data, not a result to display.
-- **Don't count matches without expanding the americano bracket** — knockout matches are not rows in `matches`. See [Stats](#stats).
+- **Don't count matches without expanding the bracket** — americano and copa knockout matches (and `bracket_plata`) are not rows in `matches`. See [Stats](#stats).
+- **Don't write "zona" in the UI** — the copa's groups are "grupos" for the user; `zona` is only the API's name.
 - **Don't group historical player stats by name** — group by identity (`linked_username` ?? normalized name); a player's `players.id` changes every jornada.
 - **Don't show a "CAMPEONES" banner in americano tournaments** — champion is determined by the bracket final, not standings.
 - **Don't hardcode player names** — always go through `adaptTournament` / `linked_name` pattern so invited users see their real name.

@@ -162,10 +162,8 @@ export function getAllMatches(tournament) {
   if (!bracket || !tournamentPairs?.length) return previaMatches;
   const bracketMatches = [];
   [
-    ...(bracket.octavos ?? []),
-    ...(bracket.cuartos ?? []),
-    ...(bracket.semis   ?? []),
-    ...(bracket.final   ? [bracket.final] : []),
+    ...bracketNodes(bracket),
+    ...bracketNodes(tournament.bracket_plata).map((m) => ({ ...m, id: `plata:${m.id}` })),
   ].forEach(m => {
     if (m.winner_id == null || m.walkover) return;
     const pair1 = tournamentPairs.find(p => p.id === m.pair1_id);
@@ -345,8 +343,8 @@ export function tournamentDate(t) {
 export function getTournamentWinners(t) {
   const nameOf = (id) => t.players.find((p) => p.id === id)?.name ?? '?';
 
-  // Con cuadro (americano o liga con playoffs) el campeón es el de la final.
-  if (t.format === 'americano' || t.bracket) {
+  // Con cuadro (americano, copa o liga con playoffs) el campeón es el de la final.
+  if (t.format === 'americano' || t.format === 'copa' || t.bracket) {
     const winnerId = t.bracket?.final?.winner_id;
     if (!winnerId) return [];
     const pair = t.pairs?.find((p) => p.id === winnerId);
@@ -419,11 +417,23 @@ export function patchBracketNames(bracket, pairs, players) {
       ...s,
       pair_name: s.pair_id ? (nameByPair[s.pair_id] ?? s.pair_name) : s.pair_name,
     })),
+    ...(bracket.dieciseisavos ? { dieciseisavos: bracket.dieciseisavos.map(patchMatch) } : {}),
     octavos: (bracket.octavos ?? []).map(patchMatch),
     cuartos: (bracket.cuartos ?? []).map(patchMatch),
     semis:   (bracket.semis   ?? []).map(patchMatch),
     final:   patchMatch(bracket.final),
+    ...(bracket.tercer ? { tercer: patchMatch(bracket.tercer) } : {}),
   };
+}
+
+/** Nodos de un cuadro en orden de ronda, con `phase`; incluye dieciseisavos de la copa y el tercer puesto. */
+export function bracketNodes(bracket) {
+  if (!bracket) return [];
+  return [
+    ...['dieciseisavos', 'octavos', 'cuartos', 'semis'].flatMap((k) => (bracket[k] ?? []).map((m) => ({ ...m, phase: k }))),
+    ...(bracket.final ? [{ ...bracket.final, phase: 'final' }] : []),
+    ...(bracket.tercer ? [{ ...bracket.tercer, phase: 'tercer' }] : []),
+  ];
 }
 
 // Club asociado a una categoría o jornada, en la forma que espera ClubSelector.
@@ -597,18 +607,15 @@ export function winnerLabelOf(tournament) {
 
 export function countPlayed(t) {
   if (!t) return 0;
-  const bracketPlayed = t.bracket
-    ? [...(t.bracket?.octavos ?? []), ...(t.bracket?.cuartos ?? []),
-       ...(t.bracket?.semis ?? []), ...(t.bracket?.final ? [t.bracket.final] : [])]
-      .filter((m) => m.winner_id != null).length
-    : 0;
+  const bracketPlayed = [...bracketNodes(t.bracket), ...bracketNodes(t.bracket_plata)]
+    .filter((m) => m.winner_id != null).length;
   return playedMatches(t.matches ?? []).length + bracketPlayed;
 }
 
 export const PHASE_LABEL = {
-  previa: 'FASE PREVIA', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL',
+  previa: 'FASE PREVIA', dieciseisavos: '16AVOS', octavos: 'OCTAVOS', cuartos: 'CUARTOS', semis: 'SEMIS', final: 'FINAL', tercer: 'TERCER PUESTO',
 };
-export const BRACKET_PHASES = new Set(['octavos', 'cuartos', 'semis', 'final']);
+export const BRACKET_PHASES = new Set(['dieciseisavos', 'octavos', 'cuartos', 'semis', 'final', 'tercer']);
 
 /** Etiqueta de la fase del cuadro, o null si el partido no es del cuadro. */
 export const bracketPhaseLabel = (phase) =>
@@ -644,6 +651,7 @@ export function adaptTournament(t) {
     scheduled_matches: (t.scheduled_matches ?? []).map(adaptScheduled),
     fechas: t.fechas ?? [],
     bracket: patchBracketNames(t.bracket, pairs, players),
+    ...(t.bracket_plata ? { bracket_plata: patchBracketNames(t.bracket_plata, pairs, players) } : {}),
   };
 }
 

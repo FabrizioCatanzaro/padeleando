@@ -30,6 +30,7 @@ export default function Main() {
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer, refresh,
     handleSorteoGrupos, handleSaveGrupos, handleUndoGrupos, handleUpdateCopa, handleSavePrizes, handlePrizeWinner, handleUpdatePlayerDatos,
+    handleProgramarCruce, handlePropuestaCopa, handleArmarCopa,
   } = useTournament(groupId, tournamentId);
 
   // El que entra a esta ruta y no puede gestionar ve la misma página en modo
@@ -92,6 +93,7 @@ export default function Main() {
     onSorteoGrupos: handleSorteoGrupos, onSaveGrupos: handleSaveGrupos, onUndoGrupos: handleUndoGrupos,
     onUpdateCopa: handleUpdateCopa, onSavePrizes: handleSavePrizes, onPrizeWinner: handlePrizeWinner,
     onUpdatePlayerDatos: handleUpdatePlayerDatos,
+    onProgramarCruce: handleProgramarCruce, onPropuestaCopa: handlePropuestaCopa, onArmarCopa: handleArmarCopa,
   } : null;
 
   return (

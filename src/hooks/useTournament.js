@@ -542,33 +542,35 @@ export function useTournament(groupId, tournamentId) {
   // Los tres endpoints del cuadro devuelven el bracket ya actualizado: se aplica al
   // estado local como con los partidos de la previa, sin volver a pedir el torneo
   // (eso disparaba el skeleton y hacía "parpadear" toda la página tras cada carga).
-  function applyBracket(bracket) {
+  // `cup` elige el cuadro: el principal o, en la copa, el de plata.
+  const colCuadro = (cup) => (cup === 'plata' ? 'bracket_plata' : 'bracket');
+  function applyBracket(bracket, cup) {
     setTournament((prev) =>
-      prev ? { ...prev, bracket: patchBracketNames(bracket, prev.pairs, prev.players) } : prev
+      prev ? { ...prev, [colCuadro(cup)]: patchBracketNames(bracket, prev.pairs, prev.players) } : prev
     );
   }
 
-  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false, setsData = {}) {
+  async function handleUpdateBracketMatch(matchId, score1, score2, duration_seconds, court, isEdit = false, setsData = {}, cup) {
     const res = await api.tournaments.updateBracket(tournament.id, matchId, {
       score1, score2, duration_seconds, court,
       sets_format: setsData.sets_format ?? null,
       sets:        setsData.sets ?? [],
-    });
-    applyBracket(res.bracket);
+    }, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast(isEdit ? 'Partido actualizado' : 'Partido registrado');
   }
 
-  async function handleClearBracketMatch(matchId) {
-    const res = await api.tournaments.clearBracketMatch(tournament.id, matchId);
-    applyBracket(res.bracket);
+  async function handleClearBracketMatch(matchId, cup) {
+    const res = await api.tournaments.clearBracketMatch(tournament.id, matchId, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast('Resultado borrado');
   }
 
-  async function handleSetBracket(bracket) {
-    const res = await api.tournaments.setBracket(tournament.id, bracket);
-    applyBracket(res.bracket);
+  async function handleSetBracket(bracket, cup) {
+    const res = await api.tournaments.setBracket(tournament.id, bracket, cup);
+    applyBracket(res[colCuadro(cup)], cup);
     flash();
     showToast('Cruces actualizados');
   }
@@ -576,8 +578,49 @@ export function useTournament(groupId, tournamentId) {
   async function handleDeleteBracket() {
     await api.tournaments.deleteBracket(tournament.id);
     localStorage.removeItem(`bracket_live_${tournament.id}`);
-    setTournament((prev) => (prev ? { ...prev, bracket: null, live_match: null } : prev));
+    localStorage.removeItem(`bracket_live_${tournament.id}:plata`);
+    setTournament((prev) => (prev ? { ...prev, bracket: null, bracket_plata: null, live_match: null } : prev));
     showToast('Cuadro borrado');
+  }
+
+  async function handleProgramarCruce(matchId, body, cup) {
+    try {
+      const res = await api.tournaments.programarCruce(tournament.id, matchId, body, cup);
+      applyBracket(res[colCuadro(cup)], cup);
+      showToast('Partido programado');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      return false;
+    }
+  }
+
+  // Copa: propuesta de cruces (no guarda nada) y armado de los cuadros.
+  async function handlePropuestaCopa() {
+    try {
+      return await api.tournaments.copaCuadro.propuesta(tournament.id);
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return null;
+    }
+  }
+
+  async function handleArmarCopa(oro, plata) {
+    try {
+      const res = await api.tournaments.copaCuadro.armar(tournament.id, oro, plata);
+      setTournament((prev) => (prev ? {
+        ...prev,
+        bracket: patchBracketNames(res.bracket, prev.pairs, prev.players),
+        bracket_plata: patchBracketNames(res.bracket_plata, prev.pairs, prev.players),
+      } : prev));
+      showToast(tournament.copa_config?.mode === 'cuadro' ? 'Cuadro armado' : 'Playoffs armados');
+      return true;
+    } catch (err) {
+      showToast(err.message, 'error');
+      if (err.data?.code === 'bracket_exists') reload(true);
+      return false;
+    }
   }
 
   function getShareLink() {
@@ -600,6 +643,7 @@ export function useTournament(groupId, tournamentId) {
     getShareLink, handleToggleStatus, handleUpdateName, handleUpdateClubEvent, handleUpdateSignup, handleUpdateDatos, handleSetLiveMatch,
     handleGenerateSchedule, handleGenerateBracket, handleUpdateBracketMatch, handleClearBracketMatch, handleSetBracket, handleDeleteBracket,
     handleUpdateMode, handleUpdateLiga, handleGeneratePlayoffs, handleUploadFlyer, handleDeleteFlyer,
+    handleProgramarCruce, handlePropuestaCopa, handleArmarCopa,
     handleSorteoGrupos, handleSaveGrupos, handleUndoGrupos, handleUpdateCopa, handleSavePrizes, handlePrizeWinner, handleUpdatePlayerDatos,
     refresh: () => reload(true),
   };

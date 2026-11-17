@@ -65,6 +65,8 @@ function advancedTiles(stats, monthlyStats, weekdayStats) {
     tiles.push({ value: stats.titulos_liga, label: 'LIGAS GANADAS', accent: C.amber });
   if ((stats.campeon_americano ?? 0) > 0)
     tiles.push({ value: stats.campeon_americano, label: stats.campeon_americano === 1 ? 'AMERICANO GANADO' : 'AMERICANOS GANADOS', accent: '#a84af0' });
+  if ((stats.campeon_copa ?? 0) > 0)
+    tiles.push({ value: stats.campeon_copa, label: stats.campeon_copa === 1 ? 'COPA GANADA' : 'COPAS GANADAS', accent: C.cyan });
   if ((stats.racha_max ?? 0) > 0)
     tiles.push({ value: stats.racha_max, label: 'MEJOR RACHA', sub: 'victorias seguidas', accent: C.brand });
 
@@ -152,6 +154,7 @@ export default function ProfileStory({ owner, stats = {}, avatar, advanced = fal
     ? [
         (stats.titulos_liga ?? 0) > 0 && { value: stats.titulos_liga, label: stats.titulos_liga === 1 ? 'LIGA GANADA' : 'LIGAS GANADAS', accent: C.amber },
         (stats.campeon_americano ?? 0) > 0 && { value: stats.campeon_americano, label: stats.campeon_americano === 1 ? 'AMERICANO' : 'AMERICANOS', accent: '#a84af0' },
+        (stats.campeon_copa ?? 0) > 0 && { value: stats.campeon_copa, label: stats.campeon_copa === 1 ? 'COPA' : 'COPAS', accent: C.cyan },
       ].filter(Boolean)
     : [];
 
