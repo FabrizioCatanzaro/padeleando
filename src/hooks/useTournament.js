@@ -596,13 +596,13 @@ export function useTournament(groupId, tournamentId) {
   }
 
   // Copa: propuesta de cruces (no guarda nada) y armado de los cuadros.
+  // Sin toast: ArmarCuadro muestra el motivo en la solapa, y se pide cada vez que se abre.
   async function handlePropuestaCopa() {
     try {
       return await api.tournaments.copaCuadro.propuesta(tournament.id);
     } catch (err) {
-      showToast(err.message, 'error');
       if (err.data?.code === 'bracket_exists') reload(true);
-      return null;
+      return { error: err.message };
     }
   }
 

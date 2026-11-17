@@ -47,6 +47,8 @@ function Siembra({ titulo, lista, onMover }) {
 // Arma los playoffs (copa con grupos) o el cuadro (copa de cuadro): propuesta, orden y confirmación.
 export default function ArmarCuadro({ tournament, isOwner, onPropuesta, onArmar }) {
   const zonas = tournament.copa_config?.mode === 'zonas';
+  const activas = tournament.pairs.filter((p) => p.status !== 'withdrawn').length;
+  const sinParejas = !zonas && activas < 2;
   const [prop, setProp] = useState(null);
   const [cargando, setCargando] = useState(isOwner);
   const [armando, setArmando] = useState(false);
@@ -62,12 +64,20 @@ export default function ArmarCuadro({ tournament, isOwner, onPropuesta, onArmar 
   }, []);
 
   useEffect(() => {
-    if (!isOwner) return;
+    if (!isOwner || sinParejas) return;
     let vivo = true;
     propuestaRef.current().then((data) => { if (vivo) { setProp(data); setCargando(false); } });
     return () => { vivo = false; };
-  }, [isOwner]);
+  }, [isOwner, sinParejas]);
 
+  if (isOwner && sinParejas) {
+    return (
+      <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
+        {activas === 0 ? 'Todavía no hay parejas confirmadas.' : 'Hay 1 pareja confirmada.'} El cuadro se arma con 2 o más.
+        <span className="block text-secondary text-[13px] mt-1">Sumalas por inscripción o desde Gestión.</span>
+      </div>
+    );
+  }
   if (!isOwner) {
     return (
       <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
@@ -76,10 +86,10 @@ export default function ArmarCuadro({ tournament, isOwner, onPropuesta, onArmar 
     );
   }
   if (cargando) return <div className="min-h-[300px] text-[13px] text-secondary">Calculando los cruces...</div>;
-  if (!prop) {
+  if (!prop || prop.error) {
     return (
       <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
-        {zonas ? 'Todavía no se pueden armar los playoffs.' : 'Todavía no se puede armar el cuadro.'}
+        {prop?.error ?? (zonas ? 'Todavía no se pueden armar los playoffs.' : 'Todavía no se puede armar el cuadro.')}
         <Btn size="sm" icon={RefreshCw} onClick={cargar} className="ml-3">Reintentar</Btn>
       </div>
     );
