@@ -17,11 +17,11 @@ import { COPA_MAX_PAIRS, defaultCopaConfig, copaConfigBody, copaConfigError, cop
 import Btn from "../shared/Btn";
 import StepBar from "../shared/StepBar";
 
-// `img` es la base de /public/formatos/<id>-600.webp y -1200.webp; sin imagen se dibuja el degradado.
+// `img` es la base de /public/formatos/<id>-600.webp y -1200.webp; `pos` centra el motivo en la tarjeta alta.
 const FORMATOS = [
-  { id: 'liga', titulo: 'LIGA', bajada: 'Tabla de posiciones acumulada, en un día o en una temporada por fechas.', datos: ['Libres o parejas fijas', `Desde ${LIGA_MIN_PLAYERS} jugadores`], icono: ListOrdered, img: null },
-  { id: 'americano', titulo: 'AMERICANO', bajada: 'Fase previa de 2 partidos por pareja y cuadro de eliminación directa.', datos: [`${AMERICANO_MIN_PAIRS} a ${AMERICANO_MAX_PAIRS} parejas`, 'Un solo día'], icono: Shuffle, img: null },
-  { id: 'copa', titulo: 'COPA', bajada: 'Grupos y playoffs, o cuadro directo. Fixture con día, horario y cancha.', datos: [`Hasta ${COPA_MAX_PAIRS} parejas`, 'Premios por puesto'], icono: Trophy, img: null },
+  { id: 'liga', titulo: 'LIGA', bajada: 'Tabla de posiciones acumulada, en un día o en una temporada por fechas.', datos: ['Libres o parejas fijas', `Desde ${LIGA_MIN_PLAYERS} jugadores`], icono: ListOrdered, img: '/formatos/liga', pos: '56% center' },
+  { id: 'americano', titulo: 'AMERICANO', bajada: 'Fase previa de 2 partidos por pareja y cuadro de eliminación directa.', datos: [`${AMERICANO_MIN_PAIRS} a ${AMERICANO_MAX_PAIRS} parejas`, 'Un solo día'], icono: Shuffle, img: '/formatos/americano', pos: '74% center' },
+  { id: 'copa', titulo: 'COPA', bajada: 'Grupos y playoffs, o cuadro directo. Fixture con día, horario y cancha.', datos: [`Hasta ${COPA_MAX_PAIRS} parejas`, 'Premios por puesto'], icono: Trophy, img: '/formatos/copa', pos: '64% center' },
 ];
 
 const INFO_SECCIONES = [
@@ -42,9 +42,9 @@ function TarjetaFormato({ f, activo, onClick }) {
     >
       {f.img ? (
         <img
-          src={`${f.img}-600.webp`} srcSet={`${f.img}-600.webp 600w, ${f.img}-1200.webp 1200w`} sizes="(min-width: 640px) 33vw, 100vw"
-          width={1200} height={675} alt="" decoding="async"
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${activo ? 'opacity-90' : 'opacity-60 group-hover:opacity-75'}`}
+          src={`${f.img}-600.webp`} srcSet={`${f.img}-600.webp 600w, ${f.img}-1200.webp 1200w`} sizes="(min-width: 640px) 570px, 100vw"
+          width={1200} height={670} alt="" decoding="async" style={{ objectPosition: f.pos }}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${activo ? 'opacity-100' : 'opacity-70 group-hover:opacity-90'}`}
         />
       ) : (
         <>
@@ -52,7 +52,7 @@ function TarjetaFormato({ f, activo, onClick }) {
           <Icono aria-hidden size={150} strokeWidth={1} className="absolute -right-6 -top-4 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 sm:top-8 text-brand/25" />
         </>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-photo-shade via-photo-shade/70 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-photo-shade from-10% via-photo-shade/55 via-40% to-transparent to-70%" />
       {activo && (
         <span className="absolute top-3 right-3 w-7 h-7 rounded-full bg-brand text-base inline-flex items-center justify-center"><Check size={16} strokeWidth={3} /></span>
       )}
