@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { Shuffle, Star, Undo2, Check, Users } from "lucide-react";
+import { Shuffle, Star, Undo2, Check, Users, Minus, Plus } from "lucide-react";
 import { getPairLabel } from "../../utils/helpers";
 import {
-  grupoNombre, tablasPorGrupo, gruposArmados, copaMinPairs, ZONA_MIN_PAIRS, ZONA_MAX_PAIRS,
+  grupoNombre, tablasPorGrupo, gruposArmados, copaMinPairs, copaConfigBody, ZONA_MIN_PAIRS, ZONA_MAX_PAIRS, ZONAS_MIN, ZONAS_MAX,
 } from "../../utils/copa";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Btn from "../shared/Btn";
@@ -72,6 +72,38 @@ function TablaGrupo({ tournament, zona, rows, clasifican, mias }) {
 }
 
 // Armado de grupos: cabezas de serie, sorteo y ajuste a mano antes de confirmar.
+// Cantidad de grupos: se define al armarlos, cuando ya se sabe cuántas parejas hay.
+function CantidadGrupos({ tournament, total, onUpdate }) {
+  const config = tournament.copa_config;
+  const [guardando, setGuardando] = useState(false);
+  const entra = (z) => total >= z * ZONA_MIN_PAIRS && total <= z * ZONA_MAX_PAIRS;
+  const posibles = Array.from({ length: ZONAS_MAX - ZONAS_MIN + 1 }, (_, i) => ZONAS_MIN + i).filter(entra);
+  async function cambiar(z) {
+    setGuardando(true);
+    try {
+      await onUpdate({ copa_config: copaConfigBody({ ...config, zonas: z, mejores_extra: Math.min(config.mejores_extra, z - 1) }) });
+    } finally { setGuardando(false); }
+  }
+  const btn = "inline-flex items-center justify-center w-11 h-11 rounded-sm border border-border-strong bg-transparent text-white cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed";
+  return (
+    <div className="bg-surface border border-border-mid rounded-xl p-4">
+      <div className="flex items-center justify-between gap-3">
+        <span className="text-[14px] font-semibold text-white">Cantidad de grupos</span>
+        <div className="flex items-center gap-2">
+          <button type="button" aria-label="Menos grupos" className={btn} disabled={guardando || config.zonas <= ZONAS_MIN} onClick={() => cambiar(config.zonas - 1)}><Minus size={16} /></button>
+          <span className="min-w-[70px] text-center text-[14px] font-semibold text-white" aria-live="polite">{config.zonas} grupos</span>
+          <button type="button" aria-label="Más grupos" className={btn} disabled={guardando || config.zonas >= ZONAS_MAX} onClick={() => cambiar(config.zonas + 1)}><Plus size={16} /></button>
+        </div>
+      </div>
+      <p className="m-0 mt-2 text-[13px] text-secondary">
+        {posibles.length === 0
+          ? `Con ${total} ${total === 1 ? 'pareja confirmada' : 'parejas confirmadas'} todavía no se arman grupos. Hacen falta al menos ${ZONAS_MIN * ZONA_MIN_PAIRS}.`
+          : `Con ${total} parejas confirmadas entran ${posibles.length === 1 ? `${posibles[0]} grupos` : `de ${posibles[0]} a ${posibles[posibles.length - 1]} grupos`}, de ${ZONA_MIN_PAIRS} a ${ZONA_MAX_PAIRS} parejas cada uno.`}
+      </p>
+    </div>
+  );
+}
+
 function ArmarGrupos({ tournament, onSorteo, onSave }) {
   const config = tournament.copa_config;
   const zonas = config.zonas;
@@ -122,7 +154,7 @@ function ArmarGrupos({ tournament, onSorteo, onSave }) {
         <Users size={18} className="text-brand shrink-0 mt-0.5" aria-hidden="true" />
         <div className="text-[14px] text-content">
           Hay {activas.length} {activas.length === 1 ? 'pareja confirmada' : 'parejas confirmadas'}. Para {zonas} grupos hacen falta al menos {minimo}.
-          <span className="block text-secondary text-[13px] mt-1">Sumalas por inscripción o desde Gestión. Si son menos, bajá la cantidad de grupos en Gestión.</span>
+          <span className="block text-secondary text-[13px] mt-1">Sumalas por inscripción o desde Gestión, o bajá la cantidad de grupos.</span>
         </div>
       </div>
     );
@@ -133,7 +165,7 @@ function ArmarGrupos({ tournament, onSorteo, onSave }) {
       <div className="bg-surface border border-border-mid rounded-xl p-4">
         <h3 className="m-0 text-[15px] font-bold text-white">Armar los grupos</h3>
         <p className="m-0 mt-1 text-[13px] text-secondary">
-          {activas.length} parejas en {zonas} grupos de {ZONA_MIN_PAIRS} a {ZONA_MAX_PAIRS}{activas.length > maximo ? `. Sobran ${activas.length - maximo}: subí la cantidad de grupos en Gestión` : ''}.
+          {activas.length} parejas en {zonas} grupos de {ZONA_MIN_PAIRS} a {ZONA_MAX_PAIRS}{activas.length > maximo ? `. Sobran ${activas.length - maximo}: subí la cantidad de grupos` : ''}.
           Marcá las cabezas de serie en orden: van una por grupo.
         </p>
         <ul className="m-0 mt-3 p-0 list-none flex flex-col gap-1.5">
@@ -255,7 +287,15 @@ export default function CopaGrupos({ tournament, puedeGestionar, acciones, myPai
   const editable = puedeGestionar && tournament.status !== 'finished' && !tournament.bracket;
 
   if (!armados) {
-    if (editable) return <ArmarGrupos tournament={tournament} onSorteo={acciones.onSorteoGrupos} onSave={acciones.onSaveGrupos} />;
+    if (editable) {
+      const total = tournament.pairs.filter(activa).length;
+      return (
+        <div className="flex flex-col gap-4">
+          <CantidadGrupos tournament={tournament} total={total} onUpdate={acciones.onUpdateCopa} />
+          <ArmarGrupos key={config.zonas} tournament={tournament} onSorteo={acciones.onSorteoGrupos} onSave={acciones.onSaveGrupos} />
+        </div>
+      );
+    }
     return (
       <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
         Los grupos se sortean cuando estén confirmadas las parejas.

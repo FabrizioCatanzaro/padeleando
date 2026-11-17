@@ -59,7 +59,7 @@ export default function CopaOpciones({ value, onChange, bloqueo = {}, conPremios
 
       {zonas && (
         <>
-          {ver('grupos') && <Bloque titulo="Grupos" ayuda={bloqueo.zonas ? 'Con los grupos armados, la cantidad no se cambia.' : `Cada grupo tiene de 3 a ${ZONA_MAX_PAIRS} parejas. Se sortean con las parejas confirmadas.`}>
+          {ver('grupos') && <Bloque titulo="Grupos" ayuda={bloqueo.zonas ? 'Con los grupos armados, la cantidad no se cambia.' : `Cada grupo tiene de 3 a ${ZONA_MAX_PAIRS} parejas. Si todavía no sabés cuántos inscriptos va a haber, dejalo así: lo cambiás al armar los grupos.`}>
             {!bloqueo.zonas && (
               <Cantidad label="Cantidad de grupos" value={value.zonas} min={ZONAS_MIN} max={ZONAS_MAX} unidad={() => 'grupos'} onChange={setZonas} />
             )}
