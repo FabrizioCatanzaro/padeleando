@@ -3,9 +3,12 @@ import { getPairLabel, managementWarnings, AMERICANO_MIN_PAIRS, AMERICANO_MAX_PA
 import Modal from "../shared/Modal";
 import ActionMenu from "../shared/ActionMenu";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Check, Pencil, Trash2, X, AlertTriangle, UserMinus } from "lucide-react";
+import { Check, Pencil, Trash2, X, AlertTriangle, UserMinus, Contact } from "lucide-react";
+import DatosJugadorModal from "../Copa/DatosJugadorModal";
+import { esTemporada } from "../../utils/fechas";
+import { grupoNombre, COPA_MAX_PAIRS } from "../../utils/copa";
 import { PairAvatar } from "../shared/PlayerAvatar";
-export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete, onWithdraw }) {
+export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete, onWithdraw, onUpdatePlayerDatos }) {
   const { players, pairs = [] } = tournament;
   const [showAdd, setShowAdd]       = useState(false);
   const [newP1, setNewP1]           = useState("");
@@ -15,6 +18,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   const [editP2, setEditP2]         = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [withdrawTarget, setWithdrawTarget] = useState(null);
+  const [datosDe, setDatosDe] = useState(null);
 
   // Una pareja retirada sigue en la lista (su historia cuenta) pero libera a
   // sus jugadores: pueden armar una pareja nueva como reemplazo.
@@ -27,8 +31,11 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   // parejas cambian libremente. El back aplica la misma regla.
   const teamKey = (ids) => [...ids].map(String).sort().join('|');
   const playedKeys = new Set((tournament.matches ?? []).flatMap((m) => [teamKey(m.team1), teamKey(m.team2)]));
-  const temporada = tournament.format === 'liga' && tournament.liga_mode === 'temporada';
-  const pairStarted = (pair) => (isAmericano && (!!tournament.bracket || playedKeys.has(teamKey([pair.p1, pair.p2]))))
+  // Liga por fechas y copa: la baja cancela los programados en vez de dar W.O.
+  const esCopa = tournament.format === 'copa';
+  const temporada = esTemporada(tournament) || esCopa;
+  const conDatos = temporada && !!onUpdatePlayerDatos;
+  const pairStarted = (pair) => ((isAmericano || esCopa) && (!!tournament.bracket || playedKeys.has(teamKey([pair.p1, pair.p2]))))
     || (temporada && playedKeys.has(teamKey([pair.p1, pair.p2])));
   const cuentaDe = (pair, rows) => rows.filter((m) => [teamKey(m.team1), teamKey(m.team2)].includes(teamKey([pair.p1, pair.p2]))).length;
   const activePlayers = players.filter((p) => !p.removed);
@@ -41,7 +48,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
 
   // Americano: 8 parejas mínimo para poder jugar, 16 máximo.
   const isAmericano   = tournament.format === 'americano';
-  const pairsFull     = isAmericano && pairs.length >= AMERICANO_MAX_PAIRS;
+  const pairsFull     = (isAmericano && pairs.length >= AMERICANO_MAX_PAIRS) || (esCopa && activePairs.length >= COPA_MAX_PAIRS);
 
   // Sin dos jugadores libres no hay pareja posible: el botón queda deshabilitado.
   const freeToPair   = activePlayers.filter((p) => !assignedIds.includes(p.id));
@@ -222,7 +229,17 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
                 })()}
                 <span className={`flex-1 min-w-0 font-sans ${isWithdrawn(pair) ? 'text-dim line-through' : 'text-content'}`}>
                   {getPairLabel(pair.id, pairs, players)}
+                  {esCopa && pair.zona != null && <span className="ml-2 text-[12px] text-secondary">{grupoNombre(pair.zona)}</span>}
                 </span>
+                {isOwner && conDatos && !isWithdrawn(pair) && (
+                  <ActionMenu
+                    label="Datos de los jugadores"
+                    items={[pair.p1, pair.p2].map((pid) => {
+                      const pl = players.find((p) => p.id === pid);
+                      return { label: `Datos de ${pl?.name ?? '?'}`, icon: <Contact size={15} />, onClick: () => pl && setDatosDe(pl) };
+                    })}
+                  />
+                )}
                 {isWithdrawn(pair) && (
                   <span className="shrink-0 font-mono text-[12px] tracking-[1px] text-muted bg-base border border-border px-2 py-0.5 rounded-full">
                     {temporada ? 'DE BAJA' : 'RETIRADA'}
@@ -282,6 +299,10 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
           onConfirm={() => { onWithdraw?.(withdrawTarget.id); setWithdrawTarget(null); }}
           onCancel={() => setWithdrawTarget(null)}
         />
+      )}
+
+      {datosDe && (
+        <DatosJugadorModal player={datosDe} onSave={onUpdatePlayerDatos} onClose={() => setDatosDe(null)} />
       )}
 
       {deleteTarget && (

@@ -1,3 +1,4 @@
+import { copaMinPairs } from './copa';
 import { FileText, CalendarClock, CircleCheckBig } from 'lucide-react';
 
 export const uid = () => Math.random().toString(36).slice(2, 9);
@@ -451,9 +452,27 @@ export function clubCourts(club) {
 // manda lo que el club tiene hoy. Sin ese dato en el payload, la copia.
 export function tournamentCourts(tournament) {
   if (!tournament) return 1;
+  const conNombre = canchasConNombre(tournament);
+  if (conNombre.length > 0) return conNombre.length;
   const fromClub = Number(tournament.club_courts);
-  if (tournament.club_id && Number.isFinite(fromClub)) return fromClub > 0 ? fromClub : 0;
-  return Number(tournament.number_of_courts ?? 1);
+  if (tournament.club_id && Number.isFinite(fromClub) && fromClub > 0) return fromClub;
+  // Sin canchas del club, valen las que cargó el organizador en Gestión.
+  return Number(tournament.number_of_courts ?? (tournament.club_id ? 0 : 1));
+}
+
+/** Canchas activas del club con nombre: [{ id, name }]. Vacío si el club no las cargó. */
+export function canchasConNombre(tournament) {
+  return Array.isArray(tournament?.club_court_list) ? tournament.club_court_list : [];
+}
+
+/** Nombre de la cancha número n: el del club o el número. */
+export function courtName(tournament, n) {
+  return canchasConNombre(tournament)[n - 1]?.name ?? String(n);
+}
+
+/** Id de la cancha del club para el número n; null si no tiene nombre. */
+export function courtIdDe(tournament, n) {
+  return n == null ? null : (canchasConNombre(tournament)[n - 1]?.id ?? null);
 }
 
 // Etiqueta de cancha a mostrar para un partido.
@@ -462,7 +481,7 @@ export function tournamentCourts(tournament) {
 // - Si no, null (no se muestra badge).
 export function courtLabel(tournament, court) {
   if (tournamentCourts(tournament) === 0) return '-';
-  return court != null ? String(court) : null;
+  return court != null ? courtName(tournament, court) : null;
 }
 
 /**
@@ -618,7 +637,7 @@ export function adaptTournament(t) {
   return {
     ...t,
     createdAt: t.created_at ?? t.createdAt,
-    mode: t.format === 'americano' ? 'pairs' : t.mode,
+    mode: t.format === 'americano' || t.format === 'copa' ? 'pairs' : t.mode,
     players,
     pairs,
     matches: (t.matches ?? []).map(adaptMatch),
@@ -685,7 +704,8 @@ export function isLigaDraft({ format, playerCount }) {
 
 // Borrador de cualquier formato. `playerCount` cuenta sólo jugadores activos
 // (sin los `removed: true` que arrastra un partido ya jugado).
-export function isDraftTournament({ format, pairCount, playerCount }) {
+export function isDraftTournament({ format, pairCount, playerCount, copaConfig = null }) {
+  if (format === 'copa') return (pairCount ?? 0) < copaMinPairs(copaConfig);
   return isAmericanoDraft({ format, pairCount }) || isLigaDraft({ format, playerCount });
 }
 
@@ -726,6 +746,11 @@ export function managementWarnings(tournament) {
   if (format === 'liga') {
     const missing = LIGA_MIN_PLAYERS - activePlayers.length;
     if (missing > 0) warnings.push({ id: 'liga-min-players', missing });
+  }
+
+  if (format === 'copa') {
+    const missing = copaMinPairs(tournament.copa_config) - pairs.filter((p) => p.status !== 'withdrawn').length;
+    if (missing > 0) warnings.push({ id: 'copa-min-pairs', missing });
   }
 
   if (mode === 'pairs') {

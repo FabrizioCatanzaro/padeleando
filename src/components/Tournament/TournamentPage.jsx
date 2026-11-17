@@ -1,7 +1,7 @@
 import { useState, useEffect, lazy, Suspense } from "react";
 import { useNavigate } from "react-router-dom";
 import {
-  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye, Ticket,
+  Check, Trophy, Settings, Flame, ChartNoAxesCombined, X, List, Split, Users, Eye, Ticket, LayoutGrid,
 } from "lucide-react";
 import {
   countPlayed, isDraftTournament, isLive, managementWarnings,
@@ -33,6 +33,9 @@ import { resolveSignup } from "../../utils/signup";
 import { api } from "../../utils/api";
 import RegistrationCard from "../Registration/RegistrationCard";
 import RegistrationsPanel from "../Registration/RegistrationsPanel";
+import { esCopa as esCopaDe, esCopaZonas, copaMinPairs } from "../../utils/copa";
+// La solapa Grupos solo existe en la copa: se carga al abrirla.
+const CopaGrupos = lazy(() => import("../Copa/CopaGrupos"));
 
 // Marca de "hay algo para revisar" en la pestaña de gestión.
 function WarningMark({ className = "", count }) {
@@ -64,9 +67,23 @@ function miEstadoDe(e) {
 
 // CUADRO aparece cuando hay cuadro o la previa ya terminó (para generarlo):
 // antes era una solapa vacía en la barra de abajo (auditoría UI).
-function tabsDe({ esAmericano, puedeGestionar, conCuadro }) {
-  const tabs = [{ id: 'standings', label: 'TABLA', corto: 'Tabla', icon: Trophy }];
-  if (esAmericano) {
+function tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro }) {
+  const tabs = [];
+  if (esCopa) {
+    // Copa con grupos: grupos y fechas, y el cuadro al final. Copa de cuadro: solo el cuadro.
+    if (copaZonas) {
+      tabs.push({ id: 'standings', label: 'GRUPOS', corto: 'Grupos', icon: LayoutGrid });
+      tabs.push({ id: 'matches', label: 'PARTIDOS', corto: 'Partidos', icon: Flame });
+      if (conCuadro) tabs.push({ id: 'bracket', label: 'PLAYOFFS', corto: 'Playoffs', icon: Split });
+    } else {
+      tabs.push({ id: 'bracket', label: 'CUADRO', corto: 'Cuadro', icon: Split });
+    }
+  } else {
+    tabs.push({ id: 'standings', label: 'TABLA', corto: 'Tabla', icon: Trophy });
+  }
+  if (esCopa) {
+    // Nada más: las solapas comunes van abajo.
+  } else if (esAmericano) {
     tabs.push({ id: 'matches', label: 'PREVIA',  corto: 'Previa', icon: List });
     if (conCuadro) tabs.push({ id: 'bracket', label: 'CUADRO',  corto: 'Cuadro', icon: Split });
   } else {
@@ -132,11 +149,13 @@ export default function TournamentPage({
   }, [puedeGestionar, tournament.id]);
 
   const esAmericano = tournament.format === 'americano';
-  const isPairs = esAmericano || tournament.mode === 'pairs';
+  const esCopa = esCopaDe(tournament);
+  const copaZonas = esCopaZonas(tournament);
+  const isPairs = esAmericano || esCopa || tournament.mode === 'pairs';
   const conCuadro = !!tournament.bracket || (esAmericano && isPreviaComplete(tournament));
-  const TABS = tabsDe({ esAmericano, puedeGestionar, conCuadro });
+  const TABS = tabsDe({ esAmericano, esCopa, copaZonas, puedeGestionar, conCuadro });
   // Una solapa que no existe para este usuario (por ejemplo, del link) cae en la de siempre.
-  const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : (esAmericano ? 'matches' : 'standings');
+  const activeTab = (tab && TABS.some((t) => t.id === tab)) ? tab : TABS[0].id;
   const canEditMatches = puedeGestionar && tournament.status !== 'finished';
 
   const playedCount = countPlayed(tournament);
@@ -147,8 +166,9 @@ export default function TournamentPage({
   // viene vacía a propósito, no es un borrador.
   const isDraft = !tournament.roster_hidden && isDraftTournament({
     format: tournament.format,
-    pairCount: tournament.pairs.length,
+    pairCount: esCopa ? tournament.pairs.filter((p) => p.status !== 'withdrawn').length : tournament.pairs.length,
     playerCount: tournament.players.filter((p) => !p.removed).length,
+    copaConfig: tournament.copa_config,
   });
   const warningCount = puedeGestionar ? managementWarnings(tournament).length : 0;
   const statusMeta = TOURNAMENT_STATUS_META[tournamentDisplayStatus({
@@ -156,9 +176,12 @@ export default function TournamentPage({
   })];
   // Borrador: qué falta para arrancar, en una frase (auditoría UI).
   const activos = tournament.players.filter((p) => !p.removed).length;
-  const faltan = esAmericano ? AMERICANO_MIN_PAIRS - tournament.pairs.length : LIGA_MIN_PLAYERS - activos;
+  const porParejas = esAmericano || esCopa;
+  const faltan = esAmericano ? AMERICANO_MIN_PAIRS - tournament.pairs.length
+    : esCopa ? copaMinPairs(tournament.copa_config) - tournament.pairs.filter((p) => p.status !== 'withdrawn').length
+    : LIGA_MIN_PLAYERS - activos;
   const draftText = isDraft && faltan > 0
-    ? `Falta${faltan === 1 ? '' : 'n'} ${faltan} ${esAmericano ? (faltan === 1 ? 'pareja' : 'parejas') : (faltan === 1 ? 'jugador' : 'jugadores')} para arrancar`
+    ? `Falta${faltan === 1 ? '' : 'n'} ${faltan} ${porParejas ? (faltan === 1 ? 'pareja' : 'parejas') : (faltan === 1 ? 'jugador' : 'jugadores')} para arrancar`
     : null;
   // La cinta y la barra de "Actualizado" sólo sirven con el torneo en curso.
   const enJuegoAhora = (Array.isArray(tournament.live_match) ? tournament.live_match : []).some((m) => m?.startedAt != null);
@@ -315,7 +338,14 @@ export default function TournamentPage({
       </div>
 
       <div className="p-6">
-        {activeTab === 'standings' && <Standings tournament={tournament} />}
+        {activeTab === 'standings' && (copaZonas ? (
+          <Suspense fallback={<div style={{ minHeight: 400 }} />}>
+            <CopaGrupos
+              tournament={tournament} puedeGestionar={puedeGestionar} acciones={acciones}
+              myPairIds={tournament.pairs.filter((p) => myPlayerIds.includes(p.p1) || myPlayerIds.includes(p.p2)).map((p) => p.id)}
+            />
+          </Suspense>
+        ) : <Standings tournament={tournament} />)}
 
         {activeTab === 'stats' && (
           <Suspense fallback={<div style={{ minHeight: 400 }} />}>
@@ -373,7 +403,15 @@ export default function TournamentPage({
           )
         )}
 
-        {activeTab === 'bracket' && (
+        {activeTab === 'bracket' && esCopa && !tournament.bracket && (
+          <div className="bg-surface border border-border-mid rounded-xl p-4 text-[14px] text-content">
+            {copaZonas
+              ? 'Los playoffs se arman cuando termine la fase de grupos.'
+              : 'El cuadro se arma con las parejas confirmadas.'}
+          </div>
+        )}
+
+        {activeTab === 'bracket' && !(esCopa && !tournament.bracket) && (
           <>
             {!puedeGestionar && (
               <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="bracket" />
@@ -427,6 +465,10 @@ export default function TournamentPage({
             onUpdateSignup={acciones.onUpdateSignup}
             onUpdateDatos={acciones.onUpdateDatos}
             onRefresh={acciones.onRefresh}
+            onUpdateCopa={acciones.onUpdateCopa}
+            onSavePrizes={acciones.onSavePrizes}
+            onPrizeWinner={acciones.onPrizeWinner}
+            onUpdatePlayerDatos={acciones.onUpdatePlayerDatos}
           />
         )}
 

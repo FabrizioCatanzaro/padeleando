@@ -11,6 +11,8 @@ import { profileContacts } from "../../utils/signup";
 import { useToast } from "../../context/useToast";
 import { ChevronLeft, Check } from "lucide-react";
 import LigaOpciones from "../shared/LigaOpciones";
+import CopaOpciones from "../Copa/CopaOpciones";
+import { COPA_MAX_PAIRS, defaultCopaConfig, copaConfigBody, copaConfigError, copaMinPairs, premiosDePuestos } from "../../utils/copa";
 import Btn from "../shared/Btn";
 import StepBar from "../shared/StepBar";
 
@@ -83,11 +85,14 @@ export default function Setup() {
   const [signup, setSignup]       = useState({ open: false, price: null, unit: 'player', contacts: [] });
   const [creating, setCreating]   = useState(false);
   const [liga, setLiga] = useState({ liga_mode: 'jornada', allow_rematch: false, winner_format: 'tabla', playoff_size: null });
-  // La liga en varios días se arma con parejas fijas, como el americano.
+  const [copa, setCopa] = useState(() => ({ ...defaultCopaConfig('zonas'), points_win: 3, points_loss: 0, premio1: '', premio2: '', premio3: '' }));
+  const esCopa = format === 'copa';
+  const copaInvalida = esCopa && (!copa.premio1.trim() || !!copaConfigError(copa));
+  // La liga en varios días y la copa se arman con parejas fijas, como el americano.
   const temporada = format === 'liga' && liga.liga_mode === 'temporada';
-  const conParejas = format === 'americano' || temporada;
-  const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : 2;
-  const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : 32;
+  const conParejas = format === 'americano' || temporada || esCopa;
+  const pairsMin = format === 'americano' ? AMERICANO_MIN_PAIRS : esCopa ? copaMinPairs(copa) : 2;
+  const pairsMax = format === 'americano' ? AMERICANO_MAX_PAIRS : esCopa ? COPA_MAX_PAIRS : 32;
   // Una liga nueva copia los puntos de la última liga de la categoría (lo hace la API).
   const ultimaLiga = (group?.tournaments ?? []).filter((t) => t.format === 'liga')
     .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)))[0];
@@ -198,6 +203,11 @@ export default function Setup() {
         signup_closes_at:     signup.closes_at ?? null,
         rules:                signup.rules ?? null,
         liga: fmt === 'liga' ? liga : null,
+        copa: fmt === 'copa' ? {
+          copa_config: copaConfigBody(copa),
+          prizes: premiosDePuestos([copa.premio1, copa.premio2, copa.premio3]),
+          ...(copa.mode === 'zonas' ? { points_win: copa.points_win, points_loss: copa.points_loss } : {}),
+        } : null,
       });
       navigate(`/cat/${groupId}/torneo/${tId}`);
     } catch (e) {
@@ -278,8 +288,17 @@ export default function Setup() {
                 <div className="font-condensed font-bold text-[16px] text-white mb-1">AMERICANO</div>
                 <div className="text-[12px] text-muted font-sans">Fase previa (2 partidos por pareja) + cuadro de eliminación directa. Se juega con 8–16 parejas (16–32 jugadores); podés crearlo antes como borrador.</div>
               </div>
+              <div
+                onClick={() => setFormat('copa')}
+                className={`bg-surface border rounded-lg p-4 cursor-pointer card-link ${esCopa ? 'border-brand' : 'border-border-mid'}`}
+              >
+                <div className="font-condensed font-bold text-[16px] text-white mb-1">COPA</div>
+                <div className="text-[12px] text-muted font-sans">Grupos y playoffs, o cuadro de eliminación directa. Hasta {COPA_MAX_PAIRS} parejas, con fixture por día, horario y cancha.</div>
+                {esCopa && <CopaOpciones value={copa} onChange={setCopa} />}
+              </div>
             </div>
-            <Btn variant="primary" full size="lg" onClick={() => setStep('info')} className="mt-7">
+            {esCopa && !copa.premio1.trim() && <p className="text-secondary text-[12px] mt-3 mb-0">Cargá el premio del campeón para seguir.</p>}
+            <Btn variant="primary" full size="lg" onClick={() => setStep('info')} disabled={copaInvalida} className="mt-7">
               SIGUIENTE → INFORMACIÓN
             </Btn>
           </>
@@ -291,7 +310,7 @@ export default function Setup() {
             <label className="block text-[11px] tracking-[2px] text-muted font-mono mb-2">NOMBRE DEL TORNEO</label>
             <input
               className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 font-sans text-[14px] rounded-sm outline-none mb-2"
-              placeholder={temporada ? "ej: 1ERA EDICIÓN 2026" : "ej: Fecha 1 - 24/03"}
+              placeholder={temporada || esCopa ? "ej: 1ERA EDICIÓN 2026" : "ej: Fecha 1 - 24/03"}
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={30}
@@ -403,6 +422,7 @@ export default function Setup() {
               PAREJAS <span className="text-muted">(mínimo {pairsMin} para jugar, máximo {pairsMax})</span>
             </label>
             <p className="text-[11px] text-dim font-mono mb-2">Escribí un nombre o <span className="text-brand">@usuario</span> para invitar a alguien registrado. Podés dejar filas vacías y completarlas después.</p>
+            {esCopa && <p className="text-[12px] text-secondary mb-3">La copa se puede crear sin parejas. Se suman después por inscripción o desde Gestión.</p>}
 
             <div className="flex flex-col gap-3">
               {directPairs.map((pair, i) => (
@@ -435,7 +455,7 @@ export default function Setup() {
               ✦ {completeDirectPairs.length} {completeDirectPairs.length === 1 ? 'pareja completa' : 'parejas completas'} — {completeDirectPairs.length * 2} jugadores.
               {directIsDraft && (
                 <span className="block text-brand mt-1">
-                  Faltan {pairsMin - completeDirectPairs.length} para el mínimo de {pairsMin}. Se crea como <strong>borrador</strong>: vas a poder sumar las parejas que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.
+                  Faltan {pairsMin - completeDirectPairs.length} para el mínimo de {pairsMin}. Se crea como <strong>borrador</strong>: vas a poder sumar las parejas que faltan desde GESTIÓN, pero no se pueden cargar partidos hasta llegar al mínimo.{esCopa && copa.mode === 'zonas' ? ' Los grupos se sortean con las parejas confirmadas.' : ''}
                 </span>
               )}
             </div>

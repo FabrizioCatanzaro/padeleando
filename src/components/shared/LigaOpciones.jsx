@@ -1,6 +1,6 @@
 import { Minus, Plus } from "lucide-react";
 
-function Opcion({ on, onClick, children }) {
+export function Opcion({ on, onClick, children }) {
   return (
     <button
       type="button" aria-pressed={on} onClick={onClick}
@@ -11,7 +11,7 @@ function Opcion({ on, onClick, children }) {
   );
 }
 
-function Puntos({ label, value, min, max, onChange }) {
+export function Puntos({ label, value, min, max, onChange }) {
   return (
     <div className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-sm border border-border-mid">
       <span className="text-[14px] text-white">{label}</span>

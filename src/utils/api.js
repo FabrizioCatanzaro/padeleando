@@ -172,6 +172,8 @@ export const api = {
     resolve:              (name, groupId, tournamentId) => req('POST', '/players/resolve', { name, groupId, tournamentId }),
     rename:               (id, name, groupId) => req('PATCH',  `/players/${id}`, { name, groupId }),
     removeFromTournament: (pId, tId)      => req('DELETE', `/players/${pId}/tournament/${tId}`),
+    // Disponibilidad y WhatsApp de un jugador en un torneo: los edita el organizador.
+    datos:                (pId, tId, body) => req('PATCH', `/players/${pId}/tournament/${tId}/datos`, body),
     removeFromGroup:      (pId, gId)      => req('DELETE', `/players/${pId}/group/${gId}`),
     unlink:               (pId, gId)      => req('DELETE', `/players/${pId}/group/${gId}/link`),
   },
@@ -197,6 +199,16 @@ export const api = {
       create: (id, body)         => req('POST',   `/tournaments/${id}/fechas`, body),
       update: (id, number, body) => req('PUT',    `/tournaments/${id}/fechas/${number}`, body),
       delete: (id, number)       => req('DELETE', `/tournaments/${id}/fechas/${number}`),
+    },
+    // Copa: grupos (la API los llama zonas) y premios.
+    zonas: {
+      sorteo: (id, cabezas)            => req('POST',   `/tournaments/${id}/zonas/sorteo`, { cabezas }),
+      save:   (id, assignment, cabezas) => req('PUT',    `/tournaments/${id}/zonas`, { assignment, cabezas }),
+      undo:   (id)                     => req('DELETE', `/tournaments/${id}/zonas`),
+    },
+    prizes: {
+      save:   (id, prizes)             => req('PUT',   `/tournaments/${id}/prizes`, { prizes }),
+      winner: (id, prizeId, body)      => req('PATCH', `/tournaments/${id}/prizes/${prizeId}/winner`, body),
     },
   },
   matches: {
@@ -268,6 +280,8 @@ export const api = {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
     availability: (id, availability) => req('PATCH', `/registrations/${id}/availability`, { availability }),
+    // Datos del jugador: availability, whatsapp, whatsapp_visible y los del compañero sin cuenta.
+    datos:  (id, body)      => req('PATCH', `/registrations/${id}/availability`, body),
     mineAll: ()             => req('GET',   '/registrations/mine'),
     cancel: (id)            => req('POST',  `/registrations/${id}/cancel`),
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),

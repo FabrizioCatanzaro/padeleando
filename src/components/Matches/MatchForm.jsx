@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts } from "../../utils/helpers";
+import { getPairLabel, setWinner, setsWon, visibleSetsCount, scoreFromSets, setsResultReady, tournamentCourts, canchasConNombre, courtName } from "../../utils/helpers";
 import { CirclePlay, CircleStop, CircleX, Play, Minimize2, Maximize2, CalendarPlus, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Check } from "lucide-react";
 import { PairAvatar } from "../shared/PlayerAvatar";
 import Modal from "../shared/Modal";
@@ -28,7 +28,8 @@ function useCancelGuard({ isDirty, isEditing, onCancel }) {
 }
 
 // ── Selector de cancha ─────────────────────────────────────────────────────────
-export function CourtSelector({ courts, value, onChange }) {
+// `nombres` son las canchas del club; sin nombres se muestra el número.
+export function CourtSelector({ courts, value, onChange, nombres = [] }) {
   const trackRef    = useRef(null);
   const selectedRef = useRef(null);
   const [edges, setEdges] = useState({ left: false, right: false });
@@ -107,11 +108,11 @@ export function CourtSelector({ courts, value, onChange }) {
             type="button"
             ref={value === n ? selectedRef : null}
             onClick={() => onChange(n)}
-            className={`${btnBase} w-10 h-8 text-[13px] ${
+            className={`${btnBase} ${nombres[n - 1] ? 'px-3 h-8 text-[12px] whitespace-nowrap' : 'w-10 h-8 text-[13px]'} ${
               value === n ? 'bg-brand text-base border-brand' : 'bg-surface border-border-mid text-muted hover:border-border-strong'
             }`}
           >
-            {n}
+            {nombres[n - 1] ?? n}
           </button>
         ))}
       </div>
@@ -669,12 +670,12 @@ function PairsForm({ form, setForm, tournament, isEditing, onSave, onCancel, tim
 
       {hayCanchas && (
         <Step
-          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${form.court}` : 'Sin asignar'}
+          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${courtName(tournament, form.court)}` : 'Sin asignar'}
           abierto={teamsComplete && paso === 2} hecho={teamsComplete && form.court != null}
           bloqueado={!teamsComplete} onAbrir={() => setPaso(2)}
         >
           <CourtSelector
-            courts={tournamentCourts(tournament)} value={form.court}
+            courts={tournamentCourts(tournament)} value={form.court} nombres={canchasConNombre(tournament).map((c) => c.name)}
             onChange={(v) => { setForm({ ...form, court: v }); setPaso(3); }}
           />
         </Step>
@@ -816,12 +817,12 @@ function FreeForm({ form, setForm, tournament, isEditing, onSave, onCancel, time
 
       {hayCanchas && (
         <Step
-          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${form.court}` : 'Sin asignar'}
+          n={2} titulo="Cancha" resumen={form.court != null ? `Cancha ${courtName(tournament, form.court)}` : 'Sin asignar'}
           abierto={teamsComplete && paso === 2} hecho={teamsComplete && form.court != null}
           bloqueado={!teamsComplete} onAbrir={() => setPaso(2)}
         >
           <CourtSelector
-            courts={tournamentCourts(tournament)} value={form.court}
+            courts={tournamentCourts(tournament)} value={form.court} nombres={canchasConNombre(tournament).map((c) => c.name)}
             onChange={(v) => { setForm({ ...form, court: v }); setPaso(3); }}
           />
         </Step>

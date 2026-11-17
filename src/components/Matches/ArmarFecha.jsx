@@ -3,6 +3,7 @@ import { X, Shuffle, Plus, Trash2 } from 'lucide-react';
 import { getPairLabel } from '../../utils/helpers';
 import { parejaDeEquipo } from '../../utils/fechas';
 import { TEAM_SELECT_CLS } from './MatchForm';
+import { esCopa, grupoNombre } from '../../utils/copa';
 
 const sumarDias = (iso, n) => {
   if (!iso) return '';
@@ -34,6 +35,10 @@ export default function ArmarFecha({ tournament, fecha = null, esUltima = false,
 
   const activas = tournament.pairs.filter((p) => p.status !== 'withdrawn');
   const nombre = (id) => getPairLabel(id, tournament.pairs, tournament.players);
+  // Copa: los cruces son dentro de cada grupo; a dos ruedas, un cruce se repite una vez.
+  const copa = esCopa(tournament);
+  const zonaDe = (id) => tournament.pairs.find((p) => p.id === id)?.zona ?? null;
+  const conRevancha = !!tournament.allow_rematch || (copa && tournament.copa_config?.ruedas === 2);
 
   async function sortear() {
     setCargando(true);
@@ -74,7 +79,7 @@ export default function ArmarFecha({ tournament, fecha = null, esUltima = false,
 
   // Cruces ya jugados o programados en otras fechas, para no ofrecerlos de nuevo.
   const cruzados = new Set();
-  if (!tournament.allow_rematch) {
+  if (!conRevancha) {
     const otros = [...tournament.matches, ...(tournament.scheduled_matches ?? []).filter((s) => !propios.includes(s))];
     for (const m of otros) {
       const a = parejaDeEquipo(m.team1, tournament.pairs);
@@ -91,12 +96,12 @@ export default function ArmarFecha({ tournament, fecha = null, esUltima = false,
     const actual = cruces[i]?.[lado];
     const rival = cruces[i]?.[1 - lado];
     const usadas = new Set(cruces.flatMap((c, j) => (j === i ? [] : c)).filter(Boolean));
-    return activas.map((p) => {
+    return activas.filter((p) => !copa || !rival || zonaDe(p.id) === zonaDe(rival)).map((p) => {
       const yaCruzo = rival && cruzados.has(`${p.id}|${rival}`);
       const ocupada = usadas.has(p.id) || p.id === rival;
       return (
         <option key={p.id} value={p.id} disabled={p.id !== actual && (ocupada || yaCruzo)}>
-          {nombre(p.id)}{yaCruzo && p.id !== actual ? ' · ya se cruzaron' : ''}
+          {nombre(p.id)}{copa && zonaDe(p.id) != null ? ` · ${grupoNombre(zonaDe(p.id))}` : ''}{yaCruzo && p.id !== actual ? ' · ya se cruzaron' : ''}
         </option>
       );
     });
@@ -184,7 +189,7 @@ export default function ArmarFecha({ tournament, fecha = null, esUltima = false,
                 {!cargando && cruces.map(([a, b]) => (
                   <div key={`${a}-${b}`} className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 rounded-lg border border-border-mid bg-base px-3 py-2.5">
                     <span className="text-[13px] font-semibold text-white leading-snug">{nombre(a)}</span>
-                    <span className="text-[12px] text-secondary">contra</span>
+                    <span className="text-[12px] text-secondary text-center">{copa && zonaDe(a) != null ? grupoNombre(zonaDe(a)) : 'contra'}</span>
                     <span className="text-[13px] font-semibold text-white leading-snug text-right">{nombre(b)}</span>
                   </div>
                 ))}
@@ -222,9 +227,10 @@ export default function ArmarFecha({ tournament, fecha = null, esUltima = false,
                     <Plus size={14} /> Agregar cruce
                   </button>
                 )}
-                {!tournament.allow_rematch && (
+                {!conRevancha && (
                   <p className="m-0 text-[12px] text-secondary">Las parejas que ya se cruzaron no se ofrecen como rivales.</p>
                 )}
+                {copa && <p className="m-0 text-[12px] text-secondary">Cada cruce es entre parejas del mismo grupo.</p>}
               </div>
             )}
 

@@ -127,6 +127,8 @@ export default function TournamentHero({
 
   const formato = tournament.format === 'americano'
     ? 'Americano'
+    : tournament.format === 'copa'
+      ? (tournament.copa_config?.mode === 'cuadro' ? 'Copa de cuadro' : 'Copa con grupos')
     : temporada ? 'Liga en varios días'
       : tournament.mode === 'pairs' ? 'Liga · parejas fijas' : 'Liga · equipos libres';
 
