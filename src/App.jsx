@@ -41,6 +41,9 @@ const SubscriptionFailure = lazy(() => import('./components/Subscription/Subscri
 const SubscriptionPending = lazy(() => import('./components/Subscription/SubscriptionPending'))
 const SubscriptionManage  = lazy(() => import('./components/Subscription/SubscriptionManage'))
 const NotFoundView = lazy(() => import('./components/NotFound/NotFoundView'))
+const FriendliesView  = lazy(() => import('./components/Friendly/FriendliesView'))
+const FriendlyCreate  = lazy(() => import('./components/Friendly/FriendlyCreate'))
+const FriendlyDetail  = lazy(() => import('./components/Friendly/FriendlyDetail'))
 const FAQView      = lazy(() => import('./components/Legal/FAQView'))
 const AboutView    = lazy(() => import('./components/Legal/AboutView'))
 const ContactView  = lazy(() => import('./components/Legal/ContactView'))
@@ -135,6 +138,9 @@ export default function App() {
         <Route path="/verify-email/:token"                       element={<Titled title="Verificar email"><VerifyEmail /></Titled>} />
         <Route path="/u/:username"                               element={<ProfileView />} />
         <Route path="/nivel"                                     element={<PrivateRoute><Titled title="Tu nivel"><LevelQuizView /></Titled></PrivateRoute>} />
+        <Route path="/amistosos"                                 element={<FriendliesView />} />
+        <Route path="/amistosos/nuevo"                           element={<PrivateRoute><Titled title="Nuevo amistoso"><FriendlyCreate /></Titled></PrivateRoute>} />
+        <Route path="/amistoso/:id"                              element={<FriendlyDetail />} />
         <Route path="/club/:id"                                  element={<ClubProfileView />} />
         <Route path="/view/:id"                                  element={<ReadonlyView />} />
         <Route path="/readonly/:id"                              element={<RedirectToView />} />

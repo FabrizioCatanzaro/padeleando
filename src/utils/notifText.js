@@ -36,6 +36,36 @@ export function registrationHref(n) {
   return n.type === 'registration_received' ? `${base}?tab=registrations` : base;
 }
 
+const FRIENDLY_TEXT = {
+  friendly_added:     (a, w) => `${a} te sumó a un amistoso${w}`,
+  friendly_joined:    (a, w) => `${a} se sumó a tu amistoso${w}`,
+  friendly_left:      (a, w) => `${a} dejó tu amistoso${w}`,
+  friendly_removed:   (a, w) => `${a} te quitó del amistoso${w}`,
+  friendly_full:      (a, w) => `El amistoso${w} ya tiene los 4 jugadores`,
+  friendly_updated:   (a, w) => `${a} cambió el horario o la cancha del amistoso${w}`,
+  friendly_proposal:  (a, w) => `${a} cargó un resultado del amistoso${w}. Revisalo para que sume`,
+  friendly_confirmed: (a, w) => `Se confirmó el resultado del amistoso${w}`,
+  friendly_cancelled: (a, w) => `${a} canceló el amistoso${w}`,
+  friendly_reminder:  (a, w) => `Falta el resultado del amistoso${w}`,
+};
+
+export const isFriendlyNotif = (n) => Boolean(n?.type && FRIENDLY_TEXT[n.type]);
+export const friendlyHref = (n) => (n?.entity_id ? `/amistoso/${n.entity_id}` : null);
+
+/** "del 20/11 19:00 en Pádel Norte", con lo que haya. */
+function friendlyWhen(n) {
+  const d = n.friendly_date ? String(n.friendly_date).slice(0, 10) : null;
+  const fecha = d ? `${d.slice(8, 10)}/${d.slice(5, 7)}` : null;
+  const hora = n.friendly_time ? String(n.friendly_time).slice(0, 5) : null;
+  const cuando = [fecha, hora].filter(Boolean).join(' ');
+  return `${cuando ? ` del ${cuando}` : ''}${n.friendly_club_name ? ` en ${n.friendly_club_name}` : ''}`;
+}
+
+export function friendlyText(n) {
+  const fn = FRIENDLY_TEXT[n?.type];
+  return fn ? fn(actor(n), friendlyWhen(n)) : null;
+}
+
 const BY_TYPE = {
   registration_received: registrationText,
   registration_partner:  registrationText,
@@ -55,6 +85,7 @@ const BY_TYPE = {
   booking_decided:    (n) => n.body ?? 'Novedades sobre tu turno',
   booking_requested:  (n) => n.body ?? 'Nueva solicitud de turno',
   booking_cancelled:  (n) => n.body ?? 'Se canceló una reserva',
+  ...Object.fromEntries(Object.keys(FRIENDLY_TEXT).map((t) => [t, friendlyText])),
 };
 
 const MAX = 120;
@@ -65,6 +96,7 @@ export function notifTitle(n) {
   if (n?.type === 'registration_received') return 'Inscripción nueva';
   if (n?.type === 'registration_partner')  return 'Te inscribieron';
   if (n?.type === 'registration_decided')  return 'Tu inscripción';
+  if (isFriendlyNotif(n)) return 'Amistoso';
   return 'Notificación nueva';
 }
 

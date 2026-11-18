@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
 import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
-import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft } from 'lucide-react';
+import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft, Swords } from 'lucide-react';
 import logoUrl from '../../assets/padeleando-logo.webp'
 import FadeInCard from '../shared/FadeInCard'
 import GroupCard from '../shared/GroupCard'
@@ -860,6 +860,7 @@ export default function HomeView() {
                     <MapPin size={16} /><span className="hidden sm:inline">Cerca</span>
                   </button>
                 )}
+                <Btn icon={Swords} onClick={() => navigate('/amistosos')}>AMISTOSOS</Btn>
                 <Btn variant="primary" icon={Plus} onClick={openNewModal}>NUEVA</Btn>
               </div>
             </div>

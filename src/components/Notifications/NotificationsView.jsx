@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Check } from 'lucide-react';
 import { api } from '../../utils/api';
 import { renderRichText } from '../../utils/richText';
-import { notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria } from '../../utils/notifText';
+import { notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText';
 import { useAuth } from '../../context/useAuth';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Loader from '../Loader/Loader';
@@ -421,6 +421,19 @@ function NotifText({ n, navigate }) {
           className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
         >
           Ver club →
+        </button>
+      </div>
+    );
+  }
+  if (isFriendlyNotif(n)) {
+    return (
+      <div className="text-[13px] text-secondary">
+        {friendlyText(n)}{' '}
+        <button
+          onClick={() => navigate(friendlyHref(n))}
+          className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]"
+        >
+          Ver amistoso →
         </button>
       </div>
     );
