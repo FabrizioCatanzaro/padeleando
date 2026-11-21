@@ -81,7 +81,7 @@ export function MiniLineup({ players }) {
   )
 }
 
-export function PlayerRow({ p, me, onOpenProfile, action }) {
+export function PlayerRow({ p, me, onOpenProfile, action, detailAction }) {
   const name = playerName(p)
   return (
     <div className="flex items-center gap-2.5 min-h-11">
@@ -94,7 +94,10 @@ export function PlayerRow({ p, me, onOpenProfile, action }) {
           <span className="truncate">{me ? `${name} (vos)` : name}</span>
           {p.is_creator && <span className="shrink-0 text-[9.5px] font-bold tracking-wide bg-brand text-base rounded-sm px-1.5 py-px">CREADOR</span>}
         </div>
-        <div className="text-[12px] text-secondary truncate">{playerDetail(p) || ' '}</div>
+        <div className="text-[12px] text-secondary truncate">
+          {playerDetail(p) || ' '}
+          {detailAction && <>{playerDetail(p) ? <span aria-hidden="true"> · </span> : null}{detailAction}</>}
+        </div>
       </div>
       {action}
     </div>

@@ -92,19 +92,10 @@ export default function FriendlyDetail() {
   const slotAction = (p) => {
     if (isFilled(p)) {
       const canRemove = v.is_creator && !p.is_creator && m.status !== 'confirmado' && m.status !== 'cancelado' && m.status !== 'vencido'
-      const canInvite = v.is_creator && !p.user && m.status !== 'cancelado'
-      if (canRemove || canInvite) {
+      if (canRemove) {
         return (
-          <div className="flex items-center -mr-2">
-            {canInvite && (
-              <button type="button" disabled={busy} onClick={() => openInvite(p)} aria-label={`Invitar a ${playerName(p)} a vincular su cuenta`} title="Mandarle el link para vincular su cuenta"
-                className="w-11 h-11 flex items-center justify-center bg-transparent border-0 text-cyan hover:text-white cursor-pointer disabled:opacity-40"><Link2 size={17} /></button>
-            )}
-            {canRemove && (
-              <button type="button" onClick={() => setConfirm({ kind: 'remove', p })} aria-label={`Quitar a ${playerName(p)}`}
-                className="w-11 h-11 flex items-center justify-center bg-transparent border-0 text-muted hover:text-danger cursor-pointer"><X size={16} /></button>
-            )}
-          </div>
+          <button type="button" onClick={() => setConfirm({ kind: 'remove', p })} aria-label={`Quitar a ${playerName(p)}`}
+            className="w-11 h-11 -mr-2 flex items-center justify-center bg-transparent border-0 text-muted hover:text-danger cursor-pointer"><X size={16} /></button>
         )
       }
       if (insider && p.whatsapp && p.user?.id !== user?.id) {
@@ -115,6 +106,17 @@ export default function FriendlyDetail() {
       }
     }
     return null
+  }
+
+  const inviteAction = (p) => {
+    if (!v.is_creator || p.user || !p.guest_name || m.status === 'cancelado') return null
+    return (
+      <button type="button" disabled={busy} onClick={() => openInvite(p)} title="Mandarle el link para vincular su cuenta"
+        aria-label={`Invitar a ${playerName(p)} a vincular su cuenta`}
+        className="inline-flex items-center gap-1 bg-transparent border-0 p-0 text-[12px] text-cyan font-semibold hover:text-white cursor-pointer disabled:opacity-40 align-baseline">
+        <Link2 size={12} className="self-center" />Invitar
+      </button>
+    )
   }
 
   const freeSlot = (p) => {
@@ -143,7 +145,8 @@ export default function FriendlyDetail() {
     <div className="flex flex-col gap-2.5">
       <span className="text-[10px] tracking-[0.14em] text-secondary font-bold">EQUIPO {t}{v.team === t ? ' · EL TUYO' : ''}</span>
       {m.players.filter((p) => p.team === t).map((p) => (isFilled(p)
-        ? <PlayerRow key={`${p.team}${p.position}`} p={p} me={Boolean(user && p.user?.id === user.id)} onOpenProfile={(u) => navigate(`/u/${u}`)} action={slotAction(p)} />
+        ? <PlayerRow key={`${p.team}${p.position}`} p={p} me={Boolean(user && p.user?.id === user.id)} onOpenProfile={(u) => navigate(`/u/${u}`)}
+            action={slotAction(p)} detailAction={inviteAction(p)} />
         : freeSlot(p)))}
     </div>
   )
