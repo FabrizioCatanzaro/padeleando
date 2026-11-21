@@ -26,11 +26,15 @@ function shareLines(m) {
   ].filter(Boolean)
 }
 
-export default function ShareFriendlyModal({ m, url, onClose }) {
+export default function ShareFriendlyModal({ m, url, guest = null, onClose }) {
   const [copied, setCopied] = useState(false)
   const canNativeShare = typeof navigator !== 'undefined' && !!navigator.share
-  const title = freeCount(m.players) > 0 ? '¡Sumate a un amistoso de pádel!' : 'Amistoso de pádel'
-  const lines = shareLines(m)
+  const title = guest
+    ? `${guest.split(' ')[0]}, te anoté en un amistoso de pádel`
+    : freeCount(m.players) > 0 ? '¡Sumate a un amistoso de pádel!' : 'Amistoso de pádel'
+  const lines = guest
+    ? [...shareLines(m).filter((l) => l.icon !== '👥'), { icon: '✅', text: 'Abrí el link y vinculá el lugar a tu cuenta: el partido suma a tu perfil' }]
+    : shareLines(m)
 
   useEffect(() => {
     const onKey = (e) => { if (e.key === 'Escape') onClose() }
@@ -59,11 +63,11 @@ export default function ShareFriendlyModal({ m, url, onClose }) {
 
   return (
     <div className="fixed inset-0 z-1000 bg-black/75 flex items-end sm:items-center justify-center sm:p-5" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-label="Compartir amistoso" onClick={(e) => e.stopPropagation()}
+      <div role="dialog" aria-modal="true" aria-label={guest ? `Invitar a ${guest}` : 'Compartir amistoso'} onClick={(e) => e.stopPropagation()}
         className="animate-sheet-up bg-surface border border-border-strong w-full sm:max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden shadow-2xl">
         <div className="relative flex items-center justify-between px-5 pt-4 pb-3 border-b border-border-mid">
           <div className="sm:hidden absolute left-1/2 -translate-x-1/2 top-2 w-9 h-1 rounded-full bg-border-strong" />
-          <span className="font-condensed font-bold text-xl text-white">Compartir amistoso</span>
+          <span className="font-condensed font-bold text-xl text-white truncate">{guest ? `Invitar a ${guest}` : 'Compartir amistoso'}</span>
           <button onClick={onClose} aria-label="Cerrar"
             className="bg-transparent border-0 text-muted hover:text-white cursor-pointer p-1 transition-colors"><X size={20} /></button>
         </div>

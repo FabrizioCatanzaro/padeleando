@@ -36,6 +36,12 @@ export function registrationHref(n) {
   return n.type === 'registration_received' ? `${base}?tab=registrations` : base;
 }
 
+const REMINDER_TEXT = {
+  cargar:    (w) => `Falta cargar el resultado del amistoso${w}`,
+  responder: (w) => `Te toca revisar el resultado del amistoso${w}`,
+  segundo:   (w) => `El amistoso${w} sigue sin resultado. A los 30 días vence y no suma`,
+};
+
 const FRIENDLY_TEXT = {
   friendly_added:     (a, w) => `${a} te sumó a un amistoso${w}`,
   friendly_joined:    (a, w) => `${a} se sumó a tu amistoso${w}`,
@@ -46,7 +52,7 @@ const FRIENDLY_TEXT = {
   friendly_proposal:  (a, w) => `${a} cargó un resultado del amistoso${w}. Revisalo para que sume`,
   friendly_confirmed: (a, w) => `Se confirmó el resultado del amistoso${w}`,
   friendly_cancelled: (a, w) => `${a} canceló el amistoso${w}`,
-  friendly_reminder:  (a, w) => `Falta el resultado del amistoso${w}`,
+  friendly_reminder:  (a, w, n) => (REMINDER_TEXT[n?.body] ?? REMINDER_TEXT.cargar)(w),
 };
 
 export const isFriendlyNotif = (n) => Boolean(n?.type && FRIENDLY_TEXT[n.type]);
@@ -63,7 +69,7 @@ function friendlyWhen(n) {
 
 export function friendlyText(n) {
   const fn = FRIENDLY_TEXT[n?.type];
-  return fn ? fn(actor(n), friendlyWhen(n)) : null;
+  return fn ? fn(actor(n), friendlyWhen(n), n) : null;
 }
 
 const BY_TYPE = {

@@ -339,6 +339,9 @@ export const api = {
     clearSlot:  (id, team, pos)          => req('DELETE', `/friendlies/${id}/players/${team}/${pos}`),
     propose:    (id, sets)               => req('POST',   `/friendlies/${id}/proposals`, { sets }),
     accept:     (id, proposalId)         => req('POST',   `/friendlies/${id}/proposals/${proposalId}/accept`),
+    invite:     (id, team, pos)          => req('POST',   `/friendlies/${id}/players/${team}/${pos}/invite`),
+    inviteInfo: (token)                  => req('GET',    `/friendlies/invites/${encodeURIComponent(token)}`),
+    claim:      (token)                  => req('POST',   `/friendlies/invites/${encodeURIComponent(token)}/accept`),
   },
   photos: {
     list:          (tournamentId)                       => req('GET',    `/tournaments/${tournamentId}/photos`),

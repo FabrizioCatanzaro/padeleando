@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check } from 'lucide-react';
+import { Check, AlarmClock } from 'lucide-react';
 import { api } from '../../utils/api';
 import { renderRichText } from '../../utils/richText';
 import { notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText';
@@ -202,7 +202,11 @@ function NotifRow({ n, navigate, onFollow, onInvitation, onJoinRequest, onCollab
     <div className={`flex items-start gap-3 px-4 py-3 rounded-lg border transition-colors ${unread ? 'bg-surface border-brand/20' : 'bg-surface border-border-mid'}`}>
       {unread && <div className="shrink-0 mt-2 w-1.5 h-1.5 rounded-full bg-brand" />}
       <div className={`shrink-0 ${unread ? '' : 'ml-[18px]'}`}>
-        {isSystem ? (
+        {n.type === 'friendly_reminder' ? (
+          <div className="w-[38px] h-[38px] rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-brand">
+            <AlarmClock size={17} />
+          </div>
+        ) : isSystem ? (
           <div className="w-[38px] h-[38px] rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-brand text-[16px]">
             {isOwnership ? '👑' : isClubClaimByAdmin ? '🛡️' : isClubRequestByAdmin ? '📋' : '📢'}
           </div>

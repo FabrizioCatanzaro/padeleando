@@ -6,12 +6,13 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ---
 
-## Current Status (updated 2026-11-17)
+## Current Status (updated 2026-11-21)
 
 - **Last sprint: Copa** — merged to `main` (front PR #44, API PR #37). It shipped the Copa format (groups + playoffs, or direct bracket, copa de plata, prizes, per-player WhatsApp/availability), the redesigned tournament setup (`Setup.jsx`: format cards with photos, config/info sub-steps, segmented `StepBar`, one-row pair loader, summary aside), WhatsApp for the multi-day liga, and the mail domain change to `soporte@padeleando.ar` (Resend now sends from `padeleando.ar`). Design doc: https://claude.ai/artifact/X8KtqZZQamuNXRxhBDqftw
 - **Production DB already has the Copa schema** (`copa_config`, `bracket_plata`, `pairs.zona`, `tournament_players` data columns, `court_id`, `tournament_prizes`). `db:init` re-applies it as a no-op.
 - **Local dev points at the production database** (`padeliando-api/.env`, backed up in `produccion.env`). For risky work, create a Neon branch of `production` (project `weathered-morning-55905272`), point `.env` at it, and delete the branch when done. Test data is named `TEST …` and deleted at the end.
 - **Git flow:** feature branch from `staging` → commits authored by Fabrizio Catanzaro → `merge --ff-only` into `staging` → Fabrizio pushes and opens the PR `staging` → `main`. Never commit `.claude/` or `.mcp.json`.
+- **In progress: Amistosos** on `feat/amistosos` in both repos (not merged yet). Friendly 2 vs 2 matches outside any tournament that count toward the profile. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1. Tested against the Neon branch `amistosos` (`br-patient-hill-acqg8px5`); `.env` points there while the branch lives, `produccion.env` is the backup.
 - **Open items:**
   - Super tie-break as a match format (left out of the Copa sprint on purpose, "option b").
   - TV mode (`TvOverlay`) shows the main bracket only, not the copa de plata.
@@ -166,6 +167,7 @@ Rules that keep the three from drifting:
 - **Sets** (`countSetStats`) only counts best-of-three matches and returns `disponible: false` while none exist — with one set, "sets won" equals "matches won" and a comeback is impossible. `sets` is filled on 18% of matches and none has used the 3-set format yet.
 - **Blowout** = 6-0, or every set 6-0 in a best-of-three (`countBlowouts`). No 6-0 exists yet: matches are played to 3, 4 or 6 games, so the shutouts on record are 1-0, 3-0 and 5-0. Do **not** replace this with a games-difference threshold — that was tried and a `>= 4` matched 2% of matches while "loser scored zero" would flag a 1-0.
 - **Follow ranking** (`buildFollowRanking`) compares the user against the people they follow; it needs 2+ people with matches to render, and today there are 2 follows in the whole database. It adds each user's knockout matches so the numbers match their profile.
+- **Confirmed friendlies count in the profile** (not in tournament or category stats). They never add titles. See [Amistosos](#amistosos).
 - `ajustados` (1-game margin) is the one "close match" measure that means the same at any match length — 41% of matches qualify.
 - `duration_seconds` covers 69% of matches, so anything derived from it must say how many matches it measured.
 - Leagues run on a fixed weekday: the profile's weekday chart only renders with 3+ active days, otherwise it is five empty bars.
@@ -181,6 +183,17 @@ Rules that keep the three from drifting:
 - `Bracket` takes `cup="plata"` for the consolation draw; every bracket endpoint selects it with `?copa=plata`. Bracket matches carry day, time and court in `programado`.
 - Per-player availability and WhatsApp live in `tournament_players` (one row per tournament), not `players`. The API filters them by viewer: organizer sees all, a player in the tournament sees visible WhatsApps, nobody else sees any.
 - Quota: free owners get 1 copa per month per category, and it also counts toward the 2 monthly tournaments.
+
+### Amistosos
+
+- Routes: `/amistosos` (list with "Abiertos" / "Mis amistosos"), `/amistosos/nuevo` (4-step wizard with `StepBar`), `/amistoso/:id` (detail, "duelo" layout) and `/amistoso/invitacion/:token` (a guest claims their slot). Components in `src/components/Friendly/`, helpers in `src/utils/friendlies.js`, client in `api.friendlies`.
+- **The UI says "amistoso"**; the API and the code say `friendly`.
+- The status shown is the one the API derives (`abierto`, `completo`, `falta_resultado`, `por_confirmar`, `confirmado`, `cancelado`, `vencido`). Don't re-derive it on the client.
+- A `link` (private) match shows "Privado" with a lock on its card. Its share URL carries `?t=share_token`.
+- Without a session, "Sumarme" opens a sheet with login/register and `?redirect=` back to the match, never a hard redirect.
+- The creator invites a guest with the link icon on their row: `ShareFriendlyModal` with `guest` builds the invite message.
+- **Profile**: when `data.amistosos > 0`, `ProfileView` shows the Todos / Torneos / Amistosos selector over Resumen, Partidos and Estadísticas. Each source is fetched once (`api.groups.byUsername(username, source)`) and cached. The header, the rail and the snapshot always show the total. A friendly row in the match list opens `/amistoso/:id` (`profileMatchHref`).
+- Notifications: `friendly_*` types go through `FRIENDLY_TEXT` in `notifText.js`; `friendly_reminder` picks its text from `n.body` and shows an `AlarmClock` icon.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.

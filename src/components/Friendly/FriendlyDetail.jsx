@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil, LogIn } from 'lucide-react'
+import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil, LogIn, Link2 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -77,12 +77,34 @@ export default function FriendlyDetail() {
   }
 
 
+  async function openInvite(p) {
+    setBusy(true)
+    try {
+      const { token: invite } = await api.friendlies.invite(m.id, p.team, p.position)
+      setSheet({ kind: 'invite', guest: p.guest_name, url: `${window.location.origin}/amistoso/invitacion/${invite}` })
+    } catch (e) {
+      showToast(e.message, 'error')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const slotAction = (p) => {
     if (isFilled(p)) {
-      if (v.is_creator && !p.is_creator && m.status !== 'confirmado' && m.status !== 'cancelado' && m.status !== 'vencido') {
+      const canRemove = v.is_creator && !p.is_creator && m.status !== 'confirmado' && m.status !== 'cancelado' && m.status !== 'vencido'
+      const canInvite = v.is_creator && !p.user && m.status !== 'cancelado'
+      if (canRemove || canInvite) {
         return (
-          <button type="button" onClick={() => setConfirm({ kind: 'remove', p })} aria-label={`Quitar a ${playerName(p)}`}
-            className="w-11 h-11 -mr-2 flex items-center justify-center bg-transparent border-0 text-muted hover:text-danger cursor-pointer"><X size={16} /></button>
+          <div className="flex items-center -mr-2">
+            {canInvite && (
+              <button type="button" disabled={busy} onClick={() => openInvite(p)} aria-label={`Invitar a ${playerName(p)} a vincular su cuenta`} title="Mandarle el link para vincular su cuenta"
+                className="w-11 h-11 flex items-center justify-center bg-transparent border-0 text-cyan hover:text-white cursor-pointer disabled:opacity-40"><Link2 size={17} /></button>
+            )}
+            {canRemove && (
+              <button type="button" onClick={() => setConfirm({ kind: 'remove', p })} aria-label={`Quitar a ${playerName(p)}`}
+                className="w-11 h-11 flex items-center justify-center bg-transparent border-0 text-muted hover:text-danger cursor-pointer"><X size={16} /></button>
+            )}
+          </div>
         )
       }
       if (insider && p.whatsapp && p.user?.id !== user?.id) {
@@ -201,6 +223,7 @@ export default function FriendlyDetail() {
       </div>
 
       {sheet?.kind === 'share' && <ShareFriendlyModal m={m} url={shareUrl} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'invite' && <ShareFriendlyModal m={m} url={sheet.url} guest={sheet.guest} onClose={() => setSheet(null)} />}
       {sheet?.kind === 'login' && (
         <Sheet title="NECESITÁS UNA CUENTA" subtitle="Para sumarte al partido tenés que iniciar sesión. Después volvés a esta pantalla." onClose={() => setSheet(null)}>
           <Btn variant="primary" size="lg" full icon={LogIn}
