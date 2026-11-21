@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { Lock } from 'lucide-react'
 import { formatMoney } from '../../utils/money'
 import { freeCount, matchMeta } from '../../utils/friendlies'
 import { DayBlock, LevelChip, MiniLineup, StatusChip } from './parts'
@@ -16,7 +17,14 @@ export default function FriendlyCard({ m, showStatus = false }) {
             <span className="text-[14px] font-semibold text-white truncate">{m.club.name}</span>
             <LevelChip level={m.level} />
           </div>
-          <span className="text-[12px] text-secondary">{matchMeta(m)}</span>
+          <span className="text-[12px] text-secondary">
+            {matchMeta(m)}
+            {m.visibility === 'link' && (
+              <span className="whitespace-nowrap text-brand" title="Solo lo ve quien tiene el link">
+                <span className="text-secondary"> · </span><Lock size={10} strokeWidth={2.5} className="inline -mt-0.5 mr-0.5" />Privado
+              </span>
+            )}
+          </span>
           {m.price_per_person != null && (
             <span className="text-[12px] text-white">{formatMoney(m.price_per_person)} c/u</span>
           )}
