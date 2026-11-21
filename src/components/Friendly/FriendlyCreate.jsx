@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ChevronLeft, ChevronRight, UserPlus, Check, Globe, Link2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, UserPlus, Check } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -15,7 +15,7 @@ import ClubSelector from '../shared/ClubSelector'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import SlotEditor from './SlotEditor'
 import SetsEditor from './SetsEditor'
-import { INPUT, LABEL, SegButtons } from './parts'
+import { INPUT, LABEL, SegButtons, MoneyInput, VisibilityPicker, DurationPicker } from './parts'
 import { whatsappDePerfil } from '../../utils/copa'
 
 const STEPS = [
@@ -24,13 +24,8 @@ const STEPS = [
   { id: 'jugadores', label: 'JUGADORES' },
   { id: 'detalles', label: 'DETALLES' },
 ]
-const DURATIONS = [60, 90, 120]
 const OTHER_SLOTS = [[1, 2], [2, 1], [2, 2]]
 const FORMAT_OPTIONS = [{ id: 1, label: 'Set único' }, { id: 3, label: 'Mejor de 3' }]
-const VIS_OPTIONS = [
-  { id: 'publico', label: 'Público', hint: 'Aparece en Amistosos para todos', icon: Globe },
-  { id: 'link', label: 'Solo con link', hint: 'Entra quien reciba el link', icon: Link2 },
-]
 
 const slotKey = (t, p) => `${t}-${p}`
 const pad = (n) => String(n).padStart(2, '0')
@@ -179,17 +174,7 @@ export default function FriendlyCreate() {
                     </div>
                     <div>
                       <span className={LABEL}>DURACIÓN</span>
-                      <div className="flex flex-wrap gap-2">
-                        {DURATIONS.map((d) => (
-                          <ChoiceChip key={d} on={duration === d} onClick={() => setDuration(d)}>{d} min</ChoiceChip>
-                        ))}
-                        <select aria-label="Otra duración" value={DURATIONS.includes(duration) ? '' : duration}
-                          onChange={(e) => e.target.value && setDuration(Number(e.target.value))}
-                          className={`h-11 px-3 rounded-sm border text-[13px] font-sans cursor-pointer ${DURATIONS.includes(duration) ? 'bg-surface border-border-mid text-content' : 'bg-brand border-brand text-base font-bold'}`}>
-                          <option value="">Otra</option>
-                          {[30, 150, 180, 210, 240].map((d) => <option key={d} value={d}>{d} min</option>)}
-                        </select>
-                      </div>
+                      <DurationPicker value={duration} onChange={setDuration} />
                     </div>
                   </section>
                   <section className="flex flex-col gap-2">
@@ -275,23 +260,7 @@ export default function FriendlyCreate() {
                       </section>
                       <section>
                         <span className={LABEL}>QUIÉN LO VE</span>
-                        <div role="radiogroup" aria-label="Visibilidad" className="flex flex-col gap-2">
-                          {VIS_OPTIONS.map((o) => {
-                            const Icon = o.icon
-                            const on = visibility === o.id
-                            return (
-                              <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => setVisibility(o.id)}
-                                className={`min-h-14 px-3 rounded-lg border bg-surface flex items-center gap-3 text-left cursor-pointer font-sans ${on ? 'border-brand' : 'border-border-mid'}`}>
-                                <Icon size={18} className={on ? 'text-brand' : 'text-secondary'} />
-                                <span className="flex-1">
-                                  <span className="block text-[14px] text-white font-semibold">{o.label}</span>
-                                  <span className="block text-[12px] text-secondary">{o.hint}</span>
-                                </span>
-                                <span className={`w-[18px] h-[18px] rounded-full ${on ? 'border-[5px] border-brand' : 'border-[1.5px] border-border-strong'}`} />
-                              </button>
-                            )
-                          })}
-                        </div>
+                        <VisibilityPicker value={visibility} onChange={setVisibility} />
                       </section>
                     </>
                   )}
@@ -349,29 +318,6 @@ function TipoStep({ mode, onMode }) {
           </button>
         )
       })}
-    </div>
-  )
-}
-
-function ChoiceChip({ on, onClick, children }) {
-  return (
-    <button type="button" aria-pressed={on} onClick={onClick}
-      className={`h-11 px-4 rounded-sm border text-[13px] font-sans cursor-pointer ${on ? 'bg-brand border-brand text-base font-bold' : 'bg-surface border-border-mid text-content hover:text-white'}`}>
-      {children}
-    </button>
-  )
-}
-
-function MoneyInput({ id, label, value, onChange }) {
-  return (
-    <div>
-      <label htmlFor={id} className="block text-[12px] text-soft mb-1.5">{label}</label>
-      <div className="flex items-center bg-surface border border-border-mid rounded-sm focus-within:border-border-strong">
-        <span className="pl-3 text-muted text-[14px]" aria-hidden="true">$</span>
-        <input id={id} type="text" inputMode="numeric" value={value}
-          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 8))}
-          className="w-full bg-transparent border-0 text-white px-2 py-2.5 font-sans text-[14px] outline-none" />
-      </div>
     </div>
   )
 }

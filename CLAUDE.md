@@ -191,7 +191,9 @@ Rules that keep the three from drifting:
 - The status shown is the one the API derives (`abierto`, `completo`, `falta_resultado`, `por_confirmar`, `confirmado`, `cancelado`, `vencido`). Don't re-derive it on the client.
 - A `link` (private) match shows "Privado" with a lock on its card. Its share URL carries `?t=share_token`.
 - Without a session, "Sumarme" opens a sheet with login/register and `?redirect=` back to the match, never a hard redirect.
-- The creator invites a guest with the link icon on their row: `ShareFriendlyModal` with `guest` builds the invite message.
+- The creator invites a guest with the "Invitar" pill on their row: `ShareFriendlyModal` with `guest` builds the invite message.
+- `/amistoso/:id/editar` (`FriendlyEdit`) shows only when `viewer.can_edit`. A played match edits its data but not the format; the result stays. Pickers shared with the wizard (`DurationPicker`, `MoneyInput`, `VisibilityPicker`, `ChoiceChip`) live in `parts.jsx`.
+- The open list filters by "Cerca de mí", date and club name (debounced search). There is no locality filter yet.
 - **Profile**: when `data.amistosos > 0`, `ProfileView` shows the Todos / Torneos / Amistosos selector over Resumen, Partidos and Estadísticas. Each source is fetched once (`api.groups.byUsername(username, source)`) and cached. The header, the rail and the snapshot always show the total. A friendly row in the match list opens `/amistoso/:id` (`profileMatchHref`).
 - Notifications: `friendly_*` types go through `FRIENDLY_TEXT` in `notifText.js`; `friendly_reminder` picks its text from `n.body` and shows an `AlarmClock` icon.
 

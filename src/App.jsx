@@ -45,6 +45,7 @@ const FriendliesView  = lazy(() => import('./components/Friendly/FriendliesView'
 const FriendlyCreate  = lazy(() => import('./components/Friendly/FriendlyCreate'))
 const FriendlyDetail  = lazy(() => import('./components/Friendly/FriendlyDetail'))
 const FriendlyInvite  = lazy(() => import('./components/Friendly/FriendlyInvite'))
+const FriendlyEdit    = lazy(() => import('./components/Friendly/FriendlyEdit'))
 const FAQView      = lazy(() => import('./components/Legal/FAQView'))
 const AboutView    = lazy(() => import('./components/Legal/AboutView'))
 const ContactView  = lazy(() => import('./components/Legal/ContactView'))
@@ -143,6 +144,7 @@ export default function App() {
         <Route path="/amistosos/nuevo"                           element={<PrivateRoute><Titled title="Nuevo amistoso"><FriendlyCreate /></Titled></PrivateRoute>} />
         <Route path="/amistoso/:id"                              element={<FriendlyDetail />} />
         <Route path="/amistoso/invitacion/:token"                element={<FriendlyInvite />} />
+        <Route path="/amistoso/:id/editar"                       element={<PrivateRoute><FriendlyEdit /></PrivateRoute>} />
         <Route path="/club/:id"                                  element={<ClubProfileView />} />
         <Route path="/view/:id"                                  element={<ReadonlyView />} />
         <Route path="/readonly/:id"                              element={<RedirectToView />} />

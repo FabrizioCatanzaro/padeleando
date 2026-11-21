@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Navigation, CalendarDays, Check, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Navigation, CalendarDays, Check, ChevronRight, Loader2, Search } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -32,6 +32,8 @@ export default function FriendliesView() {
   const [coords, setCoords]         = useState(null)
   const [locating, setLocating]     = useState(false)
   const [dateId, setDateId]         = useState('todas')
+  const [clubQ, setClubQ]           = useState('')
+  const [clubFilter, setClubFilter] = useState('')
   const [list, setList]             = useState(null)
   const [mine, setMine]             = useState(null)
   const [error, setError]           = useState(null)
@@ -46,16 +48,21 @@ export default function FriendliesView() {
   }, [isLoggedIn])
 
   useEffect(() => {
+    const t = setTimeout(() => setClubFilter(clubQ.trim()), 300)
+    return () => clearTimeout(t)
+  }, [clubQ])
+
+  useEffect(() => {
     let cancelled = false
     const { from, to } = dateRange(dateId)
     api.friendlies.list({
       lat: coords?.lat, lon: coords?.lon, radius_km: coords ? RADIUS_KM : null,
-      from, to,
+      from, to, club: clubFilter || null,
     })
       .then((rows) => { if (!cancelled) { setList(rows); setError(null) } })
       .catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
-  }, [coords, dateId])
+  }, [coords, dateId, clubFilter])
 
   const pendientes = useMemo(() => (mine ?? []).filter((m) => m.viewer?.needs_action), [mine])
   const mineSorted = useMemo(() => [...(mine ?? [])].sort((a, b) => {
@@ -116,6 +123,12 @@ export default function FriendliesView() {
               {coords ? `Cerca de mí · ${RADIUS_KM} km` : 'Cerca de mí'}
             </button>
             <label className="relative inline-flex items-center">
+              <span className="sr-only">Buscar por club</span>
+              <Search size={13} className="absolute left-3 text-content pointer-events-none" aria-hidden="true" />
+              <input type="search" value={clubQ} onChange={(e) => setClubQ(e.target.value)} placeholder="Club" maxLength={60}
+                className={`h-9 w-36 sm:w-44 pl-8 pr-3 rounded-full border text-[12.5px] font-sans outline-none transition-colors placeholder:text-muted ${clubFilter ? 'bg-brand/10 border-brand text-white' : 'bg-surface border-border-mid text-content focus:border-border-strong'}`} />
+            </label>
+            <label className="relative inline-flex items-center">
               <span className="sr-only">Fecha</span>
               <CalendarDays size={13} className="absolute left-3 text-content pointer-events-none" aria-hidden="true" />
               <select value={dateId} onChange={(e) => setDateId(e.target.value)} className={SELECT}>
@@ -128,7 +141,7 @@ export default function FriendliesView() {
 
       {tab === 'abiertos' && (
         <ListBlock rows={list} error={error}
-          empty={coords || dateId !== 'todas'
+          empty={coords || dateId !== 'todas' || clubFilter
             ? 'No hay partidos abiertos con estos filtros.'
             : 'No hay partidos abiertos por ahora. Creá uno y pasá el link.'} />
       )}

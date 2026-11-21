@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil, LogIn, Link2 } from 'lucide-react'
+import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil, LogIn, Link2, Settings2 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -213,6 +213,9 @@ export default function FriendlyDetail() {
                 onClick={() => { const p = m.players.find((x) => !isFilled(x)); openJoin(p.team, p.position) }}>SUMARME</Btn>
             )}
             <Btn size="lg" full icon={Share2} onClick={() => setSheet({ kind: 'share' })}>Compartir</Btn>
+            {v.can_edit && (
+              <Btn size="lg" full icon={Settings2} onClick={() => navigate(`/amistoso/${m.id}/editar${token ? `?t=${encodeURIComponent(token)}` : ''}`)}>Editar partido</Btn>
+            )}
             {insider && ['abierto', 'completo', 'falta_resultado', 'por_confirmar'].includes(m.status) && (
               <Btn size="lg" full icon={Pencil} onClick={() => setSheet({ kind: 'me' })}>Mis datos de juego</Btn>
             )}

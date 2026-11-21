@@ -1,5 +1,5 @@
 import { useEffect, useId } from 'react'
-import { X, Plus } from 'lucide-react'
+import { X, Plus, Globe, Link2 } from 'lucide-react'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import { STATUS_LABEL, dayBlock, playerName, playerDetail, isFilled } from '../../utils/friendlies'
 
@@ -133,6 +133,74 @@ export function Sheet({ title, subtitle, onClose, children }) {
         </div>
         {children}
       </section>
+    </div>
+  )
+}
+
+const DURATIONS = [60, 90, 120]
+const OTHER_DURATIONS = [30, 150, 180, 210, 240]
+const VIS_OPTIONS = [
+  { id: 'publico', label: 'Público', hint: 'Aparece en Amistosos para todos', icon: Globe },
+  { id: 'link', label: 'Solo con link', hint: 'Entra quien reciba el link', icon: Link2 },
+]
+
+export function ChoiceChip({ on, onClick, children }) {
+  return (
+    <button type="button" aria-pressed={on} onClick={onClick}
+      className={`h-11 px-4 rounded-sm border text-[13px] font-sans cursor-pointer ${on ? 'bg-brand border-brand text-base font-bold' : 'bg-surface border-border-mid text-content hover:text-white'}`}>
+      {children}
+    </button>
+  )
+}
+
+export function MoneyInput({ id, label, value, onChange }) {
+  return (
+    <div>
+      <label htmlFor={id} className="block text-[12px] text-soft mb-1.5">{label}</label>
+      <div className="flex items-center bg-surface border border-border-mid rounded-sm focus-within:border-border-strong">
+        <span className="pl-3 text-muted text-[14px]" aria-hidden="true">$</span>
+        <input id={id} type="text" inputMode="numeric" value={value}
+          onChange={(e) => onChange(e.target.value.replace(/\D/g, '').slice(0, 8))}
+          className="w-full bg-transparent border-0 text-white px-2 py-2.5 font-sans text-[14px] outline-none" />
+      </div>
+    </div>
+  )
+}
+
+export function DurationPicker({ value, onChange }) {
+  const preset = DURATIONS.includes(value)
+  return (
+    <div className="flex flex-wrap gap-2">
+      {DURATIONS.map((d) => <ChoiceChip key={d} on={value === d} onClick={() => onChange(d)}>{d} min</ChoiceChip>)}
+      <select aria-label="Otra duración" value={preset ? '' : value}
+        onChange={(e) => e.target.value && onChange(Number(e.target.value))}
+        className={`h-11 px-3 rounded-sm border text-[13px] font-sans cursor-pointer ${preset ? 'bg-surface border-border-mid text-content' : 'bg-brand border-brand text-base font-bold'}`}>
+        <option value="">Otra</option>
+        {[...new Set([...OTHER_DURATIONS, ...(preset ? [] : [value])])].sort((a, b) => a - b)
+          .map((d) => <option key={d} value={d}>{d} min</option>)}
+      </select>
+    </div>
+  )
+}
+
+export function VisibilityPicker({ value, onChange }) {
+  return (
+    <div role="radiogroup" aria-label="Visibilidad" className="flex flex-col gap-2">
+      {VIS_OPTIONS.map((o) => {
+        const Icon = o.icon
+        const on = value === o.id
+        return (
+          <button key={o.id} type="button" role="radio" aria-checked={on} onClick={() => onChange(o.id)}
+            className={`min-h-14 px-3 rounded-lg border bg-surface flex items-center gap-3 text-left cursor-pointer font-sans ${on ? 'border-brand' : 'border-border-mid'}`}>
+            <Icon size={18} className={on ? 'text-brand' : 'text-secondary'} />
+            <span className="flex-1">
+              <span className="block text-[14px] text-white font-semibold">{o.label}</span>
+              <span className="block text-[12px] text-secondary">{o.hint}</span>
+            </span>
+            <span className={`w-[18px] h-[18px] rounded-full ${on ? 'border-[5px] border-brand' : 'border-[1.5px] border-border-strong'}`} />
+          </button>
+        )
+      })}
     </div>
   )
 }
