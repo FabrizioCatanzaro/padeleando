@@ -46,12 +46,12 @@ export const isFilled = (p) => Boolean(p?.user || p?.guest_name)
 export const freeCount = (players = []) => players.filter((p) => !isFilled(p)).length
 export const playerName = (p) => p?.user?.name ?? p?.guest_name ?? null
 
-export function playerDetail(p) {
+export function playerDetail(p, { accountLabel = true } = {}) {
   const bits = []
   if (p?.user?.category) bits.push(p.user.category)
   if (p?.side) bits.push(SIDE_LABEL[p.side])
   if (p?.hand) bits.push(HAND_LABEL[p.hand])
-  if (!p?.user && p?.guest_name) bits.push('Sin cuenta')
+  if (accountLabel && !p?.user && p?.guest_name) bits.push('Sin cuenta')
   return bits.join(' · ')
 }
 

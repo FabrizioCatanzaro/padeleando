@@ -94,10 +94,14 @@ export function PlayerRow({ p, me, onOpenProfile, action, detailAction }) {
           <span className="truncate">{me ? `${name} (vos)` : name}</span>
           {p.is_creator && <span className="shrink-0 text-[9.5px] font-bold tracking-wide bg-brand text-base rounded-sm px-1.5 py-px">CREADOR</span>}
         </div>
-        <div className="text-[12px] text-secondary truncate">
-          {playerDetail(p) || ' '}
-          {detailAction && <>{playerDetail(p) ? <span aria-hidden="true"> · </span> : null}{detailAction}</>}
-        </div>
+        {detailAction ? (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-0.5 text-[12px] leading-[18px] text-secondary">
+            {playerDetail(p, { accountLabel: false }) && <span className="whitespace-nowrap">{playerDetail(p, { accountLabel: false })}</span>}
+            {detailAction}
+          </div>
+        ) : (
+          <div className="text-[12px] text-secondary truncate">{playerDetail(p) || ' '}</div>
+        )}
       </div>
       {action}
     </div>

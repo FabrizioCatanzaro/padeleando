@@ -113,8 +113,8 @@ export default function FriendlyDetail() {
     return (
       <button type="button" disabled={busy} onClick={() => openInvite(p)} title="Mandarle el link para vincular su cuenta"
         aria-label={`Invitar a ${playerName(p)} a vincular su cuenta`}
-        className="inline-flex items-center gap-1 bg-transparent border-0 p-0 text-[12px] text-cyan font-semibold hover:text-white cursor-pointer disabled:opacity-40 align-baseline">
-        <Link2 size={12} className="self-center" />Invitar
+        className="shrink-0 inline-flex items-center gap-1 h-5 px-1.5 rounded border border-cyan/40 bg-transparent text-[11px] text-cyan font-semibold hover:border-cyan hover:text-white cursor-pointer disabled:opacity-40">
+        <Link2 size={11} />Invitar
       </button>
     )
   }
@@ -183,12 +183,12 @@ export default function FriendlyDetail() {
           <section aria-label="Equipos">
             <span className={LABEL}>EQUIPOS</span>
             <div className="flex flex-col sm:flex-row rounded-xl border border-border-mid bg-surface">
-              <div className="flex-1 p-4">{team(1)}</div>
+              <div className="flex-1 min-w-0 p-4">{team(1)}</div>
               <div className="relative flex items-center justify-center sm:w-14 h-0 sm:h-auto border-t-2 sm:border-t-0 border-dashed border-brand/40">
                 <div aria-hidden="true" className="hidden sm:block absolute top-4 bottom-4 left-1/2 border-l-2 border-dashed border-brand/40" />
                 <span className="relative -translate-y-0 h-6 px-3 rounded-full bg-brand text-base font-condensed font-extrabold text-[10px] tracking-widest flex items-center">VS</span>
               </div>
-              <div className="flex-1 p-4 pt-6 sm:pt-4">{team(2)}</div>
+              <div className="flex-1 min-w-0 p-4 pt-6 sm:pt-4">{team(2)}</div>
             </div>
           </section>
 
