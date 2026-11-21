@@ -114,7 +114,7 @@ export const api = {
     create:        (body)     => req('POST',   '/groups', body),
     update:        (id, b)    => req('PUT',    `/groups/${id}`, b),
     delete:        (id)       => req('DELETE', `/groups/${id}`),
-    byUsername:    (username) => req('GET',    `/groups/user/${username}`),
+    byUsername:    (username, source) => req('GET', `/groups/user/${username}${source && source !== 'todos' ? `?source=${source}` : ''}`),
     favorites:     ()         => req('GET',    '/groups/favorites'),
     favorite:      (id)       => req('POST',   `/groups/${id}/favorite`),
     unfavorite:    (id)       => req('DELETE', `/groups/${id}/favorite`),

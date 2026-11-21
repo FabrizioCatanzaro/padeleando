@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { LayoutGrid } from 'lucide-react';
 import MatchRow from './MatchRow';
+import { profileMatchHref } from '../../utils/friendlies';
 import SortMenu from '../shared/SortMenu';
 import StatTile, { StatTiles } from '../shared/StatTile';
 
@@ -141,7 +142,7 @@ export default function ProfileMatches({ matches = [], stats }) {
             <MatchRow
               key={m.id}
               m={m}
-              onOpen={() => navigate(`/cat/${m.group_id}/torneo/${m.tournament_id}`)}
+              onOpen={() => navigate(profileMatchHref(m))}
             />
           ))}
         </div>

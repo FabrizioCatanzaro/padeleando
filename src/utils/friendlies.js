@@ -143,3 +143,6 @@ export function shareText(m, url) {
   const faltan = libres > 0 ? ` Faltan ${libres}.` : ''
   return `Amistoso ${longDate(m.date)} ${m.start_time} en ${m.club.name}.${faltan} ${url}`
 }
+
+export const profileMatchHref = (m) =>
+  m.source === 'amistoso' ? `/amistoso/${m.friendly_id}` : `/cat/${m.group_id}/torneo/${m.tournament_id}`;

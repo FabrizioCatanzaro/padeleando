@@ -17,6 +17,7 @@ import statsPreview from '../../assets/advanced-stats-preview.svg';
 import Loader from '../Loader/Loader';
 import LazyNotFound from '../NotFound/LazyNotFound';
 import MatchRow from './MatchRow';
+import { profileMatchHref } from '../../utils/friendlies';
 import ProfileMatches from './ProfileMatches';
 import ProfileHero, { PlanBand } from './ProfileHero';
 import SectionRule from '../shared/SectionRule';
@@ -56,6 +57,12 @@ const NETWORKS = [
 ];
 
 const EMPTY_LINK = { network: '', url: '' };
+
+const SOURCES = [
+  { id: 'todos',     label: 'Todos' },
+  { id: 'torneos',   label: 'Torneos' },
+  { id: 'amistosos', label: 'Amistosos' },
+];
 
 const BASE_TABS = [
   { id: 'resumen',  label: 'RESUMEN' },
@@ -301,6 +308,8 @@ function PasswordStrength({ password }) {
 
 export default function ProfileView() {
   const [data,    setData]    = useState(null);
+  const [source,  setSource]  = useState('todos');
+  const [bySource, setBySource] = useState({});
   const [loading, setLoading] = useState(true);
   const [error,   setError]   = useState(null);
   const { username } = useParams();
@@ -407,6 +416,17 @@ export default function ProfileView() {
       .finally(() => setLoading(false));
   }, [username]);
 
+  useEffect(() => { setSource('todos'); setBySource({}); }, [username]);
+
+  useEffect(() => {
+    if (source === 'todos' || bySource[source]) return;
+    let alive = true;
+    api.groups.byUsername(username, source)
+      .then((d) => { if (alive) setBySource((p) => ({ ...p, [source]: d })); })
+      .catch(() => { if (alive) setSource('todos'); });
+    return () => { alive = false; };
+  }, [username, source, bySource]);
+
   useDocumentTitle(error === 'notfound' ? 'Perfil no encontrado' : data?.owner?.name);
 
   useEffect(() => {
@@ -429,12 +449,16 @@ export default function ProfileView() {
   if (error === 'notfound') return <LazyNotFound subject="profile" />;
   if (error)   return <div className="text-danger p-10">{error}</div>;
 
-  const { owner, groups, played_groups, coorg_groups, stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = data;
+  const { owner, groups, played_groups, coorg_groups } = data;
+  const view = source === 'todos' ? data : bySource[source] ?? data;
+  const viewLoading = view === data && source !== 'todos';
+  const { stats, recent_matches, frequent_partners, monthly_stats, club_stats, follow_ranking } = view;
+  const showSourceFilter = data.amistosos > 0 && ['resumen', 'partidos', 'stats'].includes(tab);
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
 
   const avatarSize  = isDesktop ? 128 : 104;
-  const headerPct   = stats?.partidos > 0 ? Math.round((stats.victorias / stats.partidos) * 100) : null;
-  const headerNivel = calcNivel(stats?.partidos ?? 0, headerPct ?? 0);
+  const headerPct   = data.stats?.partidos > 0 ? Math.round((data.stats.victorias / data.stats.partidos) * 100) : null;
+  const headerNivel = calcNivel(data.stats?.partidos ?? 0, headerPct ?? 0);
 
   // El plan manda: sin premium no hay avanzadas ni para el dueño. Publicarlas
   // las abre a cualquier visitante, incluida la captura del perfil.
@@ -493,13 +517,14 @@ export default function ProfileView() {
   });
 
   // Riel del perfil: sólo lo deportivo, y todo derivado de lo que ya llegó.
-  const railStats = stats ? [
-    { value: stats.partidos ?? 0, label: 'Partidos' },
-    { value: stats.torneos ?? 0,  label: 'Torneos' },
-    { value: stats.titulos ?? 0,  label: 'Títulos', tone: (stats.titulos ?? 0) > 0 ? 'gold' : 'off' },
-    { value: stats.racha ?? 0,    label: 'Racha',   tone: (stats.racha ?? 0) > 0 ? 'brand' : 'off' },
+  const hs = data.stats;
+  const railStats = hs ? [
+    { value: hs.partidos ?? 0, label: 'Partidos' },
+    { value: hs.torneos ?? 0,  label: 'Torneos' },
+    { value: hs.titulos ?? 0,  label: 'Títulos', tone: (hs.titulos ?? 0) > 0 ? 'gold' : 'off' },
+    { value: hs.racha ?? 0,    label: 'Racha',   tone: (hs.racha ?? 0) > 0 ? 'brand' : 'off' },
     { value: mergedGroups.length, label: 'Categorías' },
-    { value: club_stats?.length ?? 0, label: 'Clubes' },
+    { value: data.club_stats?.length ?? 0, label: 'Clubes' },
   ] : [];
 
   const savedLinks    = Array.isArray(owner.social_links) ? owner.social_links.filter(l => l.url?.trim()) : [];
@@ -775,8 +800,8 @@ export default function ProfileView() {
           onOpenFollowers={() => openFollowModal('followers')}
           onOpenFollowing={() => openFollowModal('following')}
           winPct={headerPct}
-          wins={stats?.victorias ?? 0}
-          played={stats?.partidos ?? 0}
+          wins={hs?.victorias ?? 0}
+          played={hs?.partidos ?? 0}
           railStats={railStats}
           actions={heroActions}
           planChip={isOwnProfile ? (
@@ -959,6 +984,26 @@ export default function ProfileView() {
           ))}
         </div>
 
+        {showSourceFilter && (
+          <div className="flex gap-1 p-1 mb-4 rounded-lg border border-border-mid bg-surface w-fit" role="tablist" aria-label="Origen de los partidos">
+            {SOURCES.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                role="tab"
+                aria-selected={source === s.id}
+                onClick={() => setSource(s.id)}
+                className={`px-3 py-1.5 rounded-md border-0 font-condensed font-bold text-[12px] tracking-wide cursor-pointer transition-colors ${
+                  source === s.id ? 'bg-brand text-base' : 'bg-transparent text-muted hover:text-brand'
+                }`}
+              >
+                {s.label}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div className={viewLoading ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
         {tab === 'stats' && (<>
         {/* El interruptor de privacidad va arriba de todo: decide sobre la
             pestaña entera, no sólo sobre el bloque premium del fondo. */}
@@ -1019,6 +1064,7 @@ export default function ProfileView() {
           stats={stats}
           clubStats={club_stats ?? []}
           partners={frequent_partners ?? []}
+          friendliesOnly={source === 'amistosos'}
         />
 
         {/* Estadísticas avanzadas — al fondo para no interrumpir el flujo.
@@ -1032,8 +1078,8 @@ export default function ProfileView() {
               <AdvancedStats
                 stats={stats}
                 monthlyStats={monthly_stats ?? []}
-                dailyActivity={data.daily_activity ?? []}
-                weekdayStats={data.weekday_stats ?? []}
+                dailyActivity={view.daily_activity ?? []}
+                weekdayStats={view.weekday_stats ?? []}
               />
             </Suspense>
           </>
@@ -1127,7 +1173,7 @@ export default function ProfileView() {
               <MatchRow
                 key={m.id}
                 m={m}
-                onOpen={() => navigate(`/cat/${m.group_id}/torneo/${m.tournament_id}`)}
+                onOpen={() => navigate(profileMatchHref(m))}
               />
             ))}
           </div>
@@ -1220,7 +1266,8 @@ export default function ProfileView() {
         </>)}
 
 
-        {tab === 'partidos' && <ProfileMatches matches={recent_matches ?? []} stats={stats} />}
+        {tab === 'partidos' && <ProfileMatches key={source} matches={recent_matches ?? []} stats={stats} />}
+        </div>
 
         {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
         {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
@@ -1287,7 +1334,7 @@ export default function ProfileView() {
           url={window.location.href}
           isOwnProfile={isOwnProfile}
           // Sin partidos ni torneos la historia queda vacía: mejor no ofrecerla.
-          onCreateImage={(stats?.partidos > 0 || stats?.torneos > 0)
+          onCreateImage={(hs?.partidos > 0 || hs?.torneos > 0)
             ? () => { setShowShare(false); setShowStory(true); }
             : undefined}
           onClose={() => setShowShare(false)}
@@ -1301,12 +1348,12 @@ export default function ProfileView() {
           story={(
             <ProfileStory
               owner={owner}
-              stats={stats ?? {}}
+              stats={data.stats ?? {}}
               avatar={displayAvatar}
               // La captura con avanzadas es del dueño premium; un visitante la
               // consigue sólo si el dueño las publicó.
               advanced={canSeeAdvanced}
-              monthlyStats={monthly_stats ?? []}
+              monthlyStats={data.monthly_stats ?? []}
               weekdayStats={data.weekday_stats ?? []}
             />
           )}
