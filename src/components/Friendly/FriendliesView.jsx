@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { Plus, Navigation, MapPin, CalendarDays, Check, ChevronRight, Loader2 } from 'lucide-react'
+import { Plus, Navigation, CalendarDays, Check, ChevronRight, Loader2 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -31,16 +31,10 @@ export default function FriendliesView() {
 
   const [coords, setCoords]         = useState(null)
   const [locating, setLocating]     = useState(false)
-  const [locality, setLocality]     = useState('')
   const [dateId, setDateId]         = useState('todas')
-  const [localities, setLocalities] = useState([])
   const [list, setList]             = useState(null)
   const [mine, setMine]             = useState(null)
   const [error, setError]           = useState(null)
-
-  useEffect(() => {
-    api.friendlies.localities().then(setLocalities).catch(() => setLocalities([]))
-  }, [])
 
   useEffect(() => {
     if (!isLoggedIn) return
@@ -56,12 +50,12 @@ export default function FriendliesView() {
     const { from, to } = dateRange(dateId)
     api.friendlies.list({
       lat: coords?.lat, lon: coords?.lon, radius_km: coords ? RADIUS_KM : null,
-      locality: locality || null, from, to,
+      from, to,
     })
       .then((rows) => { if (!cancelled) { setList(rows); setError(null) } })
       .catch((e) => { if (!cancelled) setError(e.message) })
     return () => { cancelled = true }
-  }, [coords, locality, dateId])
+  }, [coords, dateId])
 
   const pendientes = useMemo(() => (mine ?? []).filter((m) => m.viewer?.needs_action), [mine])
   const mineSorted = useMemo(() => [...(mine ?? [])].sort((a, b) => {
@@ -81,7 +75,7 @@ export default function FriendliesView() {
   }
 
   const setTab = (t) => setParams(t === 'mios' ? { tab: 'mios' } : {}, { replace: true })
-  const crear = () => navigate(isLoggedIn ? '/amistosos/nuevo' : '/login')
+  const crear = () => navigate(isLoggedIn ? '/amistosos/nuevo' : `/login?redirect=${encodeURIComponent('/amistosos/nuevo')}`)
   const band = pendientes[0]
 
   return (
@@ -122,14 +116,6 @@ export default function FriendliesView() {
               {coords ? `Cerca de mí · ${RADIUS_KM} km` : 'Cerca de mí'}
             </button>
             <label className="relative inline-flex items-center">
-              <span className="sr-only">Localidad</span>
-              <MapPin size={13} className="absolute left-3 text-content pointer-events-none" aria-hidden="true" />
-              <select value={locality} onChange={(e) => setLocality(e.target.value)} className={SELECT}>
-                <option value="">Todas las localidades</option>
-                {localities.map((l) => <option key={l.locality} value={l.locality}>{l.locality} ({l.count})</option>)}
-              </select>
-            </label>
-            <label className="relative inline-flex items-center">
               <span className="sr-only">Fecha</span>
               <CalendarDays size={13} className="absolute left-3 text-content pointer-events-none" aria-hidden="true" />
               <select value={dateId} onChange={(e) => setDateId(e.target.value)} className={SELECT}>
@@ -142,7 +128,7 @@ export default function FriendliesView() {
 
       {tab === 'abiertos' && (
         <ListBlock rows={list} error={error}
-          empty={coords || locality || dateId !== 'todas'
+          empty={coords || dateId !== 'todas'
             ? 'No hay partidos abiertos con estos filtros.'
             : 'No hay partidos abiertos por ahora. Creá uno y pasá el link.'} />
       )}

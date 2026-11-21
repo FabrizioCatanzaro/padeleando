@@ -16,6 +16,7 @@ import PlayerAvatar from '../shared/PlayerAvatar'
 import SlotEditor from './SlotEditor'
 import SetsEditor from './SetsEditor'
 import { INPUT, LABEL, SegButtons } from './parts'
+import { whatsappDePerfil } from '../../utils/copa'
 
 const STEPS = [
   { id: 'tipo', label: 'TIPO' },
@@ -32,6 +33,8 @@ const VIS_OPTIONS = [
 ]
 
 const slotKey = (t, p) => `${t}-${p}`
+const pad = (n) => String(n).padStart(2, '0')
+const todayIso = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 
 function slotBody(team, position, v) {
   if (v?.user) return { team, position, username: v.user.username }
@@ -53,7 +56,7 @@ export default function FriendlyCreate() {
   const [duration, setDuration] = useState(90)
   const [total, setTotal]       = useState('')
   const [each, setEach]         = useState('')
-  const [me, setMe]             = useState({ side: null, hand: null, whatsapp: '' })
+  const [me, setMe]             = useState(() => ({ side: null, hand: null, whatsapp: whatsappDePerfil(user?.social_links) }))
   const [slots, setSlots]       = useState({})
   const [setsFormat, setSetsFormat] = useState(1)
   const [sets, setSets]         = useState(emptySets(1))
@@ -72,6 +75,9 @@ export default function FriendlyCreate() {
     if (STEPS[i].id === 'cancha') {
       if (!club || club.pending) return 'Elegí un club de la lista.'
       if (!date || !time) return 'Completá la fecha y la hora.'
+      const start = new Date(`${date}T${time}`)
+      if (!played && start <= new Date()) return 'Un partido abierto tiene que ser en una fecha y hora futuras.'
+      if (played && start > new Date()) return 'Un partido ya jugado no puede tener fecha futura.'
     }
     if (STEPS[i].id === 'jugadores') {
       if (played && filledCount < 3) return 'Cargá los 4 jugadores del partido.'
@@ -163,7 +169,8 @@ export default function FriendlyCreate() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label htmlFor="am-fecha" className={LABEL}>FECHA</label>
-                        <input id="am-fecha" type="date" className={INPUT} value={date} onChange={(e) => setDate(e.target.value)} />
+                        <input id="am-fecha" type="date" className={INPUT} value={date} onChange={(e) => setDate(e.target.value)}
+                          min={played ? undefined : todayIso()} max={played ? todayIso() : undefined} />
                       </div>
                       <div>
                         <label htmlFor="am-hora" className={LABEL}>HORA</label>
@@ -323,7 +330,7 @@ export default function FriendlyCreate() {
 
 function TipoStep({ mode, onMode }) {
   const opts = [
-    { id: 'abierto', title: 'PARTIDO ABIERTO', text: 'Tenés cancha reservada y te faltan jugadores. Publicás los lugares libres y se suman.', icon: UserPlus },
+    { id: 'abierto', title: 'PARTIDO ABIERTO', text: 'Tenés cancha reservada y te faltan jugadores. Lo publicás para todos o lo compartís solo por link.', icon: UserPlus },
     { id: 'jugado', title: 'YA LO JUGUÉ', text: 'Cargás jugadores y resultado. Suma al perfil cuando un rival lo aprueba.', icon: Check },
   ]
   return (

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil } from 'lucide-react'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { ChevronLeft, Plus, X, Check, MessageCircle, Share2, Trophy, Loader2, UserPlus, Pencil, LogIn } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
@@ -8,12 +8,14 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { formatMoney } from '../../utils/money'
 import {
   SIDE_OPTIONS, HAND_OPTIONS, STYLE_LABEL, longDate, endTime, freeCount, isFilled, playerName,
-  teamNames, setsText, emptySets, normalizeSets, resultSummary, whatsappHref, shareText,
+  teamNames, setsText, emptySets, normalizeSets, resultSummary, whatsappHref,
 } from '../../utils/friendlies'
+import { whatsappDePerfil } from '../../utils/copa'
 import Btn from '../shared/Btn'
 import Modal from '../shared/Modal'
 import SlotEditor from './SlotEditor'
 import SetsEditor from './SetsEditor'
+import ShareFriendlyModal from './ShareFriendlyModal'
 import { INPUT, LABEL, LevelChip, PlayerRow, SegButtons, Sheet, StatusChip } from './parts'
 
 export default function FriendlyDetail() {
@@ -21,6 +23,7 @@ export default function FriendlyDetail() {
   const [params] = useSearchParams()
   const token = params.get('t')
   const navigate = useNavigate()
+  const location = useLocation()
   const { user, isLoggedIn } = useAuth()
   const { showToast } = useToast()
 
@@ -69,17 +72,10 @@ export default function FriendlyDetail() {
   const started = m.status === 'falta_resultado' || m.status === 'por_confirmar'
 
   function openJoin(team, position) {
-    if (!isLoggedIn) { navigate('/login'); return }
+    if (!isLoggedIn) { setSheet({ kind: 'login' }); return }
     setSheet({ kind: 'join', team, position })
   }
 
-  async function share() {
-    const text = shareText(m, shareUrl)
-    if (navigator.share) {
-      try { await navigator.share({ text }); return } catch { /* el usuario cerró el menú */ }
-    }
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank', 'noopener')
-  }
 
   const slotAction = (p) => {
     if (isFilled(p)) {
@@ -191,7 +187,7 @@ export default function FriendlyDetail() {
               <Btn variant="primary" size="lg" icon={Plus} full
                 onClick={() => { const p = m.players.find((x) => !isFilled(x)); openJoin(p.team, p.position) }}>SUMARME</Btn>
             )}
-            <Btn size="lg" full icon={Share2} onClick={share}>Pasarlo por WhatsApp</Btn>
+            <Btn size="lg" full icon={Share2} onClick={() => setSheet({ kind: 'share' })}>Compartir</Btn>
             {insider && ['abierto', 'completo', 'falta_resultado', 'por_confirmar'].includes(m.status) && (
               <Btn size="lg" full icon={Pencil} onClick={() => setSheet({ kind: 'me' })}>Mis datos de juego</Btn>
             )}
@@ -204,8 +200,16 @@ export default function FriendlyDetail() {
         </aside>
       </div>
 
+      {sheet?.kind === 'share' && <ShareFriendlyModal m={m} url={shareUrl} onClose={() => setSheet(null)} />}
+      {sheet?.kind === 'login' && (
+        <Sheet title="NECESITÁS UNA CUENTA" subtitle="Para sumarte al partido tenés que iniciar sesión. Después volvés a esta pantalla." onClose={() => setSheet(null)}>
+          <Btn variant="primary" size="lg" full icon={LogIn}
+            onClick={() => navigate(`/login?redirect=${encodeURIComponent(location.pathname + location.search)}`)}>INICIAR SESIÓN</Btn>
+          <Btn size="lg" full onClick={() => navigate(`/register?redirect=${encodeURIComponent(location.pathname + location.search)}`)}>Crear cuenta gratis</Btn>
+        </Sheet>
+      )}
       {sheet?.kind === 'join' && (
-        <GameDataSheet title={`SUMARTE AL EQUIPO ${sheet.team}`}
+        <GameDataSheet title={`SUMARTE AL EQUIPO ${sheet.team}`} initial={{ whatsapp: whatsappDePerfil(user?.social_links) }}
           subtitle={`${longDate(m.date)} · ${m.start_time} · ${m.club.name}${m.price_per_person != null ? ` · ${formatMoney(m.price_per_person)} por persona` : ''}`}
           submitLabel="CONFIRMAR LUGAR" busy={busy} onClose={() => setSheet(null)}
           onSubmit={(data) => run(() => api.friendlies.join(m.id, { team: sheet.team, position: sheet.position, t: token ?? undefined, ...data }), 'Ya estás en el partido')} />
