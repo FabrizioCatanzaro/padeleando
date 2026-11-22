@@ -1,0 +1,583 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T19:43:57+00:00",
+  "title": "Design System: Padeleando",
+  "extensions": {
+    "colorMeta": {
+      "base": {
+        "role": "neutral",
+        "displayName": "Negro Club",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Superficie",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "surface-alt": {
+        "role": "neutral",
+        "displayName": "Superficie Alta",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Línea",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "border-mid": {
+        "role": "neutral",
+        "displayName": "Línea Media",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "border-strong": {
+        "role": "neutral",
+        "displayName": "Línea Fuerte",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "brand": {
+        "role": "primary",
+        "displayName": "Amarillo Pelota",
+        "tonalRamp": [
+          "#0c0d00",
+          "#272800",
+          "#444600",
+          "#656700",
+          "#868a00",
+          "#a7ad2f",
+          "#cad17b",
+          "#eff4ba"
+        ]
+      },
+      "cyan": {
+        "role": "secondary",
+        "displayName": "Menta Próximo",
+        "tonalRamp": [
+          "#00100a",
+          "#002f22",
+          "#00513d",
+          "#00765b",
+          "#009d7a",
+          "#43bd9e",
+          "#89dcc4",
+          "#c5fdeb"
+        ]
+      },
+      "green": {
+        "role": "tertiary",
+        "displayName": "Verde Victoria",
+        "tonalRamp": [
+          "#001101",
+          "#003006",
+          "#005311",
+          "#007a1d",
+          "#00a12d",
+          "#47c167",
+          "#8be09b",
+          "#c6ffcf"
+        ]
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Rojo Falta",
+        "tonalRamp": [
+          "#1c0202",
+          "#470c0d",
+          "#781a1c",
+          "#ac2a2c",
+          "#e13e40",
+          "#fa7770",
+          "#ffa9a1",
+          "#ffd9d2"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Texto Apagado",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "dim": {
+        "role": "neutral",
+        "displayName": "Texto Tenue",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "secondary": {
+        "role": "neutral",
+        "displayName": "Texto Secundario",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "soft": {
+        "role": "neutral",
+        "displayName": "Texto Suave",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "content": {
+        "role": "neutral",
+        "displayName": "Texto Lectura",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "white": {
+        "role": "neutral",
+        "displayName": "Énfasis Máximo",
+        "tonalRamp": [
+          "#0b0b0b",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#a5a5a5",
+          "#c9c9c9",
+          "#eeeeee"
+        ]
+      },
+      "premium": {
+        "role": "tertiary",
+        "displayName": "Oro Logro",
+        "tonalRamp": [
+          "#160700",
+          "#3b1d00",
+          "#643500",
+          "#904f00",
+          "#be6c00",
+          "#d9953b",
+          "#f3be80",
+          "#ffe7bd"
+        ]
+      },
+      "premium-hi": {
+        "role": "tertiary",
+        "displayName": "Oro Claro",
+        "tonalRamp": [
+          "#0f0b01",
+          "#2d2503",
+          "#4e4109",
+          "#726011",
+          "#978120",
+          "#b6a560",
+          "#d7ca95",
+          "#f8efcb"
+        ]
+      },
+      "premium-ink": {
+        "role": "tertiary",
+        "displayName": "Tinta Oro",
+        "tonalRamp": [
+          "#0f0a05",
+          "#2d2317",
+          "#4e3f2b",
+          "#725d42",
+          "#977e5b",
+          "#b7a185",
+          "#d7c6b0",
+          "#f9eddd"
+        ]
+      },
+      "chart-1": {
+        "role": "data",
+        "displayName": "Gráfico Oliva",
+        "tonalRamp": [
+          "#0c0c00",
+          "#272700",
+          "#454501",
+          "#656602",
+          "#878810",
+          "#a9ab5b",
+          "#ccce92",
+          "#f0f2c9"
+        ]
+      },
+      "chart-2": {
+        "role": "data",
+        "displayName": "Gráfico Azul",
+        "tonalRamp": [
+          "#050a19",
+          "#172441",
+          "#2c406e",
+          "#435e9e",
+          "#5c7fcf",
+          "#85a4e7",
+          "#b0c9fe",
+          "#ddefff"
+        ]
+      },
+      "chart-3": {
+        "role": "data",
+        "displayName": "Gráfico Cobre",
+        "tonalRamp": [
+          "#150801",
+          "#391d03",
+          "#61360a",
+          "#8c5013",
+          "#b96d22",
+          "#d59560",
+          "#f0be95",
+          "#ffe7cb"
+        ]
+      },
+      "heat-0": {
+        "role": "data",
+        "displayName": "Calor",
+        "tonalRamp": [
+          "#141414",
+          "#6c6d2b",
+          "#8b8c2c",
+          "#abac2a",
+          "#cccd22"
+        ]
+      }
+    },
+    "themes": {
+      "light": {
+        "selector": "html.light",
+        "colors": {
+          "base": "#f5f7fa",
+          "surface": "#ffffff",
+          "surface-alt": "#eef0f5",
+          "border": "#dde1ec",
+          "border-mid": "#cdd3e0",
+          "border-strong": "#b8c0d0",
+          "brand": "#6e7a00",
+          "cyan": "#0a9070",
+          "green": "#166534",
+          "danger": "#dc2626",
+          "muted": "#5f6b7a",
+          "dim": "#565f6b",
+          "secondary": "#4b5563",
+          "soft": "#374151",
+          "content": "#1e293b",
+          "white": "#0f172a",
+          "premium": "#b45309",
+          "premium-hi": "#f59e0b",
+          "premium-ink": "#fffbeb",
+          "chart-1": "#868604",
+          "chart-2": "#5a7dce",
+          "chart-3": "#b76b1c",
+          "heat-0": "#eef0f5",
+          "heat-1": "#b5b761",
+          "heat-2": "#9fa03c",
+          "heat-3": "#898900",
+          "heat-4": "#6d6d00"
+        }
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero titles and champion names."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Modal and page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card and section titles, primary button text."
+      },
+      "numeral": {
+        "displayName": "Numeral",
+        "purpose": "Scores and stat values; steps down to 30px and 24px by length."
+      },
+      "section-label": {
+        "displayName": "Section Label",
+        "purpose": "SectionRule heading followed by a hairline."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Reading text."
+      },
+      "body-sm": {
+        "displayName": "Body Small",
+        "purpose": "List rows and dense UI text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Uppercase metadata, steps and badges."
+      }
+    },
+    "shadows": [
+      {
+        "name": "floating-panel",
+        "value": "0 25px 50px -12px rgba(0,0,0,0.25)",
+        "purpose": "Menus, notification panel, popovers (Tailwind shadow-2xl)."
+      },
+      {
+        "name": "card-hover-glow",
+        "value": "0 0 22px color-mix(in srgb, var(--color-brand) 8%, transparent), 0 4px 14px rgba(0,0,0,0.35)",
+        "purpose": "Clickable card on hover."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-enter",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Sheets (0.28s) and alerts (0.24s) entering."
+      },
+      {
+        "name": "duration-state",
+        "value": "0.15s–0.2s ease",
+        "purpose": "Color, border and shadow state changes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation: none",
+        "purpose": "Sheets, alerts and the match ticker under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The one main action in view.",
+      "html": "<button class=\"ds-btn-primary\">CREAR TORNEO</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;gap:8px;background:var(--color-brand);color:var(--color-base);border:0;font-family:Unbounded, sans-serif;font-weight:700;letter-spacing:0.1em;font-size:14px;padding:10px 16px;border-radius:4px;cursor:pointer;transition:opacity .15s}.ds-btn-primary:hover{opacity:.9}.ds-btn-primary:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-btn-primary:disabled{opacity:.4;cursor:not-allowed}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button variant for every other action.",
+      "html": "<button class=\"ds-btn-secondary\">Compartir</button>",
+      "css": ".ds-btn-secondary{background:transparent;color:var(--color-content);border:1px solid var(--color-border-strong);font-family:'Albert Sans', sans-serif;font-size:14px;padding:10px 16px;border-radius:4px;cursor:pointer;transition:background-color .15s,color .15s}.ds-btn-secondary:hover{background:var(--color-border-mid);color:var(--color-white)}.ds-btn-secondary:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive actions.",
+      "html": "<button class=\"ds-btn-danger\">Eliminar</button>",
+      "css": ".ds-btn-danger{background:transparent;color:var(--color-danger);border:1px solid color-mix(in srgb,var(--color-danger) 40%,transparent);font-family:'Albert Sans', sans-serif;font-size:14px;padding:10px 16px;border-radius:4px;cursor:pointer;transition:background-color .15s}.ds-btn-danger:hover{background:color-mix(in srgb,var(--color-danger) 10%,transparent)}.ds-btn-danger:focus-visible{outline:2px solid var(--color-danger);outline-offset:2px}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Reference field (Auth form).",
+      "html": "<input class=\"ds-input\" placeholder=\"Nombre del torneo\" />",
+      "css": ".ds-input{width:100%;background:var(--color-base);color:var(--color-content);border:1px solid var(--color-border-mid);border-radius:8px;padding:10px 14px;font-size:14px;font-family:'Albert Sans', sans-serif;outline:none;transition:border-color .15s,box-shadow .15s}.ds-input::placeholder{color:var(--color-muted)}.ds-input:focus-visible{border-color:var(--color-brand);box-shadow:0 0 0 1px color-mix(in srgb,var(--color-brand) 30%,transparent)}"
+    },
+    {
+      "name": "Chips and Badges",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Round chip, square label badge and live status.",
+      "html": "<span class=\"ds-chip ds-chip-brand\">C7</span> <span class=\"ds-chip\">Liga</span> <span class=\"ds-label\">PRIVADO</span> <span class=\"ds-status\"><span class=\"ds-dot\"></span>EN VIVO</span>",
+      "css": ".ds-chip{display:inline-flex;align-items:center;border:1px solid var(--color-border-mid);background:var(--color-surface);color:var(--color-muted);border-radius:9999px;padding:2px 10px;font-size:11px;font-family:'Albert Sans', sans-serif;margin-right:6px}.ds-chip-brand{color:var(--color-brand);border-color:color-mix(in srgb,var(--color-brand) 30%,transparent)}.ds-label{display:inline-flex;border:1px solid var(--color-border-strong);color:var(--color-muted);border-radius:4px;padding:2px 6px;font-size:10px;font-weight:700;font-family:'Albert Sans', sans-serif;margin-right:6px}.ds-status{display:inline-flex;align-items:center;gap:6px;color:var(--color-brand);font-size:13px;font-family:'Albert Sans', sans-serif}.ds-dot{width:6px;height:6px;border-radius:9999px;background:currentColor;animation:ds-pulse 2s ease-in-out infinite}@keyframes ds-pulse{50%{opacity:.5}}@media (prefers-reduced-motion:reduce){.ds-dot{animation:none}}"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Clickable container with the brand hover glow.",
+      "html": "<a class=\"ds-card\" href=\"#\"><div class=\"ds-card-title\">Liga de los jueves</div><div class=\"ds-card-meta\">C7 · 12 parejas · Club Norte</div></a>",
+      "css": ".ds-card{display:block;text-decoration:none;background:var(--color-surface);border:1px solid var(--color-border-mid);border-radius:12px;padding:16px;transition:border-color .2s ease,box-shadow .2s ease}.ds-card:hover,.ds-card:focus-visible{border-color:color-mix(in srgb,var(--color-brand) 30%,transparent);box-shadow:0 0 22px color-mix(in srgb,var(--color-brand) 8%,transparent),0 4px 14px rgba(0,0,0,.35);outline:none}.ds-card-title{font-family:Unbounded, sans-serif;font-weight:700;font-size:15px;color:var(--color-white)}.ds-card-meta{font-family:'Albert Sans', sans-serif;font-size:13px;color:var(--color-secondary);margin-top:6px}"
+    },
+    {
+      "name": "Stat Slab",
+      "kind": "custom",
+      "refersTo": "stat-slab",
+      "description": "Signature stat plate: white number, tone in dot, watermark and bar.",
+      "html": "<div class=\"ds-slab\"><span class=\"ds-slab-mark\"><svg width=\"66\" height=\"66\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 9H4.5a2.5 2.5 0 0 1 0-5H6\"/><path d=\"M18 9h1.5a2.5 2.5 0 0 0 0-5H18\"/><path d=\"M4 22h16\"/><path d=\"M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22\"/><path d=\"M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22\"/><path d=\"M18 2H6v7a6 6 0 0 0 12 0V2Z\"/></svg></span><div class=\"ds-slab-head\"><span class=\"ds-slab-dot\"></span><span class=\"ds-slab-label\">Victorias</span></div><div class=\"ds-slab-value\">18</div><div class=\"ds-slab-sub\">de 22 partidos</div><div class=\"ds-slab-track\"><div class=\"ds-slab-bar\"></div></div></div>",
+      "css": ".ds-slab{position:relative;overflow:hidden;width:200px;display:flex;flex-direction:column;gap:14px;background:var(--color-surface-alt);border:1px solid var(--color-border);border-radius:10px;padding:14px 16px 18px}.ds-slab-mark{position:absolute;top:-10px;right:-12px;color:var(--color-brand);opacity:.08;pointer-events:none}.ds-slab-head{display:flex;align-items:center;gap:7px}.ds-slab-dot{width:6px;height:6px;border-radius:1px;background:var(--color-brand)}.ds-slab-label{font-family:'Albert Sans', sans-serif;font-size:12px;font-weight:600;color:var(--color-soft)}.ds-slab-value{font-family:Unbounded, sans-serif;font-weight:900;font-size:38px;line-height:1;color:var(--color-white);font-variant-numeric:tabular-nums}.ds-slab-sub{font-family:'Albert Sans', sans-serif;font-size:11.5px;color:var(--color-dim);margin-top:-4px}.ds-slab-track{position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--color-border)}.ds-slab-bar{height:100%;width:82%;background:var(--color-brand)}"
+    },
+    {
+      "name": "Step Bar",
+      "kind": "custom",
+      "description": "Segmented progress for wizards.",
+      "html": "<div class=\"ds-steps\"><p class=\"ds-steps-label\">PASO 2 DE 4 · <span>FORMATO</span></p><div class=\"ds-steps-row\"><i class=\"on\"></i><i class=\"on\"></i><i></i><i></i></div></div>",
+      "css": ".ds-steps{width:320px}.ds-steps-label{margin:0 0 10px;font-family:'Albert Sans', sans-serif;font-size:11px;letter-spacing:2px;color:var(--color-muted)}.ds-steps-label span{color:var(--color-brand)}.ds-steps-row{display:flex;gap:6px}.ds-steps-row i{flex:1;height:6px;border-radius:9999px;background:var(--color-border-strong);transition:background-color .3s}.ds-steps-row i.on{background:var(--color-brand)}"
+    },
+    {
+      "name": "Header",
+      "kind": "nav",
+      "refersTo": "nav-header",
+      "description": "Sticky app header with wordmark and outlined icon buttons.",
+      "html": "<header class=\"ds-nav\"><span class=\"ds-nav-logo\">PADEL<b>EANDO</b></span><button class=\"ds-nav-icon\" aria-label=\"Notificaciones\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9\"/><path d=\"M10.3 21a1.94 1.94 0 0 0 3.4 0\"/></svg><span class=\"ds-nav-badge\">3</span></button></header>",
+      "css": ".ds-nav{display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:var(--color-base);border-bottom:1px solid var(--color-border)}.ds-nav-logo{font-family:Unbounded, sans-serif;font-weight:900;font-size:18px;color:var(--color-white);letter-spacing:.02em}.ds-nav-logo b{color:var(--color-brand)}.ds-nav-icon{position:relative;display:inline-flex;background:transparent;border:1px solid var(--color-border-strong);color:var(--color-muted);padding:8px;border-radius:8px;cursor:pointer;transition:color .15s,border-color .15s}.ds-nav-icon:hover{color:var(--color-soft);border-color:var(--color-border-mid)}.ds-nav-icon:focus-visible{outline:2px solid var(--color-brand);outline-offset:2px}.ds-nav-badge{position:absolute;top:-4px;right:-4px;width:16px;height:16px;border-radius:9999px;background:var(--color-brand);color:var(--color-base);font-size:9px;font-weight:700;font-family:'Albert Sans', sans-serif;display:flex;align-items:center;justify-content:center}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Cancha de noche",
+    "overview": "Padeleando looks like a padel court at night: a black club, lights on, and one ball-yellow mark on whatever matters right now. The mood is nocturnal, sporty and precise. Dark mode is the default; light mode is a full counterpart (`html.light`), not an afterthought, and every token is redefined there.\n\nThe system is dense and compact. Information leads: tables, scores, fixtures and stats. The brand shows in a few precise places: the Amarillo Pelota accent, Unbounded on numbers and titles, and small uppercase labels with wide tracking. Depth comes from tonal layers on black, not from shadows.\n\nThe interface serves two scenes at once: an organizer loading results one-handed at the court, and a player checking their table at home. Both get the same compact components.",
+    "keyCharacteristics": [
+      "Pure black base with near-black surfaces and hairline borders.",
+      "One loud accent (Amarillo Pelota) for the primary action, live data and highlighted numbers.",
+      "Unbounded for numbers, titles and primary buttons; Albert Sans for everything read.",
+      "Flat by default; shadow only on what floats.",
+      "Firm, compact components with short corners and thin borders."
+    ],
+    "rules": [
+      {
+        "name": "The One Ball Rule",
+        "body": "Amarillo Pelota marks the single most important thing in view. It is a mark, not a fill: large areas and chart fills use the chart palette.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Gold Rule",
+        "body": "There is one gold, and it means achievement or Premium. A second yellow-gold reads as the brand and is banned.",
+        "section": "colors"
+      },
+      {
+        "name": "The Token-Only Rule",
+        "body": "Colors come from `@theme` variables. A hardcoded hex breaks light mode.",
+        "section": "colors"
+      },
+      {
+        "name": "The Scoreboard Rule",
+        "body": "Numbers that matter use Unbounded with tabular figures. Their size steps down with length; they never wrap or overflow.",
+        "section": "typography"
+      },
+      {
+        "name": "The Small-Caps Label Rule",
+        "body": "Metadata is small, uppercase and widely tracked. Reading text is never uppercase.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-At-Rest Rule",
+        "body": "Nothing has a shadow at rest. A shadow means \"this floats\" or \"this responds to your pointer\".",
+        "section": "elevation"
+      },
+      {
+        "name": "The Light-Mode Lift Rule",
+        "body": "In light mode surface-alt does not separate from base, so the stat slab switches to white `surface`.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use the `@theme` color tokens, including `text-white`, so light mode works.",
+      "Do keep stat numbers `white` and put the tone in the dot, the watermark and the bottom bar.",
+      "Do fill the stat slab bar only when a real proportion backs it; otherwise show the fixed 30px segment.",
+      "Do draw icons with lucide-react. Raise `strokeWidth` to 3 below 14px. Put the icon before the text.",
+      "Do pick text levels by role: labels and hints in `secondary`, reading text in `content` or `soft`, `muted` only for what should recede.",
+      "Do use `photo-ink` and `photo-shade` for text over photos.",
+      "Do honor `prefers-reduced-motion`: sheets, alerts and the match ticker stop animating.",
+      "Do use the ease-out curve `cubic-bezier(0.16, 1, 0.3, 1)` at 0.24–0.28s for things that enter."
+    ],
+    "donts": [
+      "Don't hardcode hex colors in components.",
+      "Don't use Amarillo Pelota as a large fill or a chart fill; use `chart-1..3`.",
+      "Don't add a second gold or yellow; `premium` is the only one.",
+      "Don't use typographic glyphs (✓ ○ →) as icons.",
+      "Don't put a shadow on a card at rest.",
+      "Don't color a stat number to carry its tone.",
+      "Don't invent a proportion to fill a meter bar."
+    ]
+  }
+}
