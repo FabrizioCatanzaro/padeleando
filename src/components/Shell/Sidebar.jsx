@@ -2,7 +2,8 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Plus, ChevronDown, Building2 } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
-import { NAV_ITEMS, profileItem } from './navConfig'
+import { useSummary } from '../../hooks/useSummary'
+import { NAV_ITEMS, BADGE_TONE, profileItem } from './navConfig'
 
 const CreateMenu = lazy(() => import('./CreateMenu'))
 
@@ -11,6 +12,7 @@ const ITEM = 'flex items-center gap-3 h-11 px-3 rounded-[10px] font-sans text-[1
 export default function Sidebar() {
   const { user } = useAuth()
   const { pathname } = useLocation()
+  const summary = useSummary()
   const [openAt, setOpenAt] = useState(null)
   // Se abre atado a la ruta: al navegar se cierra solo.
   const createOpen = openAt === pathname
@@ -51,11 +53,20 @@ export default function Sidebar() {
       {items.map((it) => {
         const Icon = it.icon
         const active = it.match(pathname)
+        const count = it.badge ? (summary?.pending?.[it.badge] ?? 0) : 0
         return (
           <Link key={it.id} to={it.to} aria-current={active ? 'page' : undefined} title={it.label}
             className={`${ITEM} justify-center xl:justify-start ${active ? 'bg-brand/10 text-brand font-bold' : 'text-content font-semibold hover:bg-surface-alt hover:text-white'}`}>
-            <Icon size={20} strokeWidth={active ? 2.2 : 2} className="shrink-0" />
-            <span className="hidden xl:inline">{it.label}</span>
+            <span className="relative shrink-0 flex">
+              <Icon size={20} strokeWidth={active ? 2.2 : 2} />
+              {count > 0 && <span aria-hidden="true" className={`xl:hidden absolute -top-1 -right-1.5 w-2.5 h-2.5 rounded-full border-2 border-base ${BADGE_TONE[it.badge]}`} />}
+            </span>
+            <span className="hidden xl:inline flex-1">{it.label}</span>
+            {count > 0 && (
+              <span className={`hidden xl:inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full text-black font-sans font-bold text-[11px] ${BADGE_TONE[it.badge]}`}>
+                {count}<span className="sr-only"> pendientes</span>
+              </span>
+            )}
           </Link>
         )
       })}

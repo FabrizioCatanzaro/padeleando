@@ -319,6 +319,10 @@ export const api = {
     resolve: (token)                  => req('POST', '/invites/resolve', { token }),
     accept:  (token)                  => req('POST', '/invites/accept',  { token }),
   },
+  // Resumen del usuario logueado (routes/me.js del back): números del perfil y contadores.
+  me: {
+    summary: () => req('GET', '/me/summary'),
+  },
   // Amistosos (routes/friendlies.js del back). `t` es el token de un partido visible solo por link.
   friendlies: {
     list:       (params = {}) => {

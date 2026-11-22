@@ -5,6 +5,7 @@ import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
+import { refreshSummary } from '../../hooks/useSummary'
 import { formatMoney } from '../../utils/money'
 import {
   SIDE_OPTIONS, HAND_OPTIONS, STYLE_LABEL, longDate, endTime, freeCount, isFilled, playerName,
@@ -50,6 +51,7 @@ export default function FriendlyDetail() {
       if (data && data.id) setM(data)
       else load()
       if (okText) showToast(okText)
+      refreshSummary()
       setSheet(null)
       setConfirm(null)
       return true

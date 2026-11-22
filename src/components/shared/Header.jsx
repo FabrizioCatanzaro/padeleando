@@ -15,6 +15,7 @@ import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
 import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
+import { useSummary } from '../../hooks/useSummary'
 
 // Preferencia de sonido de la campana, apagada por defecto.
 const SOUND_KEY = 'notif_sound'
@@ -140,6 +141,8 @@ export default function Header() {
   const [shareAppOpen,  setShareAppOpen]  = useState(false)
 
   const { user, isLoggedIn, logout } = useAuth()
+  const summary = useSummary()
+  const stats = summary?.stats
   const { pushAlert } = useAlerts()
   // El intervalo lee el toggle por ref: no queremos reiniciarlo al cambiarlo.
   const soundOnRef  = useRef(notifSound)
@@ -302,7 +305,10 @@ export default function Header() {
             <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={user?.subscription?.plan === 'premium'} />
             <div className="min-w-0">
               <div className="text-sm text-white font-sans font-semibold truncate">{user?.name}</div>
-              <div className="text-[11px] font-mono text-dim truncate">@{user?.username}</div>
+              <div className="text-[11px] font-mono text-dim truncate">
+                @{user?.username}{user?.category && ` · ${user.category}`}
+                {stats?.partidos > 0 && ` · ${stats.partidos} partidos · ${stats.win_pct}%`}
+              </div>
             </div>
           </div>
 
