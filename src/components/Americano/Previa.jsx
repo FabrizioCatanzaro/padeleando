@@ -8,6 +8,7 @@ import ScheduleForm from "../Matches/ScheduleForm";
 import Modal from "../shared/Modal";
 import ShareFixtureModal from "../shared/ShareFixtureModal";
 import { Share2, Dices, CalendarPlus, Check } from "lucide-react";
+import AvisoDirectas from "./AvisoDirectas";
 
 const EMPTY_TIMER = { startedAt: null, stoppedAt: null };
 const getLiveKey  = (id) => `live_${id}`;
@@ -477,6 +478,7 @@ export default function Previa({
               ? 'Las posiciones de esta fase definen los cruces del cuadro eliminatorio.'
               : 'El organizador ya puede generar el cuadro eliminatorio.'}
           </p>
+          {isOwner && <AvisoDirectas pairCount={pairCount} className="mt-4" />}
           {isOwner && bracketButton('mt-4 px-5 py-2.5 font-bold text-[13px] tracking-wide')}
         </div>
       )}
