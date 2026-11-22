@@ -663,9 +663,21 @@ export const localDateStr = () => {
 // input[type=date] acepta años de más de 4 dígitos; se acota para no guardar fechas como "52026"
 export const isSaneEventDate = (v) => !v || /^\d{4}-\d{2}-\d{2}$/.test(v) && Number(v.slice(0, 4)) >= 1900 && Number(v.slice(0, 4)) <= 2100;
 
-// Límites de parejas del formato americano.
-export const AMERICANO_MIN_PAIRS = 8;
-export const AMERICANO_MAX_PAIRS = 16;
+// Límites de parejas del formato americano. Espejo de lib/americano.js del back.
+export const AMERICANO_MIN_PAIRS = 4;
+export const AMERICANO_MAX_PAIRS = 32;
+
+const RONDAS_DEL_CUADRO = { 8: ['cuartos', 'semifinales'], 16: ['octavos', 'cuartos'], 32: ['16avos', 'octavos'] };
+
+/** Parejas del americano que pasan directo a la segunda ronda del cuadro, o null si no hay. */
+export function americanoDirectas(n) {
+  if (n < AMERICANO_MIN_PAIRS || n > AMERICANO_MAX_PAIRS) return null;
+  let cuadro = 4;
+  while (cuadro < n) cuadro *= 2;
+  if (cuadro === n) return null;
+  const [primera, segunda] = RONDAS_DEL_CUADRO[cuadro];
+  return { directas: cuadro - n, primera, segunda };
+}
 
 // En la fase previa de un americano, cada pareja juega 2 partidos.
 export const MAX_PREVIA_MATCHES = 2;
@@ -695,7 +707,7 @@ export function isPreviaComplete(tournament) {
     && previaPendingPairs(tournament).length < 2;
 }
 
-// Un americano con menos de 8 parejas es un "borrador": se puede crear y seguir
+// Un americano debajo del mínimo de parejas es un "borrador": se puede crear y seguir
 // cargando parejas, pero no se puede jugar (ni calendario, ni partidos, ni cuadro).
 export function isAmericanoDraft({ format, pairCount }) {
   return format === 'americano' && (pairCount ?? 0) < AMERICANO_MIN_PAIRS;

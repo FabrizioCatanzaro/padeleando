@@ -176,6 +176,12 @@ Rules that keep the three from drifting:
 
 **The profile's advanced stats are gated server-side.** `GET /groups/user/:username` returns them only to the owner, or to anyone if a premium user opted in via `users.advanced_stats_public` (default `false`). The queries that only feed that block are skipped entirely when it won't render. The frontend's `canSeeAdvanced` mirrors the same rule for the UI and the profile snapshot, but it is cosmetic — the payload is the source of truth, so don't put those fields back into the public response.
 
+### Americano
+
+- 4 to 32 fixed pairs (`AMERICANO_MIN_PAIRS` / `AMERICANO_MAX_PAIRS` in `helpers.js`, mirror of the API's `lib/americano.js`). Below the minimum it is a draft.
+- Every pair enters the bracket. When the count doesn't fill a round (4, 8, 16, 32), the best pairs of the previa skip the first round. `americanoDirectas(n)` computes how many and which rounds; `AvisoDirectas` shows the warning in `Setup`, `PairManager` and `Bracket` before generating it.
+- Below 8 or above 16 the bracket comes in the copa shape (byes, `dieciseisavos`), which `Bracket` already renders.
+
 ### Copa
 
 - Two variants in `copa_config.mode`: `zonas` (groups by fechas, then playoffs) and `cuadro` (direct elimination). Always fixed pairs, up to 32.

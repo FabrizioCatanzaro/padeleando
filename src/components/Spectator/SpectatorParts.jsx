@@ -937,7 +937,7 @@ function teamLabel(team, tournament) {
 
 // Carrusel horizontal que va pasando partidos en vivo + resultados recientes.
 // Resultados jugados del cuadro (americano), de más reciente (final) a más
-// antiguo (octavos), para incluirlos en el ticker junto con los de la previa.
+// antiguo (16avos), para incluirlos en el ticker junto con los de la previa.
 function bracketRecentItems(tournament) {
   const b = tournament.bracket;
   if (!b) return [];
@@ -946,6 +946,7 @@ function bracketRecentItems(tournament) {
     ["semis",   b.semis   ?? []],
     ["cuartos", b.cuartos ?? []],
     ["octavos", b.octavos ?? []],
+    ["dieciseisavos", b.dieciseisavos ?? []],
   ];
   const out = [];
   for (const [phase, matches] of byPhase) {
