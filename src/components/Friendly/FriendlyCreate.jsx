@@ -91,7 +91,7 @@ export default function FriendlyCreate() {
 
   function back() {
     setError(null)
-    if (step === 0) navigate('/amistosos')
+    if (step === 0) navigate('/partidos')
     else setStep(step - 1)
   }
 

@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
 import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft, Swords } from 'lucide-react';
 import logoUrl from '../../assets/padeleando-logo.webp'
@@ -128,18 +128,26 @@ export default function HomeView() {
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { hash, key: navKey } = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  // `#categorias` entra por el menú de la cabecera. `useScrollToTop` ya se
-  // aparta cuando hay hash, pero nadie lleva al ancla: el router no hace ese
-  // scroll solo. Espera a `loading` porque durante la carga la lista todavía no
-  // está en el DOM, y depende de `navKey` para que volver a tocar el mismo ítem
-  // estando ya en la portada vuelva a bajar.
+  // El router no lleva al ancla: se espera a `loading` porque antes la sección no está en el DOM.
   useEffect(() => {
-    if (hash !== '#categorias' || loading) return;
+    if (!['#categorias', '#descubrir'].includes(hash) || loading) return;
     requestAnimationFrame(() => {
-      document.getElementById('categorias')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }, [hash, navKey, loading]);
+
+  // Atajos del botón Crear de la navegación: ?nueva=categoria y ?cerca=1.
+  useEffect(() => {
+    if (loading || !isLoggedIn) return;
+    const nueva = searchParams.get('nueva');
+    const cerca = searchParams.get('cerca');
+    if (!nueva && !cerca) return;
+    setSearchParams({}, { replace: true });
+    if (nueva === 'categoria') openNewModal();
+    else if (cerca) goNearby();
+  }, [loading, isLoggedIn, searchParams]);
 
   const valsPrivacy = [
     { val: true, label: 'Público', icon: Globe },
@@ -860,7 +868,7 @@ export default function HomeView() {
                     <MapPin size={16} /><span className="hidden sm:inline">Cerca</span>
                   </button>
                 )}
-                <Btn icon={Swords} onClick={() => navigate('/amistosos')}>AMISTOSOS</Btn>
+                <Btn icon={Swords} onClick={() => navigate('/partidos')}>AMISTOSOS</Btn>
                 <Btn variant="primary" icon={Plus} onClick={openNewModal}>NUEVA</Btn>
               </div>
             </div>

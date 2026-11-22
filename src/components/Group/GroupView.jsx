@@ -570,7 +570,7 @@ export default function GroupView() {
   );
 
   return (
-    <div className="bg-base text-content font-sans pb-24 sm:pb-15">
+    <div className="bg-base text-content font-sans pb-15">
       {editingGroup ? (
         <div className="px-4 sm:px-6 pt-6 pb-5 flex flex-col gap-3 border-b border-border">
           <div className="flex justify-between items-center">{backBtn}</div>
@@ -759,11 +759,8 @@ export default function GroupView() {
         )}
       </div>
 
-      {/* Pestañas. Antes todo esto era una sola página larguísima: la lista de
-          torneos, las estadísticas históricas y las canchas, una debajo de otra.
-          Desktop arriba; en mobile van abajo fijas, como en el torneo, así no
-          hay que arrastrar una tira horizontal para llegar a la última. */}
-      <div className="hidden sm:flex border-b border-border px-2 items-center overflow-x-auto">
+      {/* Pestañas arriba también en mobile: abajo va la barra de navegación de la app. */}
+      <div className="flex border-b border-border px-2 items-center overflow-x-auto">
         {TABS.map((t) => {
           const Icon = t.icon;
           return (
@@ -776,25 +773,6 @@ export default function GroupView() {
             >
               <Icon size={13} />
               {t.label}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Barra inferior — sólo mobile */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-base border-t border-border flex">
-        {TABS.map((t) => {
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${
-                tab === t.id ? 'text-brand bg-brand/10' : 'text-muted bg-transparent'
-              }`}
-            >
-              <Icon size={20} />
-              <span className="text-[9px] font-mono tracking-wide leading-none">{t.label}</span>
             </button>
           );
         })}

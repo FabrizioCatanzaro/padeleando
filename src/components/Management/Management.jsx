@@ -35,7 +35,7 @@ function signupDe(t) {
 // Barra de guardado: queda pegada abajo mientras haya cambios sin guardar.
 function BarraGuardar({ dirty, saving, error, onSave }) {
   return (
-    <div className={`mt-5 flex items-center justify-between gap-3 flex-wrap ${dirty ? 'sticky bottom-20 sm:bottom-4 z-10 bg-surface border border-brand/40 rounded-xl px-3.5 py-3 shadow-xl' : ''}`}>
+    <div className={`mt-5 flex items-center justify-between gap-3 flex-wrap ${dirty ? 'sticky bottom-[calc(112px+env(safe-area-inset-bottom))] lg:bottom-4 z-10 bg-surface border border-brand/40 rounded-xl px-3.5 py-3 shadow-xl' : ''}`}>
       <span className={`text-[13px] ${dirty ? 'text-white font-semibold' : 'text-secondary'}`}>
         {error ? <span className="text-danger">{error}</span>
           : dirty ? 'Tenés cambios sin guardar.' : 'Todo guardado.'}

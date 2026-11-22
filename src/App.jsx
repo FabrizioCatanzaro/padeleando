@@ -6,6 +6,9 @@ import useScrollToTop from './hooks/useScrollToTop'
 import Header       from './components/shared/Header'
 import Footer       from './components/shared/Footer'
 import AdBanner     from './components/shared/AdBanner'
+import Sidebar      from './components/Shell/Sidebar'
+import BottomNav    from './components/Shell/BottomNav'
+import { showsBottomNav } from './components/Shell/navConfig'
 import InstallPrompt from './components/shared/InstallPrompt'
 import Loader       from './components/Loader/Loader'
 
@@ -46,6 +49,8 @@ const FriendlyCreate  = lazy(() => import('./components/Friendly/FriendlyCreate'
 const FriendlyDetail  = lazy(() => import('./components/Friendly/FriendlyDetail'))
 const FriendlyInvite  = lazy(() => import('./components/Friendly/FriendlyInvite'))
 const FriendlyEdit    = lazy(() => import('./components/Friendly/FriendlyEdit'))
+const TorneosView     = lazy(() => import('./components/Torneos/TorneosView'))
+const PadelerosView   = lazy(() => import('./components/Padeleros/PadelerosView'))
 const FAQView      = lazy(() => import('./components/Legal/FAQView'))
 const AboutView    = lazy(() => import('./components/Legal/AboutView'))
 const ContactView  = lazy(() => import('./components/Legal/ContactView'))
@@ -58,42 +63,38 @@ function RedirectToView() {
   return <Navigate to={`/view/${id}`} replace />
 }
 
+function RedirectAmistosos() {
+  const { search } = useLocation()
+  return <Navigate to={new URLSearchParams(search).get('tab') === 'mios' ? '/partidos/mios' : '/partidos'} replace />
+}
+
 function Layout() {
   useScrollToTop()
+  const { isLoggedIn } = useAuth()
+  const { pathname } = useLocation()
+  const withNav = isLoggedIn && showsBottomNav(pathname)
 
-  // El degradado de la portada se pinta acá y no dentro de HomeView: colgado
-  // del <main> quedaba encerrado en la columna central y, en desktop, se
-  // cortaba con dos franjas negras a los costados —justo donde van los
-  // banners—. Sobre la fila entera llega de borde a borde y además cubre el
-  // padding inferior del <main>, que antes empujaba el glow lejos del footer.
-  const isHome = useLocation().pathname === '/'
+  // El degradado de la portada va en la fila entera para llegar de borde a borde.
+  const isHome = pathname === '/'
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className={`min-h-screen flex flex-col ${withNav ? 'pb-[calc(104px+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
       <Header />
 
-      {/* Banner superior — solo mobile/tablet */}
-      {/* <div className="xl:hidden w-full flex justify-center py-1 border-b border-gray-100/10">
-        <AdBanner slot="mobile-top" />
-      </div> */}
-
       <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
-        {/* Banner lateral izquierdo — solo desktop */}
-        <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
-          <AdBanner slot="sidebar" />
-        </aside>
+        {isLoggedIn ? <Sidebar /> : (
+          <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
+            <AdBanner slot="sidebar" />
+          </aside>
+        )}
 
-        {/* Contenido principal. <main> es el landmark que los lectores de
-            pantalla usan para saltar la navegación repetida. */}
-        <main className="flex-1 w-full max-w-7xl min-w-0 pb-16 xl:pb-0">
-          {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra
-              el chunk de la ruta. */}
+        <main className={`flex-1 w-full max-w-7xl min-w-0 ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
+          {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra el chunk. */}
           <Suspense fallback={<Loader />}>
             <Outlet />
           </Suspense>
         </main>
 
-        {/* Banner lateral derecho — solo desktop */}
         <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
           <AdBanner slot="sidebar" />
         </aside>
@@ -101,13 +102,10 @@ function Layout() {
 
       <Footer />
 
+      {isLoggedIn && <BottomNav />}
+
       {/* Flota sobre el contenido, así que no desplaza nada ni suma CLS. */}
       <InstallPrompt />
-
-      {/* Banner inferior fijo — solo mobile/tablet */}
-      {/* <div className="xl:hidden fixed bottom-0 left-0 right-0 z-50 border-t border-gray-100/10 flex items-center justify-center h-14">
-        <AdBanner slot="mobile-bottom" />
-      </div> */}
     </div>
   )
 }
@@ -140,7 +138,16 @@ export default function App() {
         <Route path="/verify-email/:token"                       element={<Titled title="Verificar email"><VerifyEmail /></Titled>} />
         <Route path="/u/:username"                               element={<ProfileView />} />
         <Route path="/nivel"                                     element={<PrivateRoute><Titled title="Tu nivel"><LevelQuizView /></Titled></PrivateRoute>} />
-        <Route path="/amistosos"                                 element={<FriendliesView />} />
+        <Route path="/partidos"                                  element={<FriendliesView tab="abiertos" />} />
+        <Route path="/partidos/mios"                             element={<PrivateRoute><FriendliesView tab="mios" /></PrivateRoute>} />
+        <Route path="/amistosos"                                 element={<RedirectAmistosos />} />
+        <Route path="/torneos"                                   element={<Titled title="Torneos"><TorneosView tab="explorar" /></Titled>} />
+        <Route path="/torneos/mios"                              element={<PrivateRoute><Titled title="Mis torneos"><TorneosView tab="mios" /></Titled></PrivateRoute>} />
+        <Route path="/torneos/organizar"                         element={<PrivateRoute><Titled title="Organizar"><TorneosView tab="organizar" /></Titled></PrivateRoute>} />
+        <Route path="/padeleros"                                 element={<Navigate to="/padeleros/jugadores" replace />} />
+        <Route path="/padeleros/jugadores"                       element={<Titled title="Jugadores"><PadelerosView tab="jugadores" /></Titled>} />
+        <Route path="/padeleros/organizadores"                   element={<Titled title="Organizadores"><PadelerosView tab="organizadores" /></Titled>} />
+        <Route path="/padeleros/clubes"                          element={<Titled title="Clubes"><PadelerosView tab="clubes" /></Titled>} />
         <Route path="/amistosos/nuevo"                           element={<PrivateRoute><Titled title="Nuevo amistoso"><FriendlyCreate /></Titled></PrivateRoute>} />
         <Route path="/amistoso/:id"                              element={<FriendlyDetail />} />
         <Route path="/amistoso/invitacion/:token"                element={<FriendlyInvite />} />

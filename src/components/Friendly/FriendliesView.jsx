@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Plus, Navigation, CalendarDays, Check, ChevronRight, Loader2, Search } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
@@ -8,6 +8,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { DATE_FILTERS, dateRange, teamNames, setsText } from '../../utils/friendlies'
 import Btn from '../shared/Btn'
 import FriendlyCard from './FriendlyCard'
+import SectionTabs from '../Shell/SectionTabs'
 
 const RADIUS_KM = 15
 const SELECT = 'h-9 pl-8 pr-3 rounded-full border border-border-mid bg-surface text-content text-[12.5px] font-sans cursor-pointer appearance-none outline-none focus:border-border-strong'
@@ -21,13 +22,12 @@ function bandText(m) {
   return { title: `Confirmá el resultado${rivals ? ` vs. ${rivals}` : ''}`, sub: `${m.club.name} · ${setsText(m.pending?.sets ?? [])}` }
 }
 
-export default function FriendliesView() {
-  useDocumentTitle('Amistosos')
+export default function FriendliesView({ tab: tabProp = 'abiertos' }) {
   const navigate = useNavigate()
   const { isLoggedIn } = useAuth()
   const { showToast } = useToast()
-  const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'mios' && isLoggedIn ? 'mios' : 'abiertos'
+  const tab = tabProp === 'mios' && isLoggedIn ? 'mios' : 'abiertos'
+  useDocumentTitle(tab === 'mios' ? 'Mis partidos' : 'Partidos')
 
   const [coords, setCoords]         = useState(null)
   const [locating, setLocating]     = useState(false)
@@ -81,19 +81,18 @@ export default function FriendliesView() {
     )
   }
 
-  const setTab = (t) => setParams(t === 'mios' ? { tab: 'mios' } : {}, { replace: true })
   const crear = () => navigate(isLoggedIn ? '/amistosos/nuevo' : `/login?redirect=${encodeURIComponent('/amistosos/nuevo')}`)
   const band = pendientes[0]
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-7 pt-6 sm:pt-8 pb-10 font-sans">
-      <div className="flex items-end justify-between gap-4 mb-5">
-        <div>
-          <p className="m-0 text-[11px] font-mono tracking-[2px] text-secondary">PARTIDOS</p>
-          <h1 className="m-0 mt-1 font-condensed font-extrabold text-[22px] sm:text-[28px] text-white">AMISTOSOS</h1>
-        </div>
-        <Btn variant="primary" icon={Plus} onClick={crear}>CREAR</Btn>
-      </div>
+      <SectionTabs
+        title="Partidos"
+        tabs={isLoggedIn
+          ? [{ label: 'Explorar', to: '/partidos', end: true }, { label: 'Mis partidos', to: '/partidos/mios', badge: pendientes.length }]
+          : [{ label: 'Explorar', to: '/partidos', end: true }]}
+        action={<Btn variant="primary" icon={Plus} onClick={crear}>AMISTOSO</Btn>}
+      />
 
       {band && (
         <Link to={`/amistoso/${band.id}`}
@@ -109,12 +108,6 @@ export default function FriendliesView() {
       )}
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div role="tablist" aria-label="Amistosos" className="flex gap-1.5">
-          <TabButton active={tab === 'abiertos'} onClick={() => setTab('abiertos')}>ABIERTOS</TabButton>
-          {isLoggedIn && (
-            <TabButton active={tab === 'mios'} onClick={() => setTab('mios')} badge={pendientes.length}>MIS AMISTOSOS</TabButton>
-          )}
-        </div>
         {tab === 'abiertos' && (
           <div className="flex flex-wrap gap-2">
             <button type="button" aria-pressed={Boolean(coords)} onClick={toggleNear}
@@ -147,16 +140,6 @@ export default function FriendliesView() {
       )}
       {tab === 'mios' && <ListBlock rows={mine && mineSorted} showStatus empty="Todavía no jugaste amistosos. Creá uno o sumate a uno abierto." />}
     </div>
-  )
-}
-
-function TabButton({ active, onClick, badge = 0, children }) {
-  return (
-    <button type="button" role="tab" aria-selected={active} onClick={onClick}
-      className={`h-9 px-3.5 rounded-lg border font-condensed font-bold text-[10.5px] tracking-[0.08em] inline-flex items-center gap-1.5 cursor-pointer transition-colors ${active ? 'bg-brand border-brand text-base' : 'bg-transparent border-border-mid text-soft hover:text-white'}`}>
-      {children}
-      {badge > 0 && <span className={`min-w-[18px] h-[18px] px-1 rounded-full text-[11px] font-sans flex items-center justify-center ${active ? 'bg-base text-brand' : 'bg-brand text-base'}`}>{badge}</span>}
-    </button>
   )
 }
 
