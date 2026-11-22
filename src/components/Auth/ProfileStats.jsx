@@ -9,7 +9,7 @@ import ClubLogo from '../shared/ClubLogo';
 // `frequent_partners`, que el servidor manda siempre. Nada de acá depende del
 // plan, por eso lleva escrito "siempre visible": el visitante que ve el bloque
 // premium tapado tiene que entender qué parte sí está viendo.
-export default function ProfileStats({ stats, clubStats = [], partners = [] }) {
+export default function ProfileStats({ stats, clubStats = [], partners = [], friendliesOnly = false }) {
   const navigate = useNavigate();
   const partidos  = stats?.partidos ?? 0;
   const victorias = stats?.victorias ?? 0;
@@ -30,6 +30,17 @@ export default function ProfileStats({ stats, clubStats = [], partners = [] }) {
         <StatTile value={`${pct}%`} label="Victorias" tone={partidos > 0 ? 'brand' : 'off'} />
       </StatTiles>
 
+      {friendliesOnly ? (
+      <StatTiles className="mt-2.5">
+        <StatTile
+          value={stats?.racha ?? 0}
+          label="Racha actual"
+          sub={stats?.racha > 0 ? 'partidos al hilo' : 'sin racha'}
+          tone={stats?.racha > 0 ? 'brand' : 'off'}
+        />
+        <StatTile value={clubStats.length} label="Clubes" sub="donde jugó" tone={clubStats.length > 0 ? 'default' : 'off'} />
+      </StatTiles>
+      ) : (
       <StatTiles className="mt-2.5">
         <StatTile
           value={stats?.torneos ?? 0}
@@ -55,6 +66,7 @@ export default function ProfileStats({ stats, clubStats = [], partners = [] }) {
           tone={(stats?.torneos_americanos ?? 0) > 0 ? 'default' : 'off'}
         />
       </StatTiles>
+      )}
 
       {clubStats.length > 0 && (
         <>

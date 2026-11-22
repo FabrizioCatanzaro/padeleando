@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, House, LayoutGrid, CreditCard, Shield, LogOut, Building2 } from 'lucide-react'
+import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, House, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -12,7 +12,7 @@ import logoTxtUrl from '../../assets/padeleando-txt.webp'
 import PlayerAvatar from './PlayerAvatar'
 import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
-import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria } from '../../utils/notifText'
+import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
 
 // Preferencia de sonido de la campana, apagada por defecto.
@@ -124,6 +124,7 @@ function NotifItemText({ n, onNavigate }) {
   if (n.type === 'booking_decided')   return <>{n.body}</>;
   if (n.type === 'booking_cancelled') return <>{n.body}</>;
   if (isRegistrationNotif(n)) return <>{registrationText(n)}</>;
+  if (isFriendlyNotif(n)) return <>{friendlyText(n)}</>;
   // Un tipo sin rama propia se leía como una notificación en blanco.
   return <>{notifSummary(n)}</>;
 }
@@ -529,7 +530,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n))) ? 'cursor-pointer hover:bg-white/5' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n)) || isFriendlyNotif(n)) ? 'cursor-pointer hover:bg-white/5' : ''}`}
       onClick={
         n.type === 'admin_message' ? () => onNavigate('/notifications')
           : n.type === 'club_request' && isAdminViewer ? () => onNavigate('/admin/clubs/requests')
@@ -538,12 +539,17 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
           : (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') ? () => onNavigate(`/club/${n.entity_id}`)
           : n.type === 'premium_claim' ? () => onNavigate('/admin/users')
           : isRegistrationNotif(n) && registrationHref(n) ? () => onNavigate(registrationHref(n))
+          : isFriendlyNotif(n) ? () => onNavigate(friendlyHref(n))
           : undefined
       }
     >
       {unread && <div className="shrink-0 mt-2.5 w-1.5 h-1.5 rounded-full bg-brand flex-none" />}
       <div className={`shrink-0 ${unread ? '' : 'ml-[18px]'}`}>
-        {(n.type === 'admin_message' || n.type === 'ownership_received'
+        {n.type === 'friendly_reminder' ? (
+          <div className="w-8 h-8 rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-brand">
+            <AlarmClock size={15} />
+          </div>
+        ) : (n.type === 'admin_message' || n.type === 'ownership_received'
           || (n.type === 'club_claim' && n.actor_is_admin) || (n.type === 'club_request' && n.actor_is_admin)) ? (
           // Ícono fijo solo si el actor es el admin que revisó; si es el solicitante se ve su avatar
           <div className="w-8 h-8 rounded-full bg-brand/15 border border-brand/30 flex items-center justify-center text-[14px]">

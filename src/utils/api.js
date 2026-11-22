@@ -114,7 +114,7 @@ export const api = {
     create:        (body)     => req('POST',   '/groups', body),
     update:        (id, b)    => req('PUT',    `/groups/${id}`, b),
     delete:        (id)       => req('DELETE', `/groups/${id}`),
-    byUsername:    (username) => req('GET',    `/groups/user/${username}`),
+    byUsername:    (username, source) => req('GET', `/groups/user/${username}${source && source !== 'todos' ? `?source=${source}` : ''}`),
     favorites:     ()         => req('GET',    '/groups/favorites'),
     favorite:      (id)       => req('POST',   `/groups/${id}/favorite`),
     unfavorite:    (id)       => req('DELETE', `/groups/${id}/favorite`),
@@ -318,6 +318,30 @@ export const api = {
   invites: {
     resolve: (token)                  => req('POST', '/invites/resolve', { token }),
     accept:  (token)                  => req('POST', '/invites/accept',  { token }),
+  },
+  // Amistosos (routes/friendlies.js del back). `t` es el token de un partido visible solo por link.
+  friendlies: {
+    list:       (params = {}) => {
+      const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== null && v !== undefined && v !== '')).toString()
+      return req('GET', `/friendlies${qs ? `?${qs}` : ''}`)
+    },
+    localities: ()                       => req('GET',    '/friendlies/localities'),
+    mine:       ()                       => req('GET',    '/friendlies/mine'),
+    get:        (id, t)                  => req('GET',    `/friendlies/${id}${t ? `?t=${encodeURIComponent(t)}` : ''}`),
+    create:     (body)                   => req('POST',   '/friendlies', body),
+    update:     (id, body)               => req('PATCH',  `/friendlies/${id}`, body),
+    cancel:     (id)                     => req('POST',   `/friendlies/${id}/cancel`),
+    remove:     (id)                     => req('DELETE', `/friendlies/${id}`),
+    join:       (id, body)               => req('POST',   `/friendlies/${id}/join`, body),
+    leave:      (id)                     => req('POST',   `/friendlies/${id}/leave`),
+    updateMe:   (id, body)               => req('PATCH',  `/friendlies/${id}/me`, body),
+    fillSlot:   (id, team, pos, body)    => req('POST',   `/friendlies/${id}/players/${team}/${pos}`, body),
+    clearSlot:  (id, team, pos)          => req('DELETE', `/friendlies/${id}/players/${team}/${pos}`),
+    propose:    (id, sets)               => req('POST',   `/friendlies/${id}/proposals`, { sets }),
+    accept:     (id, proposalId)         => req('POST',   `/friendlies/${id}/proposals/${proposalId}/accept`),
+    invite:     (id, team, pos)          => req('POST',   `/friendlies/${id}/players/${team}/${pos}/invite`),
+    inviteInfo: (token)                  => req('GET',    `/friendlies/invites/${encodeURIComponent(token)}`),
+    claim:      (token)                  => req('POST',   `/friendlies/invites/${encodeURIComponent(token)}/accept`),
   },
   photos: {
     list:          (tournamentId)                       => req('GET',    `/tournaments/${tournamentId}/photos`),

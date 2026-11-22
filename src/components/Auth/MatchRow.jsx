@@ -1,4 +1,4 @@
-import { Lock } from 'lucide-react';
+import { Lock, Swords } from 'lucide-react';
 
 const ROUND_LABEL = {
   dieciseisavos: '16avos', octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semifinal', final: 'Final', tercer: 'Tercer puesto',
@@ -18,7 +18,8 @@ const firstName = (n) => n?.split(' ')[0] ?? '?';
 export default function MatchRow({ m, onOpen }) {
   const result = m.result === 'win' ? 'win' : m.result === 'draw' ? 'draw' : 'loss';
   // De una categoría privada llega el resultado, no la jornada.
-  const priv = m.private_group;
+  const friendly = m.source === 'amistoso';
+  const priv = m.private_group || m.private_friendly;
 
   return (
     <div
@@ -41,7 +42,11 @@ export default function MatchRow({ m, onOpen }) {
         <div className="font-mono text-[11px] text-muted mt-1 truncate">
           <span className="opacity-70">vs </span>{firstName(m.opp1_name)} &amp; {firstName(m.opp2_name)}
           <span className="opacity-40"> · </span>
-          {priv
+          {friendly ? (
+            <span className="inline-flex items-center gap-1 text-cyan">
+              <Swords size={9} className="shrink-0" />Amistoso{m.club_name ? <span className="text-muted"> · {m.club_name}</span> : null}
+            </span>
+          ) : priv
             ? <span className="inline-flex items-center gap-1"><Lock size={9} className="shrink-0" />Categoría privada</span>
             : m.tournament_name}
           {m.bracket_round && <span className="text-brand"> · {ROUND_LABEL[m.bracket_round] ?? m.bracket_round}</span>}
