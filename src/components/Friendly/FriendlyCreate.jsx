@@ -15,7 +15,7 @@ import ClubSelector from '../shared/ClubSelector'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import SlotEditor from './SlotEditor'
 import SetsEditor from './SetsEditor'
-import { INPUT, LABEL, SegButtons, MoneyInput, VisibilityPicker, DurationPicker } from './parts'
+import { INPUT, LABEL, SegButtons, MoneyInput, VisibilityPicker, DurationPicker, TimePicker } from './parts'
 import { whatsappDePerfil } from '../../utils/copa'
 
 const STEPS = [
@@ -169,7 +169,7 @@ export default function FriendlyCreate() {
                       </div>
                       <div>
                         <label htmlFor="am-hora" className={LABEL}>HORA</label>
-                        <input id="am-hora" type="time" step={1800} className={INPUT} value={time} onChange={(e) => setTime(e.target.value)} />
+                        <TimePicker id="am-hora" value={time} onChange={setTime} />
                       </div>
                     </div>
                     <div>

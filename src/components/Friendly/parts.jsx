@@ -204,3 +204,19 @@ export function VisibilityPicker({ value, onChange }) {
     </div>
   )
 }
+
+// Horarios fijos cada 30 min, de 06:00 a 05:30: el input nativo arma el desplegable desde la hora actual.
+const HALF_HOURS = Array.from({ length: 48 }, (_, i) => {
+  const mins = (6 * 60 + i * 30) % (24 * 60)
+  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${mins % 60 === 0 ? '00' : '30'}`
+})
+
+export function TimePicker({ id, value, onChange }) {
+  const options = value && !HALF_HOURS.includes(value) ? [value, ...HALF_HOURS] : HALF_HOURS
+  return (
+    <select id={id} className={`${INPUT} cursor-pointer`} value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="" disabled>Elegí la hora</option>
+      {options.map((t) => <option key={t} value={t}>{t}</option>)}
+    </select>
+  )
+}
