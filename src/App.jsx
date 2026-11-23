@@ -68,7 +68,7 @@ function RedirectAmistosos() {
   return <Navigate to={new URLSearchParams(search).get('tab') === 'mios' ? '/partidos/mios' : '/partidos'} replace />
 }
 
-const OWN_ASIDE = new Set(['/', '/torneos/organizar'])
+const OWN_ASIDE = new Set(['/', '/torneos/organizar', '/padeleros/jugadores'])
 
 function Layout() {
   useScrollToTop()
@@ -97,7 +97,7 @@ function Layout() {
           </Suspense>
         </main>
 
-        {/* Inicio y Organizar arman su propia columna derecha. */}
+        {/* Inicio, Organizar y Jugadores arman su propia columna derecha. */}
         {!(isLoggedIn && OWN_ASIDE.has(pathname)) && (
           <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
             <AdBanner slot="sidebar" />

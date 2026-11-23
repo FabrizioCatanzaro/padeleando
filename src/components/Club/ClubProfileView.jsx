@@ -61,7 +61,7 @@ export default function ClubProfileView() {
   const isAdmin = user?.role === 'admin'
   const [club, setClub]     = useState(null)
   const [events, setEvents] = useState({ upcoming: [], ongoing: [], past: [] })
-  const [tab, setTab]       = useState('agenda')
+  const [tab, setTab]       = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'reservar' ? 'reservar' : 'agenda'))
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState(null)
   const [showEditRequest, setShowEditRequest] = useState(false)

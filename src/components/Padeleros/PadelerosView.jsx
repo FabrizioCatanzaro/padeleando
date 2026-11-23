@@ -1,6 +1,12 @@
-import { Users, ClipboardList, Building2 } from 'lucide-react'
+import { lazy, Suspense } from 'react'
+import { Link } from 'react-router-dom'
 import SectionTabs from '../Shell/SectionTabs'
-import ComingSoon from '../Shell/ComingSoon'
+import { useAuth } from '../../context/useAuth'
+import { Spinner } from './parts'
+
+const Jugadores     = lazy(() => import('./Jugadores'))
+const Organizadores = lazy(() => import('./Organizadores'))
+const Clubes        = lazy(() => import('./Clubes'))
 
 const TABS = [
   { label: 'Jugadores',     to: '/padeleros/jugadores' },
@@ -10,32 +16,21 @@ const TABS = [
   { label: 'Ranking', soon: true },
 ]
 
-const CONTENT = {
-  jugadores: {
-    icon: Users,
-    title: 'Jugadores para seguir',
-    text: 'Los que más jugaron con vos y sugeridos de tus mismos torneos. Mientras tanto, buscá jugadores con el buscador de Inicio.',
-    linkTo: '/', linkLabel: 'Ir a Inicio',
-  },
-  organizadores: {
-    icon: ClipboardList,
-    title: 'Organizadores activos',
-    text: 'Quienes organizan torneos cerca tuyo. Mientras tanto, encontrá categorías con el buscador de Inicio.',
-    linkTo: '/', linkLabel: 'Ir a Inicio',
-  },
-  clubes: {
-    icon: Building2,
-    title: 'Clubes cerca tuyo',
-    text: 'Clubes con distancia, canchas, partidos abiertos y reserva online. Mientras tanto, están en Inicio, en "Clubes cerca".',
-    linkTo: '/?cerca=1', linkLabel: 'Ver clubes cerca',
-  },
-}
+const VIEWS = { jugadores: Jugadores, organizadores: Organizadores, clubes: Clubes }
 
 export default function PadelerosView({ tab = 'jugadores' }) {
+  const { isLoggedIn } = useAuth()
+  const View = VIEWS[tab] ?? Jugadores
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-7 pt-6 sm:pt-8 pb-10">
+    <div className="max-w-6xl mx-auto px-4 sm:px-7 pt-6 sm:pt-8 pb-10">
       <SectionTabs title="Padeleros" tabs={TABS} />
-      <ComingSoon {...CONTENT[tab]} />
+      {tab === 'jugadores' && !isLoggedIn ? (
+        <p className="font-sans text-[13px] text-secondary min-h-[40vh]">
+          <Link to="/login?redirect=/padeleros/jugadores" className="text-brand font-bold no-underline hover:underline">Iniciá sesión</Link> para ver con quién jugaste y a quién seguir.
+        </p>
+      ) : (
+        <Suspense fallback={<Spinner />}><View /></Suspense>
+      )}
     </div>
   )
 }

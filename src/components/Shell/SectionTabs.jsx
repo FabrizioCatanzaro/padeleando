@@ -9,11 +9,11 @@ export default function SectionTabs({ title, tabs, action }) {
         <h1 className="m-0 font-condensed font-bold text-[22px] sm:text-[28px] text-white leading-tight">{title}</h1>
         {action}
       </div>
-      <div role="tablist" className="flex gap-6 sm:gap-7 mt-4 border-b border-border overflow-x-auto">
+      <div role="tablist" className="flex gap-6 sm:gap-7 mt-4 border-b border-border overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {tabs.map((t) => t.soon ? (
           <span key={t.label} role="tab" aria-disabled="true" className={`${TAB} border-b-transparent text-muted font-semibold cursor-default`}>
             {t.label}
-            <span className="text-[9px] font-bold tracking-wider border border-border-strong rounded-md px-1.5 py-0.5">PRÓXIMAMENTE</span>
+            <span className="text-[9px] font-bold tracking-wider border border-border-strong rounded-md px-1.5 py-0.5"><span className="sm:hidden">PRONTO</span><span className="hidden sm:inline">PRÓXIMAMENTE</span></span>
           </span>
         ) : (
           <NavLink key={t.to} to={t.to} end={t.end} role="tab"
