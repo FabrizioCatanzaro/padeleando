@@ -5,6 +5,7 @@ import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { useToast } from '../../context/useToast'
 import { useDocumentTitle } from '../../hooks/useDocumentTitle'
+import { refreshSummary } from '../../hooks/useSummary'
 import { formatMoney } from '../../utils/money'
 import {
   SIDE_OPTIONS, HAND_OPTIONS, STYLE_LABEL, longDate, endTime, freeCount, isFilled, playerName,
@@ -50,6 +51,7 @@ export default function FriendlyDetail() {
       if (data && data.id) setM(data)
       else load()
       if (okText) showToast(okText)
+      refreshSummary()
       setSheet(null)
       setConfirm(null)
       return true
@@ -153,8 +155,8 @@ export default function FriendlyDetail() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-7 pt-4 sm:pt-6 pb-12 font-sans">
-      <Link to="/amistosos" className="inline-flex items-center gap-1 min-h-11 text-[13px] text-soft hover:text-white no-underline">
-        <ChevronLeft size={16} />Amistosos
+      <Link to="/partidos" className="inline-flex items-center gap-1 min-h-11 text-[13px] text-soft hover:text-white no-underline">
+        <ChevronLeft size={16} />Partidos
       </Link>
 
       <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-8 lg:items-start">
@@ -270,7 +272,7 @@ export default function FriendlyDetail() {
         <Modal title={started ? 'No jugué este partido' : 'Salir del partido'}
           message={started ? 'Tu lugar queda libre y la propuesta de resultado vigente se anula.' : 'Tu lugar queda libre para otro jugador.'}
           confirmText="CONFIRMAR" confirmDanger onCancel={() => setConfirm(null)}
-          onConfirm={async () => { if (await run(() => api.friendlies.leave(m.id), 'Saliste del partido')) navigate('/amistosos', { replace: true }) }} />
+          onConfirm={async () => { if (await run(() => api.friendlies.leave(m.id), 'Saliste del partido')) navigate('/partidos', { replace: true }) }} />
       )}
       {confirm?.kind === 'remove' && (
         <Modal title="Quitar jugador" message={`${playerName(confirm.p)} deja el partido y su lugar queda libre.`} confirmText="QUITAR" confirmDanger

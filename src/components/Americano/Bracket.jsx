@@ -8,6 +8,7 @@ import ShareStoryButton from "../Snapshot/ShareStoryButton";
 import SnapshotModal from "../Snapshot/SnapshotModal";
 import BracketStory from "../Snapshot/BracketStory";
 import { ScoreRow } from "../Matches/MatchCard";
+import AvisoDirectas from "./AvisoDirectas";
 
 const PHASE_TITLE = { dieciseisavos: "16AVOS DE FINAL", octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL", tercer: "TERCER PUESTO" };
 const SLOT_LABEL  = { dieciseisavos: "16avos", octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final", tercer: "el tercer puesto" };
@@ -716,6 +717,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
             <p className="text-muted font-mono text-[12px] mb-4">
               La fase previa terminó: ya podés generar el cuadro.
             </p>
+            <AvisoDirectas pairCount={pairCount} className="mb-4" />
             <button
               onClick={handleGenerateBracket}
               disabled={generating}

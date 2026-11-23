@@ -226,7 +226,7 @@ export default function TournamentPage({
   const irATab = (id) => { setTvMode(false); setTab(id); };
 
   return (
-    <div className="bg-base text-content font-sans pb-24 sm:pb-15">
+    <div className="bg-base text-content font-sans pb-15">
       <TournamentHero
         tournament={tournament}
         groupId={groupId ?? tournament.group_id}
@@ -305,12 +305,12 @@ export default function TournamentPage({
         </div>
       )}
 
-      {/* Solapas — escritorio */}
-      <div className="hidden sm:flex border-b border-border px-4 items-center overflow-x-auto">
+      {/* Solapas arriba también en mobile: abajo va la barra de navegación de la app. */}
+      <div className="flex border-b border-border px-2 sm:px-4 items-center overflow-x-auto">
         {TABS.map((t) => (
           <div key={t.id} onClick={() => irATab(t.id)}
             className={`border-0 px-3.5 py-3.5 font-condensed font-bold text-[13px] tracking-wide cursor-pointer border-b-2 rounded-t-md whitespace-nowrap transition-all hover:text-brand ${activeTab === t.id && !tvMode ? 'text-brand border-b-brand bg-brand/10' : 'text-muted border-b-transparent bg-transparent hover:bg-brand/5'}`}>
-            <t.icon size={14} className="inline mr-1.5" />{t.label}
+            <t.icon size={14} className="inline mr-1.5" /><span className="sm:hidden">{t.corto}</span><span className="hidden sm:inline">{t.label}</span>
             {t.id === 'management' && warningCount > 0 && (
               <WarningMark count={warningCount} className="ml-1.5 align-middle" />
             )}
@@ -318,28 +318,6 @@ export default function TournamentPage({
               <span aria-label={`${pendientes} pendientes`} className="ml-1.5 align-middle inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
             )}
           </div>
-        ))}
-      </div>
-
-      {/* Barra inferior — mobile */}
-      <div className="sm:hidden fixed bottom-0 left-0 right-0 z-40 bg-base border-t border-border flex">
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => irATab(t.id)}
-            className={`flex-1 flex flex-col items-center justify-center gap-1 py-2.5 border-0 cursor-pointer transition-colors ${activeTab === t.id && !tvMode ? 'text-brand bg-brand/10' : 'text-secondary bg-transparent'}`}
-          >
-            <span className="relative inline-flex leading-none">
-              <t.icon size={20} />
-              {t.id === 'management' && warningCount > 0 && (
-                <WarningMark count={warningCount} className="absolute -top-1 -right-2" />
-              )}
-              {t.id === 'registrations' && pendientes > 0 && (
-                <span aria-label={`${pendientes} pendientes`} className="absolute -top-1 -right-2 inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand text-black font-condensed font-bold text-[10px]">{pendientes}</span>
-              )}
-            </span>
-            <span className="text-[11px] font-semibold leading-none">{t.corto}</span>
-          </button>
         ))}
       </div>
 

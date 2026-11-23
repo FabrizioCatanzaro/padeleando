@@ -47,8 +47,32 @@ padeliando/
     │   ├── Loader/
     │   │   └── Loader.jsx          # Full-page loading spinner
     │   │
+    │   ├── Shell/                  # Logged-in frame (see CLAUDE.md › Navegación)
+    │   │   ├── navConfig.js        # Modules, routes, icons, badges, routes without bottom bar
+    │   │   ├── Sidebar.jsx         # Left menu ≥1024 px: Crear, modules, Tus clubes
+    │   │   ├── BottomNav.jsx       # Glass bottom bar <1024 px with the central ＋
+    │   │   ├── CreateMenu.jsx      # Amistoso · Torneo (category picker) · Categoría · Reservar
+    │   │   ├── SectionTabs.jsx     # Module title + tabs ("Próximamente" tabs)
+    │   │   └── ComingSoon.jsx      # Placeholder block
+    │   │
     │   ├── Home/
-    │   │   └── HomeView.jsx        # Dashboard: user's tournaments, profile/group search, create button
+    │   │   ├── HomeView.jsx        # Inicio (logged in) and the visitor landing; search; new-category modal
+    │   │   ├── PanelBands.jsx      # StatRail and LiveBand
+    │   │   └── Inicio/             # Pendientes, Agenda, ParaSumarte, ResumenCard, ClubesCerca
+    │   │
+    │   ├── Torneos/
+    │   │   ├── TorneosView.jsx     # Tabs /torneos, /torneos/mios, /torneos/organizar (lazy)
+    │   │   ├── Explorar.jsx        # Tus categorías + /api/home showcase
+    │   │   ├── MisTorneos.jsx      # Flat list from /me/tournaments with filters
+    │   │   └── Organizar.jsx       # /me/organize: registrations to approve, category cards, plan
+    │   │
+    │   ├── Padeleros/
+    │   │   ├── PadelerosView.jsx   # Tabs Jugadores · Organizadores · Clubes · Feed/Ranking (soon)
+    │   │   ├── Jugadores.jsx       # Search, Siguiendo, Jugaste con, Sugeridos, right column
+    │   │   ├── Organizadores.jsx   # Active organizers, "Cerca de mí"
+    │   │   ├── Clubes.jsx          # Clubs with open friendlies and online booking
+    │   │   └── parts.jsx           # FollowButton, PersonRow, shared classes
+    │   │
     │   │
     │   ├── Auth/
     │   │   ├── AuthView.jsx        # Login + register forms, Google OAuth
@@ -143,14 +167,18 @@ padeliando/
     │   └── useAuth.js              # useContext(AuthContext) convenience hook
     │
     ├── hooks/
-    │   └── useTournament.js        # Central hook: all tournament CRUD, match/player/pair ops, schedule/bracket
+    │   ├── useTournament.js        # Central hook: all tournament CRUD, match/player/pair ops, schedule/bracket
+    │   ├── useSummary.js           # Shared store over /me/summary: nav counters and profile summary
+    │   └── useGeolocation.js       # Location on tap, or on mount when already granted
     │
     └── utils/
         ├── api.js                  # Fetch wrapper: all API endpoints, auto token refresh on 401
         ├── auth.js                 # Auth helper functions
+        ├── agenda.js               # Day keys and labels for the agenda
         ├── copa.js                 # Copa rules mirrored from the API: options, group tables, seeding, labels
         ├── helpers.js              # Pure utility functions (see table below)
-        └── storage.js              # localStorage read/write helpers
+        ├── storage.js              # localStorage read/write helpers
+        └── tournamentList.js       # Mis torneos: format labels, role, phase and status lines
 ```
 
 ---
@@ -159,7 +187,10 @@ padeliando/
 
 | Component | Route | Purpose |
 |-----------|-------|---------|
-| `HomeView` | `/` | User's tournament list, search, create entry point |
+| `HomeView` | `/` | Inicio: rail, live, Pendientes, agenda, Para sumarte (visitor: landing) |
+| `FriendliesView` | `/partidos` `/partidos/mios` | Partidos › Explorar / Mis partidos |
+| `TorneosView` | `/torneos` `/torneos/mios` `/torneos/organizar` | Torneos › Explorar / Mis torneos / Organizar |
+| `PadelerosView` | `/padeleros/jugadores` `/padeleros/organizadores` `/padeleros/clubes` | Padeleros community tabs |
 | `AuthView` | `/login` `/register` | Email + Google OAuth login/register |
 | `ProfileView` | `/u/:username` | Public user profile: stats, streaks, recent matches, frequent partners |
 | `ResetPassword` | `/reset-password/:token` | Complete password reset flow |
@@ -193,6 +224,9 @@ padeliando/
 | Path | Component |
 |------|-----------|
 | `/` | HomeView |
+| `/partidos` `/partidos/mios` | FriendliesView (`/amistosos` redirects to `/partidos`) |
+| `/torneos` | TorneosView (Explorar) |
+| `/padeleros/jugadores` `/padeleros/organizadores` `/padeleros/clubes` | PadelerosView |
 | `/login` | AuthView |
 | `/register` | AuthView |
 | `/reset-password/:token` | ResetPassword |
@@ -209,6 +243,7 @@ padeliando/
 | Path | Component |
 |------|-----------|
 | `/cat/:groupId/torneo/new` | Setup |
+| `/torneos/mios` `/torneos/organizar` | TorneosView |
 | `/invitations` | InvitationsView |
 
 ### Admin Routes (require `user.role === 'admin'` via `<AdminRoute>`)
@@ -285,6 +320,20 @@ File uploads use `reqMultipart()` (no `Content-Type` header; browser sets multip
 - `updateMe(data)` — PATCH /auth/me
 - `uploadAvatar(file)` — POST /auth/me/avatar (multipart)
 - `deleteAvatar()` — DELETE /auth/me/avatar
+
+**me** *(logged-in summaries for the navigation)*
+- `summary()` — GET /me/summary (profile numbers and pending counters)
+- `agenda(from, to)` — GET /me/agenda
+- `tournaments()` — GET /me/tournaments (flat list for Mis torneos)
+- `organize()` — GET /me/organize (categories, registrations to approve, plan)
+
+**padeleros**
+- `players()` — GET /padeleros/players (network, Jugaste con, Sugeridos, active organizers)
+- `organizers(lat, lon)` — GET /padeleros/organizers
+
+**clubs** *(only the Padeleros additions)*
+- `browse(q)` — GET /clubs?stats=1&limit=60&q=
+- `nearbyStats(lat, lon)` — GET /clubs/nearby?stats=1
 
 **groups**
 - `list()` — GET /groups (user's groups)

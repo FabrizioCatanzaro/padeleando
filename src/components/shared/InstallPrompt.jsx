@@ -2,21 +2,21 @@ import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Download, X, Share } from 'lucide-react'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
+import { useAuth } from '../../context/useAuth'
+import { showsBottomNav } from '../Shell/navConfig'
 import { isSnoozed, OPEN_EVENT } from '../../utils/pwa'
 import logoUrl from '../../assets/padeleando-logo.webp'
 
 const DELAY_MS = 30_000
 
-// Main y ReadonlyView tienen su propia barra fija en mobile, así que ahí el
-// cartel sube para no taparla.
-function hasBottomNav(pathname) {
-  return /\/torneo\//.test(pathname) || pathname.startsWith('/view/')
-}
 
 export default function InstallPrompt() {
   const { available, needsManualSteps, install, dismiss } = usePwaInstall()
   const [open, setOpen] = useState(false)
   const { pathname } = useLocation()
+  const { isLoggedIn } = useAuth()
+  // Con la barra de navegación de la app el cartel sube para no taparla.
+  const aboveNav = isLoggedIn && showsBottomNav(pathname)
 
   useEffect(() => {
     if (!available || isSnoozed()) return
@@ -49,7 +49,7 @@ export default function InstallPrompt() {
       aria-label="Instalar Padeleando"
       style={{ animation: 'fadeInUp 250ms ease forwards' }}
       className={`fixed left-3 right-3 z-50 sm:left-auto sm:right-5 sm:w-90
-        ${hasBottomNav(pathname) ? 'bottom-[74px] sm:bottom-5' : 'bottom-3 sm:bottom-5'}`}
+        ${aboveNav ? 'bottom-[calc(100px+env(safe-area-inset-bottom))] lg:bottom-5' : 'bottom-3 sm:bottom-5'}`}
     >
       <div className="bg-surface/85 backdrop-blur-xl border border-border-strong rounded-2xl shadow-2xl p-4 flex gap-3 items-start">
         <img src={logoUrl} width="40" height="40" alt="" className="w-10 h-10 rounded-xl shrink-0" />

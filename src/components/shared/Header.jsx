@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, House, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
+import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -14,6 +15,7 @@ import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
 import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
+import { useSummary } from '../../hooks/useSummary'
 
 // Preferencia de sonido de la campana, apagada por defecto.
 const SOUND_KEY = 'notif_sound'
@@ -139,6 +141,8 @@ export default function Header() {
   const [shareAppOpen,  setShareAppOpen]  = useState(false)
 
   const { user, isLoggedIn, logout } = useAuth()
+  const summary = useSummary()
+  const stats = summary?.stats
   const { pushAlert } = useAlerts()
   // El intervalo lee el toggle por ref: no queremos reiniciarlo al cambiarlo.
   const soundOnRef  = useRef(notifSound)
@@ -150,10 +154,11 @@ export default function Header() {
   const location  = useLocation()
   const menuRef   = useRef(null)
   const notifRef  = useRef(null)
+  const sheetRef  = useRef(null)
 
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current  && !menuRef.current.contains(e.target))  setMenuOpen(false)
+      if (menuRef.current && !menuRef.current.contains(e.target) && !sheetRef.current?.contains(e.target)) setMenuOpen(false)
       if (notifRef.current && !notifRef.current.contains(e.target)) setNotifOpen(false)
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -288,6 +293,104 @@ export default function Header() {
     </button>
   );
 
+  const menuBody = (
+    <>
+      {isLoggedIn ? (
+        <>
+          {/* Header del menú — avatar + nombre */}
+          <div
+            className="flex items-center gap-3 px-4 py-3 border-b border-border-mid cursor-pointer hover:bg-border-mid transition-colors"
+            onClick={() => go(`/u/${user?.username}`)}
+          >
+            <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={user?.subscription?.plan === 'premium'} />
+            <div className="min-w-0">
+              <div className="text-sm text-white font-sans font-semibold truncate">{user?.name}</div>
+              <div className="text-[11px] font-mono text-dim truncate">
+                @{user?.username}{user?.category && ` · ${user.category}`}
+                {stats?.partidos > 0 && ` · ${stats.partidos} partidos · ${stats.win_pct}%`}
+              </div>
+            </div>
+          </div>
+
+          {/* En desktop Tus clubes y Mis categorías ya están en el menú lateral. */}
+          {user?.owned_clubs?.length > 0 && (
+            <div className="py-1 border-b border-border-mid lg:hidden">
+              <div className="px-4 pt-2 pb-1 font-sans text-[10px] font-bold tracking-[2px] text-muted">TUS CLUBES</div>
+              {user.owned_clubs.map((c) => (
+                <button key={c.id} onClick={() => go(`/club/${c.id}`)}
+                  className={`${MENU_ITEM} text-content hover:text-white`}>
+                  <Building2 size={MENU_ITEM_ICON} className="shrink-0" />
+                  <span className="truncate min-w-0">{c.name}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="py-1">
+            <button onClick={() => go('/torneos/organizar')}
+              className={`${MENU_ITEM} text-content hover:text-white lg:hidden`}>
+              <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
+              Mis categorías
+            </button>
+            <button onClick={() => go('/subscription/manage')}
+              className={`${MENU_ITEM} text-content hover:text-white`}>
+              <CreditCard size={MENU_ITEM_ICON} className="shrink-0" />
+              Mi plan
+            </button>
+            <button onClick={() => { setMenuOpen(false); setShareAppOpen(true); }}
+              className={`${MENU_ITEM} text-content hover:text-white`}>
+              <UserPlus size={MENU_ITEM_ICON} className="shrink-0" />
+              Invitar amigos
+            </button>
+            <Link
+              to="/tutorial"
+              onClick={() => setMenuOpen(false)}
+              className={`${MENU_ITEM} text-content hover:text-white`}
+            >
+              <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
+              Ayuda
+            </Link>
+            {installItem}
+            {user?.role === 'admin' && (
+              <button onClick={() => go('/admin')}
+                className={`${MENU_ITEM} text-content hover:text-white`}>
+                <Shield size={MENU_ITEM_ICON} className="shrink-0" />
+                Admin
+              </button>
+            )}
+          </div>
+
+          <div className="border-t border-border-mid py-1">
+            <button
+              onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}
+              className={`${MENU_ITEM} text-danger`}
+            >
+              <LogOut size={MENU_ITEM_ICON} className="shrink-0" />
+              Cerrar sesión
+            </button>
+          </div>
+        </>
+      ) : (
+        <div className="py-1">
+          <button onClick={() => go('/login')}
+            className={`${MENU_ITEM} text-content hover:text-white`}>
+            <User size={MENU_ITEM_ICON} className="shrink-0" />
+            Iniciar sesión
+          </button>
+          <Link
+            to="/tutorial"
+            onClick={() => setMenuOpen(false)}
+            className={`${MENU_ITEM} text-content hover:text-white`}
+          >
+            <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
+            Ayuda
+          </Link>
+          {installItem}
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div
       className={`sticky top-0 z-40 px-5 py-3 flex justify-between items-center border-b border-border bg-base transition-transform duration-300 ${
@@ -396,100 +499,19 @@ export default function Header() {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 top-full mt-2 bg-surface-alt border border-border-strong rounded-xl min-w-56 max-w-[min(20rem,calc(100vw-2rem))] z-50 overflow-hidden shadow-2xl">
-              {isLoggedIn ? (
-                <>
-                  {/* Header del menú — avatar + nombre */}
-                  <div
-                    className="flex items-center gap-3 px-4 py-3 border-b border-border-mid cursor-pointer hover:bg-border-mid transition-colors"
-                    onClick={() => go(`/u/${user?.username}`)}
-                  >
-                    <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={user?.subscription?.plan === 'premium'} />
-                    <div className="min-w-0">
-                      <div className="text-sm text-white font-sans font-semibold truncate">{user?.name}</div>
-                      <div className="text-[11px] font-mono text-dim truncate">@{user?.username}</div>
-                    </div>
-                  </div>
-
-                  <div className="py-1">
-                    <button onClick={() => go('/')}
-                      className={`${MENU_ITEM} text-content hover:text-white`}>
-                      <House size={MENU_ITEM_ICON} className="shrink-0" />
-                      Panel
-                    </button>
-                    {/* El listado completo vive en la portada, debajo del saludo
-                        y las bandas. Sin el ancla, "Mis categorías" te dejaba
-                        arriba de todo y había que buscarlas scrolleando. */}
-                    <button onClick={() => go('/#categorias')}
-                      className={`${MENU_ITEM} text-content hover:text-white`}>
-                      <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
-                      Mis categorías
-                    </button>
-                    <button onClick={() => go('/subscription/manage')}
-                      className={`${MENU_ITEM} text-content hover:text-white`}>
-                      <CreditCard size={MENU_ITEM_ICON} className="shrink-0" />
-                      Mi plan
-                    </button>
-                    {/* Un usuario puede ser dueño verificado de varios clubes: se listan todos */}
-                    {(user?.owned_clubs ?? []).map((c) => (
-                      <button key={c.id} onClick={() => go(`/club/${c.id}`)}
-                        className={`${MENU_ITEM} text-content hover:text-white`}>
-                        <Building2 size={MENU_ITEM_ICON} className="shrink-0" />
-                        <span className="truncate min-w-0">{(user.owned_clubs.length > 1 ? c.name : `Mi club · ${c.name}`)}</span>
-                      </button>
-                    ))}
-                    <button onClick={() => { setMenuOpen(false); setShareAppOpen(true); }}
-                      className={`${MENU_ITEM} text-content hover:text-white`}>
-                      <UserPlus size={MENU_ITEM_ICON} className="shrink-0" />
-                      Invitar amigos
-                    </button>
-                    <Link
-                      to="/tutorial"
-                      onClick={() => setMenuOpen(false)}
-                      className={`${MENU_ITEM} text-content hover:text-white`}
-                    >
-                      <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
-                      Ayuda
-                    </Link>
-                    {installItem}
-                    {user?.role === 'admin' && (
-                      <button onClick={() => go('/admin')}
-                        className={`${MENU_ITEM} text-content hover:text-white`}>
-                        <Shield size={MENU_ITEM_ICON} className="shrink-0" />
-                        Admin
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="border-t border-border-mid py-1">
-                    <button
-                      onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}
-                      className={`${MENU_ITEM} text-danger`}
-                    >
-                      <LogOut size={MENU_ITEM_ICON} className="shrink-0" />
-                      Cerrar sesión
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <div className="py-1">
-                  <button onClick={() => go('/login')}
-                    className={`${MENU_ITEM} text-content hover:text-white`}>
-                    <User size={MENU_ITEM_ICON} className="shrink-0" />
-                    Iniciar sesión
-                  </button>
-                  <Link
-                    to="/tutorial"
-                    onClick={() => setMenuOpen(false)}
-                    className={`${MENU_ITEM} text-content hover:text-white`}
-                  >
-                    <CircleHelp size={MENU_ITEM_ICON} className="shrink-0" />
-                    Ayuda
-                  </Link>
-                  {installItem}
-                </div>
-              )}
+            <div className={`absolute right-0 top-full mt-2 bg-surface-alt border border-border-strong rounded-xl min-w-56 max-w-[min(20rem,calc(100vw-2rem))] z-50 overflow-hidden shadow-2xl ${isLoggedIn ? 'hidden lg:block' : ''}`}>
+              {menuBody}
             </div>
+          )}
+          {menuOpen && isLoggedIn && createPortal(
+            <div className="lg:hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-[3px]">
+              <div ref={sheetRef} role="dialog" aria-label="Tu cuenta"
+                className="glass-nav absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-[28px] border-t border-white/10 pt-2.5 pb-[calc(20px+env(safe-area-inset-bottom))]">
+                <div className="w-10 h-1.5 rounded-full bg-border-strong mx-auto mb-2" />
+                {menuBody}
+              </div>
+            </div>,
+            document.body,
           )}
         </div>
       </div>

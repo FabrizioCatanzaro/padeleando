@@ -116,7 +116,7 @@ export default function FriendlyInvite() {
         </div>
       )}
 
-      <Link to="/amistosos" className="text-[13px] text-muted no-underline hover:text-brand self-center">Ver amistosos abiertos</Link>
+      <Link to="/partidos" className="text-[13px] text-muted no-underline hover:text-brand self-center">Ver partidos abiertos</Link>
     </div>
   )
 }

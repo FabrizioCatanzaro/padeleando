@@ -122,6 +122,8 @@ export const api = {
   clubs: {
     list:        (q = '')      => req('GET',    `/clubs?q=${encodeURIComponent(q)}`),
     nearby:      (lat, lon, radius = 20) => req('GET', `/clubs/nearby?lat=${lat}&lon=${lon}&radius=${radius}`),
+    browse:      (q = '')      => req('GET',    `/clubs?stats=1&limit=60&q=${encodeURIComponent(q)}`),
+    nearbyStats: (lat, lon)    => req('GET',    `/clubs/nearby?lat=${lat}&lon=${lon}&radius=20&stats=1`),
     get:         (id)          => req('GET',    `/clubs/${id}`),
     events:      (id)          => req('GET',    `/clubs/${id}/events`),
     create:      (body)        => req('POST',   '/clubs', body),
@@ -249,6 +251,11 @@ export const api = {
     respond:(id, action)                 => req('PATCH',  `/invitations/${id}`, { action }),
     cancel: (id)                         => req('DELETE', `/invitations/${id}`),
   },
+  padeleros: {
+    players:    ()         => req('GET', '/padeleros/players'),
+    organizers: (lat, lon) => req('GET', `/padeleros/organizers${lat != null ? `?lat=${lat}&lon=${lon}` : ''}`),
+  },
+
   follows: {
     follow:    (username) => req('POST',   `/follows/${username}`),
     unfollow:  (username) => req('DELETE', `/follows/${username}`),
@@ -318,6 +325,13 @@ export const api = {
   invites: {
     resolve: (token)                  => req('POST', '/invites/resolve', { token }),
     accept:  (token)                  => req('POST', '/invites/accept',  { token }),
+  },
+  // Resumen del usuario logueado (routes/me.js del back): números del perfil y contadores.
+  me: {
+    summary: () => req('GET', '/me/summary'),
+    tournaments: () => req('GET', '/me/tournaments'),
+    organize:    () => req('GET', '/me/organize'),
+    agenda:  (from, to) => req('GET', `/me/agenda${from ? `?from=${from}${to ? `&to=${to}` : ''}` : ''}`),
   },
   // Amistosos (routes/friendlies.js del back). `t` es el token de un partido visible solo por link.
   friendlies: {

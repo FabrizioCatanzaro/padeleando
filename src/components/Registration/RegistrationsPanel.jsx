@@ -3,6 +3,7 @@ import { AlertTriangle, Settings, FileCheck, Clock } from 'lucide-react';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
 import { whatsappHref } from '../../utils/copa';
 import { api } from '../../utils/api';
+import { refreshSummary } from '../../hooks/useSummary';
 import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Btn from '../shared/Btn';
@@ -79,6 +80,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
     try {
       const updated = await api.registrations.decide(r.id, action, reason);
       load();
+      refreshSummary();
       if (updated.status === 'approved') onTournamentChanged?.();
     } catch (e) {
       setError(e.message);

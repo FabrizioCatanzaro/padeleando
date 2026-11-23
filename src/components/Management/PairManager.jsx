@@ -8,6 +8,7 @@ import DatosJugadorModal from "../Copa/DatosJugadorModal";
 import { esTemporada } from "../../utils/fechas";
 import { grupoNombre, COPA_MAX_PAIRS } from "../../utils/copa";
 import { PairAvatar } from "../shared/PlayerAvatar";
+import AvisoDirectas from "../Americano/AvisoDirectas";
 export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDelete, onWithdraw, onUpdatePlayerDatos }) {
   const { players, pairs = [] } = tournament;
   const [showAdd, setShowAdd]       = useState(false);
@@ -46,7 +47,7 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
   const missingPairs = warnings.find((w) => w.id === 'americano-min-pairs')?.missing ?? 0;
   const freePlayers  = warnings.find((w) => w.id === 'players-without-pair')?.players ?? [];
 
-  // Americano: 8 parejas mínimo para poder jugar, 16 máximo.
+  // Americano: AMERICANO_MIN_PAIRS para poder jugar, AMERICANO_MAX_PAIRS como tope.
   const isAmericano   = tournament.format === 'americano';
   const pairsFull     = (isAmericano && pairs.length >= AMERICANO_MAX_PAIRS) || (esCopa && activePairs.length >= COPA_MAX_PAIRS);
 
@@ -118,6 +119,10 @@ export default function PairManager({ tournament, isOwner, onAdd, onEdit, onDele
             </span>
           </span>
         </div>
+      )}
+
+      {isAmericano && missingPairs === 0 && !tournament.bracket && (
+        <AvisoDirectas pairCount={pairs.length} className="mb-3" />
       )}
 
       {showAdd && (

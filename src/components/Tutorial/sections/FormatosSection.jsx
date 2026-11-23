@@ -37,15 +37,15 @@ export default function FormatosSection() {
             Modo Americano
           </div>
           <p className="text-content text-[14px] font-sans leading-relaxed mb-4">
-            Formato de torneo estructurado para 8 a 16 parejas fijas. Se divide en dos fases: una fase previa (2 partidos por pareja) y una fase de cuadro final (eliminación directa con los mejores clasificados). Ideal para torneos de clubes de padel.
+            Formato de torneo estructurado para 4 a 32 parejas fijas. Se divide en dos fases: una fase previa (2 partidos por pareja) y una fase de cuadro final (eliminación directa con los mejores clasificados). Ideal para torneos de clubes de padel.
           </p>
           <ul className="flex flex-col gap-2 mb-4">
             {[
               'No pueden haber jugadores sueltos.', 
-              'Se requieren mínimo 8 parejas para iniciar. Con menos, el torneo queda en BORRADOR: lo podés crear igual y sumar las parejas que faltan más tarde, pero no se pueden cargar partidos ni generar el cuadro hasta llegar al mínimo.',
+              'Se requieren mínimo 4 parejas para iniciar. Con menos, el torneo queda en BORRADOR: lo podés crear igual y sumar las parejas que faltan más tarde, pero no se pueden cargar partidos ni generar el cuadro hasta llegar al mínimo.',
               'Fase previa: 2 partidos al azar que suman a una tabla general para clasificar al cuadro final.',
-              'Cuadro final: octavos, cuartos, semifinales y final por eliminación directa.',
-              'Mejores parejas: En caso de no llegar a 16 parejas, se calcula automáticamente la cantidad de mejores parejas que pasan directo a cuartos de final. Por ejemplo, si hay 12 parejas, las 4 mejores pasan directo a cuartos y las otras 8 juegan octavos.',
+              'Cuadro final: 16avos, octavos, cuartos, semifinales y final por eliminación directa. Todas las parejas juegan el cuadro.',
+              'Mejores parejas: Si la cantidad de parejas no llena una ronda (4, 8, 16 o 32), las mejores de la fase previa pasan directo a la ronda siguiente. Por ejemplo, con 12 parejas las 4 mejores pasan directo a cuartos y las otras 8 juegan octavos. Con 6 parejas, las 2 mejores pasan directo a semifinales. Con 20 parejas, las 12 mejores pasan directo a octavos. El organizador ve este aviso antes de generar el cuadro.',
             ].map((item, i) => (
               <li key={i} className="flex gap-3 items-start text-[14px] text-secondary font-sans">
                 <span className="text-brand mt-0.5 shrink-0">›</span>

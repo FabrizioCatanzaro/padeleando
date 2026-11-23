@@ -7,7 +7,7 @@ import { useDocumentTitle } from '../../hooks/useDocumentTitle'
 import { STYLE_OPTIONS, perPersonFromTotal, totalFromPerPerson } from '../../utils/friendlies'
 import Btn from '../shared/Btn'
 import ClubSelector from '../shared/ClubSelector'
-import { INPUT, LABEL, SegButtons, MoneyInput, VisibilityPicker, DurationPicker } from './parts'
+import { INPUT, LABEL, SegButtons, MoneyInput, VisibilityPicker, DurationPicker, TimePicker } from './parts'
 
 const FORMAT_OPTIONS = [{ id: 1, label: 'Set único' }, { id: 3, label: 'Mejor de 3' }]
 const OPEN = ['abierto', 'completo']
@@ -140,7 +140,7 @@ export default function FriendlyEdit() {
               </div>
               <div>
                 <label htmlFor="ed-hora" className={LABEL}>HORA</label>
-                <input id="ed-hora" type="time" step={1800} className={INPUT} value={f.time} onChange={(e) => set('time')(e.target.value)} />
+                <TimePicker id="ed-hora" value={f.time} onChange={set('time')} />
               </div>
             </div>
             <div>

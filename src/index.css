@@ -231,3 +231,15 @@ html.light .stat-slab { background: var(--color-surface); }
   box-shadow: 0 0 22px color-mix(in srgb, var(--color-brand) 8%, transparent),
               0 4px 14px rgba(0, 0, 0, 0.35);
 }
+
+/* Barra de navegación glass: sin backdrop-filter queda con fondo casi opaco. */
+.glass-nav {
+  background: color-mix(in srgb, var(--color-surface-alt) 94%, transparent);
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass-nav {
+    background: color-mix(in srgb, var(--color-surface-alt) 58%, transparent);
+    -webkit-backdrop-filter: blur(22px) saturate(170%);
+    backdrop-filter: blur(22px) saturate(170%);
+  }
+}

@@ -6,15 +6,17 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ---
 
-## Current Status (updated 2026-11-22)
+## Current Status (updated 2026-11-23)
 
-- **Last sprint: Amistosos** — on `staging`, PR `staging` → `main` pending. Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
-- **The friendly schema reaches production with the deploy of that PR**: `db:init` creates `friendly_matches`, `friendly_match_players` and `friendly_match_proposals`, widens `notifications_type_check` and adds `uq_friendly_reminder`. It was tested on a Neon branch that has been deleted.
-- **Previous sprint: Copa** — merged to `main` (front PR #44, API PR #37). It shipped the Copa format (groups + playoffs, or direct bracket, copa de plata, prizes, per-player WhatsApp/availability), the redesigned tournament setup (`Setup.jsx`: format cards with photos, config/info sub-steps, segmented `StepBar`, one-row pair loader, summary aside), WhatsApp for the multi-day liga, and the mail domain change to `soporte@padeleando.ar` (Resend now sends from `padeleando.ar`). Design doc: https://claude.ai/artifact/X8KtqZZQamuNXRxhBDqftw
+- **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
+- **Previous sprint: Amistosos** — merged to `main` (front PR #45, API PR #38). Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
+- **The friendly schema is in production since that deploy**: `db:init` creates `friendly_matches`, `friendly_match_players` and `friendly_match_proposals`, widens `notifications_type_check` and adds `uq_friendly_reminder`. It was tested on a Neon branch that has been deleted.
+- **Sprint before: Copa** — merged to `main` (front PR #44, API PR #37). It shipped the Copa format (groups + playoffs, or direct bracket, copa de plata, prizes, per-player WhatsApp/availability), the redesigned tournament setup (`Setup.jsx`: format cards with photos, config/info sub-steps, segmented `StepBar`, one-row pair loader, summary aside), WhatsApp for the multi-day liga, and the mail domain change to `soporte@padeleando.ar` (Resend now sends from `padeleando.ar`). Design doc: https://claude.ai/artifact/X8KtqZZQamuNXRxhBDqftw
 - **Production DB already has the Copa schema** (`copa_config`, `bracket_plata`, `pairs.zona`, `tournament_players` data columns, `court_id`, `tournament_prizes`). `db:init` re-applies it as a no-op.
 - **Local dev points at the production database** (`padeliando-api/.env`, backed up in `produccion.env`). For risky work, create a Neon branch of `production` (project `weathered-morning-55905272`), point `.env` at it, and delete the branch when done. Test data is named `TEST …` and deleted at the end.
 - **Git flow:** feature branch from `staging` → commits authored by Fabrizio Catanzaro → `merge --ff-only` into `staging` → Fabrizio pushes and opens the PR `staging` → `main`. Never commit `.claude/` or `.mcp.json`.
 - **Open items:**
+  - Navegación follow-ups: Feed and Ranking in Padeleros (shown as "Próximamente"); unconfirmed club bookings in Inicio › Pendientes once bookings ship; a player directory with a category filter in Padeleros › Jugadores; the 300×250 ad images for the right column.
   - Amistosos follow-ups: playing data (dominant hand, preferred side) on the user's profile; a locality filter once clubs carry their locality (`GET /friendlies/localities` is kept for it); email reminders through a scheduled GitHub Actions workflow; linking a friendly to a club booking.
   - Super tie-break as a match format (left out of the Copa sprint on purpose, "option b").
   - TV mode (`TvOverlay`) shows the main bracket only, not the copa de plata.
@@ -176,6 +178,12 @@ Rules that keep the three from drifting:
 
 **The profile's advanced stats are gated server-side.** `GET /groups/user/:username` returns them only to the owner, or to anyone if a premium user opted in via `users.advanced_stats_public` (default `false`). The queries that only feed that block are skipped entirely when it won't render. The frontend's `canSeeAdvanced` mirrors the same rule for the UI and the profile snapshot, but it is cosmetic — the payload is the source of truth, so don't put those fields back into the public response.
 
+### Americano
+
+- 4 to 32 fixed pairs (`AMERICANO_MIN_PAIRS` / `AMERICANO_MAX_PAIRS` in `helpers.js`, mirror of the API's `lib/americano.js`). Below the minimum it is a draft.
+- Every pair enters the bracket. When the count doesn't fill a round (4, 8, 16, 32), the best pairs of the previa skip the first round. `americanoDirectas(n)` computes how many and which rounds; `AvisoDirectas` shows the warning in `Setup`, `PairManager` and `Bracket` before generating it.
+- Below 8 or above 16 the bracket comes in the copa shape (byes, `dieciseisavos`), which `Bracket` already renders.
+
 ### Copa
 
 - Two variants in `copa_config.mode`: `zonas` (groups by fechas, then playoffs) and `cuadro` (direct elimination). Always fixed pairs, up to 32.
@@ -188,16 +196,29 @@ Rules that keep the three from drifting:
 
 ### Amistosos
 
-- Routes: `/amistosos` (list with "Abiertos" / "Mis amistosos"), `/amistosos/nuevo` (4-step wizard with `StepBar`), `/amistoso/:id` (detail, "duelo" layout) and `/amistoso/invitacion/:token` (a guest claims their slot). Components in `src/components/Friendly/`, helpers in `src/utils/friendlies.js`, client in `api.friendlies`.
+- Routes: `/partidos` and `/partidos/mios` (Partidos › Explorar / Mis partidos; old `/amistosos` redirects to `/partidos`), `/amistosos/nuevo` (4-step wizard with `StepBar`), `/amistoso/:id` (detail, "duelo" layout) and `/amistoso/invitacion/:token` (a guest claims their slot). Components in `src/components/Friendly/`, helpers in `src/utils/friendlies.js`, client in `api.friendlies`.
 - **The UI says "amistoso"**; the API and the code say `friendly`.
 - The status shown is the one the API derives (`abierto`, `completo`, `falta_resultado`, `por_confirmar`, `confirmado`, `cancelado`, `vencido`). Don't re-derive it on the client.
 - A `link` (private) match shows "Privado" with a lock on its card. Its share URL carries `?t=share_token`.
 - Without a session, "Sumarme" opens a sheet with login/register and `?redirect=` back to the match, never a hard redirect.
 - The creator invites a guest with the "Invitar" pill on their row: `ShareFriendlyModal` with `guest` builds the invite message.
-- `/amistoso/:id/editar` (`FriendlyEdit`) shows only when `viewer.can_edit`. A played match edits its data but not the format; the result stays. Pickers shared with the wizard (`DurationPicker`, `MoneyInput`, `VisibilityPicker`, `ChoiceChip`) live in `parts.jsx`.
+- `/amistoso/:id/editar` (`FriendlyEdit`) shows only when `viewer.can_edit`. A played match edits its data but not the format; the result stays. Pickers shared with the wizard (`DurationPicker`, `MoneyInput`, `VisibilityPicker`, `ChoiceChip`, `TimePicker`) live in `parts.jsx`. `TimePicker` is one list from 00:00 to 23:30 every half hour with a short scrolling dropdown: the native time input built its list from the device's current time.
 - The open list filters by "Cerca de mí", date and club name (debounced search). There is no locality filter yet.
 - **Profile**: when `data.amistosos > 0`, `ProfileView` shows the Todos / Torneos / Amistosos selector over Resumen, Partidos and Estadísticas. Each source is fetched once (`api.groups.byUsername(username, source)`) and cached. The header, the rail and the snapshot always show the total. A friendly row in the match list opens `/amistoso/:id` (`profileMatchHref`).
 - Notifications: `friendly_*` types go through `FRIENDLY_TEXT` in `notifText.js`; `friendly_reminder` picks its text from `n.body` and shows an `AlarmClock` icon.
+
+### Navegación
+
+- The logged-in frame lives in `src/components/Shell/`. `navConfig.js` is the single source of the modules, their routes, icons, badge counters and the routes that hide the bottom bar (`HIDE_BOTTOM_NAV`: full-screen forms such as `/amistosos/nuevo`).
+- `Sidebar` shows from 1024 px: icons only up to 1279 px, full from 1280 px. It carries the Crear button, the modules and "Tus clubes" (only when the user owns a club). `BottomNav` is the glass bar below 1024 px; its `＋` opens `CreateMenu` as a sheet. `SectionTabs` is the header and tab row of every module; a tab with `soon` renders "Próximamente".
+- On mobile the Layout adds `pb-[calc(104px+env(safe-area-inset-bottom))]`. Anything fixed to the bottom (sticky bars, `InstallPrompt`) must sit above the bar with the same offset. `GroupView` and `TournamentPage` show their own tabs at the top for this reason.
+- The right column is the Layout's `AdBanner` aside, except on the routes in `OWN_ASIDE` (`/`, `/torneos/organizar`, `/padeleros/jugadores`): those build their own aside with widgets and the ad. Add a route there only if it renders its own.
+- Counters come from one request: `useSummary()` is a shared store over `GET /me/summary`, refreshed on route change and on tab focus (15 s apart at most). Call `refreshSummary()` after an action that changes a pending count. No module asks for its counters separately.
+- Routes: `/partidos`, `/partidos/mios`, `/torneos`, `/torneos/mios`, `/torneos/organizar`, `/padeleros/jugadores`, `/padeleros/organizadores`, `/padeleros/clubes`. `/amistosos` redirects to `/partidos` and `/#categorias` to `/torneos/organizar`; `/amistoso/:id` didn't change.
+- **Inicio**: `StatRail`, `LiveBand`, `Pendientes` and `Agenda` (`GET /me/agenda`, shared rows in `shared/AgendaList.jsx`), then `ParaSumarte`: open friendlies (within 15 km when location is granted) and tournaments with open signup. Right column: `ResumenCard`, `ClubesCerca`, ad. The category list of the old "Panel" home is gone.
+- **Torneos**: Explorar (the `/api/home` showcase plus "Tus categorías": favorites and categories where you play, minus your own), Mis torneos (`GET /me/tournaments`, flat list, phases in `utils/tournamentList.js`) and Organizar (`GET /me/organize`). Organizar links into `GroupView` with `?tab=jugadores|estadisticas` and `?accion=editar|coorg` (owner only). Its quota bar uses the category owner's plan, like every plan gate.
+- **Padeleros**: Jugadores (`GET /padeleros/players`), Organizadores (`GET /padeleros/organizers`, "Cerca de mí" sends lat/lon) and Clubes (`api.clubs.browse` / `nearbyStats`, i.e. `?stats=1`). Location goes through `hooks/useGeolocation.js`: it asks on tap, or on mount when the permission is already granted. The club page opens on the booking tab with `?tab=reservar`.
+- The avatar menu hides "Tus clubes" and "Mis categorías" on desktop (the sidebar has them); the mobile sheet keeps them.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.
@@ -209,7 +230,7 @@ Rules that keep the three from drifting:
 - Protected routes use the `<PrivateRoute>` component wrapper in `App.jsx`.
 - Admin-only routes use `<AdminRoute>` (checks `user.role === 'admin'`).
 - Group/tournament URLs use the `/cat/` prefix (e.g. `/cat/:groupId/torneo/:tournamentId`).
-- Public routes include: `/`, `/login`, `/register`, `/u/:username`, `/view/:id` (old `/readonly/:id` redirects here), `/tutorial`, `/cat/:groupId`, `/verify-email/:token`, `/reset-password/:token`, `/invitacion/:token`.
+- Public routes include: `/`, `/partidos`, `/torneos`, `/padeleros/*`, `/login`, `/register`, `/u/:username`, `/view/:id` (old `/readonly/:id` redirects here), `/tutorial`, `/cat/:groupId`, `/verify-email/:token`, `/reset-password/:token`, `/invitacion/:token`.
 
 ### Permissions & Co-organizers
 - A category (`groups`) has one **owner** (`groups.user_id`) plus zero or more **co-organizers** (`group_collaborators`). A tournament/jornada has no owner of its own — it inherits from its category.

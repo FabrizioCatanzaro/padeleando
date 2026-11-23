@@ -16,6 +16,7 @@ import { LIGA_SECCIONES } from "../../utils/fechas";
 import { COPA_MAX_PAIRS, defaultCopaConfig, copaConfigBody, copaConfigError, copaMinPairs, premiosDePuestos, totalClasificados, copaSecciones } from "../../utils/copa";
 import Btn from "../shared/Btn";
 import StepBar from "../shared/StepBar";
+import AvisoDirectas from "../Americano/AvisoDirectas";
 
 // `img` es la base de /public/formatos/<id>-600.webp y -1200.webp; `pos` centra el motivo en la tarjeta alta.
 const FORMATOS = [
@@ -430,6 +431,7 @@ export default function Setup() {
                     {esCopa && copa.mode === 'zonas' ? ' Los grupos se sortean con las parejas confirmadas.' : ''}
                   </p>
                 )}
+                {format === 'americano' && !directIsDraft && <AvisoDirectas pairCount={completeDirectPairs.length} className="mt-4" />}
               </>
             )}
 
