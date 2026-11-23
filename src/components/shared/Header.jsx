@@ -312,8 +312,9 @@ export default function Header() {
             </div>
           </div>
 
+          {/* En desktop Tus clubes y Mis categorías ya están en el menú lateral. */}
           {user?.owned_clubs?.length > 0 && (
-            <div className="py-1 border-b border-border-mid">
+            <div className="py-1 border-b border-border-mid lg:hidden">
               <div className="px-4 pt-2 pb-1 font-sans text-[10px] font-bold tracking-[2px] text-muted">TUS CLUBES</div>
               {user.owned_clubs.map((c) => (
                 <button key={c.id} onClick={() => go(`/club/${c.id}`)}
@@ -327,7 +328,7 @@ export default function Header() {
 
           <div className="py-1">
             <button onClick={() => go('/torneos/organizar')}
-              className={`${MENU_ITEM} text-content hover:text-white`}>
+              className={`${MENU_ITEM} text-content hover:text-white lg:hidden`}>
               <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
               Mis categorías
             </button>

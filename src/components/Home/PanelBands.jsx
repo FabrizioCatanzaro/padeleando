@@ -1,6 +1,4 @@
-import { Radio, CalendarDays, ChevronRight, Building2 } from 'lucide-react';
-import { dateLabel } from '../../utils/homePanel';
-import { fmtHora } from '../../utils/helpers';
+import { Radio, ChevronRight } from 'lucide-react';
 
 export function StatRail({ stats }) {
   return (
@@ -59,46 +57,6 @@ export function LiveBand({ tournaments, onOpen }) {
         <Radio size={16} className="text-green" />
         <ChevronRight size={16} className="text-dim" />
       </div>
-    </div>
-  );
-}
-
-export function NextBand({ t, onOpen }) {
-  if (!t) return null;
-  const day = dateLabel(t.event_date);
-  const hora = fmtHora(t.event_time);
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onOpen(t.id)}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onOpen(t.id); } }}
-      className="border border-border-mid rounded-xl px-4 py-3.5 mb-6 bg-surface cursor-pointer hover:border-border-strong transition-colors flex items-center gap-3.5 flex-wrap outline-none"
-    >
-      <CalendarDays size={16} className="text-brand shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="font-condensed font-bold text-[15px] text-white leading-tight">
-          <span className="text-muted font-sans font-normal text-[13px] mr-1.5">Próxima:</span>
-          {t.group_emojis?.length > 0 && <span className="mr-1.5">{t.group_emojis.join(' ')}</span>}
-          {t.name}
-        </div>
-        <div className="flex items-center gap-2 flex-wrap font-mono text-[11.5px] text-muted mt-1">
-          {day && <span className="text-brand">{day}{hora && ` · ${hora}`}</span>}
-          {t.club_name && (
-            <>
-              <span className="opacity-40">·</span>
-              <span className="inline-flex items-center gap-1 min-w-0">
-                <Building2 size={10} className="shrink-0" /><span className="truncate">{t.club_name}</span>
-              </span>
-            </>
-          )}
-          {t.player_count > 0 && (
-            <><span className="opacity-40">·</span><span>{t.player_count} anotados</span></>
-          )}
-        </div>
-      </div>
-      <ChevronRight size={16} className="text-dim shrink-0" />
     </div>
   );
 }

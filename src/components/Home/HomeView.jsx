@@ -9,7 +9,7 @@ import FadeInCard from '../shared/FadeInCard'
 import GroupCard from '../shared/GroupCard'
 import VisitorShowcase from './VisitorShowcase';
 import AppPreview from './AppPreview';
-import { Skeleton, CardSkeleton } from '../shared/Skeleton';
+import { Skeleton } from '../shared/Skeleton';
 import ClubSelector from '../shared/ClubSelector';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import { addRecentSearch } from '../../utils/recentSearches';
@@ -25,7 +25,6 @@ import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
 import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, isLevelDismissed, dismissLevel } from '../../utils/onboarding';
 import SearchPalette from './SearchPalette';
-import CategoryList from './CategoryList';
 import Discover from './Discover';
 import { StatRail, LiveBand } from './PanelBands';
 import Pendientes from './Inicio/Pendientes';
@@ -36,7 +35,6 @@ import AdBanner from '../shared/AdBanner';
 import { useSummary } from '../../hooks/useSummary';
 import { dayKey, addDaysKey } from '../../utils/agenda';
 import useHomeSearch from '../../hooks/useHomeSearch';
-import { mergeGroups, countByRole, nextByGroup } from '../../utils/homePanel';
 
 const EMPTY_SIGNUP = { open: false, price: null, unit: 'player', contacts: [] };
 
@@ -126,7 +124,6 @@ export default function HomeView() {
   const [homeLoading, setHomeLoading] = useState(true);
 
   // Listado unificado y vitrina de descubrimiento (sólo con sesión).
-  const [roleFilter,   setRoleFilter]   = useState('all');
   const [discoverTab,  setDiscoverTab]  = useState('signup');
   const [paletteOpen,  setPaletteOpen]  = useState(false);
   const [agenda,       setAgenda]       = useState(null);
@@ -142,7 +139,7 @@ export default function HomeView() {
   // El router no lleva al ancla: se espera a `loading` porque antes la sección no está en el DOM.
   useEffect(() => {
     if (hash === '#categorias' && isLoggedIn) { navigate('/torneos/organizar', { replace: true }); return; }
-    if (!['#categorias', '#descubrir'].includes(hash) || loading) return;
+    if (hash !== '#descubrir' || loading) return;
     requestAnimationFrame(() => {
       document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -362,9 +359,6 @@ export default function HomeView() {
   );
 
   const liveMine     = useMemo(() => homeLive.filter((t) => myGroupIds.has(t.group_id)), [homeLive, myGroupIds]);
-  const liveGroupIds = useMemo(() => new Set(liveMine.map((t) => t.group_id)), [liveMine]);
-  const upcomingMine = useMemo(() => homeUpcoming.filter((t) => myGroupIds.has(t.group_id)), [homeUpcoming, myGroupIds]);
-  const nextMap      = useMemo(() => nextByGroup(upcomingMine), [upcomingMine]);
 
   const discoverSignup = useMemo(
     () => homeSignup.filter((t) => !managedIds.has(t.group_id)),
@@ -375,11 +369,6 @@ export default function HomeView() {
     return homeUpcoming.filter((t) => !managedIds.has(t.group_id) && !shown.has(t.id));
   }, [homeUpcoming, managedIds, discoverSignup]);
 
-  const merged = useMemo(
-    () => mergeGroups({ groups, coorgGroups, partGroups, favGroups, liveGroupIds }),
-    [groups, coorgGroups, partGroups, favGroups, liveGroupIds],
-  );
-  const roleCounts = useMemo(() => countByRole(merged), [merged]);
   const weekCount = useMemo(() => {
     const limit = addDaysKey(dayKey(), 6);
     return (agenda?.items ?? []).filter((it) => it.kind !== 'torneo' && it.date <= limit).length;
@@ -912,19 +901,6 @@ export default function HomeView() {
 
               <Pendientes friendlies={agenda?.pending?.friendlies} registrations={agenda?.pending?.registrations} />
               <Agenda items={agenda?.items ?? null} />
-
-                <div id="categorias" className="scroll-mt-20">
-                  <CategoryList
-                    merged={merged}
-                    counts={roleCounts}
-                    liveGroupIds={liveGroupIds}
-                    nextMap={nextMap}
-                    filter={roleFilter}
-                    onFilter={setRoleFilter}
-                    onOpen={(id) => navigate(`/cat/${id}`)}
-                    onNew={openNewModal}
-                  />
-                </div>
 
                 <Discover
                   tab={discoverTab}
