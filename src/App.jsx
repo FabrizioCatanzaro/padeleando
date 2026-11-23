@@ -95,9 +95,12 @@ function Layout() {
           </Suspense>
         </main>
 
-        <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
-          <AdBanner slot="sidebar" />
-        </aside>
+        {/* Inicio con sesión arma su propia columna derecha. */}
+        {!(isLoggedIn && isHome) && (
+          <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
+            <AdBanner slot="sidebar" />
+          </aside>
+        )}
       </div>
 
       <Footer />

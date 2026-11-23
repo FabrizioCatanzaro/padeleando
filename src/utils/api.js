@@ -322,6 +322,7 @@ export const api = {
   // Resumen del usuario logueado (routes/me.js del back): números del perfil y contadores.
   me: {
     summary: () => req('GET', '/me/summary'),
+    agenda:  (from, to) => req('GET', `/me/agenda${from ? `?from=${from}${to ? `&to=${to}` : ''}` : ''}`),
   },
   // Amistosos (routes/friendlies.js del back). `t` es el token de un partido visible solo por link.
   friendlies: {

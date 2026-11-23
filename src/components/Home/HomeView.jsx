@@ -3,7 +3,7 @@ import { useState, useEffect, useRef, useMemo } from 'react';
 import { api } from '../../utils/api';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
-import { Globe, Lock, Plus, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft, Swords } from 'lucide-react';
+import { Globe, Lock, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft } from 'lucide-react';
 import logoUrl from '../../assets/padeleando-logo.webp'
 import FadeInCard from '../shared/FadeInCard'
 import GroupCard from '../shared/GroupCard'
@@ -27,9 +27,16 @@ import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, 
 import SearchPalette from './SearchPalette';
 import CategoryList from './CategoryList';
 import Discover from './Discover';
-import { StatRail, LiveBand, NextBand } from './PanelBands';
+import { StatRail, LiveBand } from './PanelBands';
+import Pendientes from './Inicio/Pendientes';
+import Agenda from './Inicio/Agenda';
+import ResumenCard from './Inicio/ResumenCard';
+import ClubesCerca from './Inicio/ClubesCerca';
+import AdBanner from '../shared/AdBanner';
+import { useSummary } from '../../hooks/useSummary';
+import { dayKey, addDaysKey } from '../../utils/agenda';
 import useHomeSearch from '../../hooks/useHomeSearch';
-import { mergeGroups, countByRole, railStats, nextByGroup } from '../../utils/homePanel';
+import { mergeGroups, countByRole, nextByGroup } from '../../utils/homePanel';
 
 const EMPTY_SIGNUP = { open: false, price: null, unit: 'player', contacts: [] };
 
@@ -122,6 +129,8 @@ export default function HomeView() {
   const [roleFilter,   setRoleFilter]   = useState('all');
   const [discoverTab,  setDiscoverTab]  = useState('signup');
   const [paletteOpen,  setPaletteOpen]  = useState(false);
+  const [agenda,       setAgenda]       = useState(null);
+  const summary = useSummary();
 
   const search = useHomeSearch();
   const searchInputRef = useRef(null);
@@ -162,6 +171,9 @@ export default function HomeView() {
       })
       .catch(() => { navigate('/login'); })
       .finally(() => setLoading(false));
+    api.me.agenda()
+      .then(setAgenda)
+      .catch(() => setAgenda({ items: [], pending: { friendlies: [], registrations: [] } }));
   }, []);
 
   // Clubes cercanos: usa cache, o auto-carga si el permiso de ubicación ya está concedido.
@@ -367,7 +379,21 @@ export default function HomeView() {
     [groups, coorgGroups, partGroups, favGroups, liveGroupIds],
   );
   const roleCounts = useMemo(() => countByRole(merged), [merged]);
-  const rail       = useMemo(() => railStats(merged, liveMine.length, upcomingMine.length), [merged, liveMine.length, upcomingMine.length]);
+  const weekCount = useMemo(() => {
+    const limit = addDaysKey(dayKey(), 6);
+    return (agenda?.items ?? []).filter((it) => it.kind !== 'torneo' && it.date <= limit).length;
+  }, [agenda]);
+  const pendingCount = (summary?.pending?.friendlies ?? 0) + (summary?.pending?.registrations ?? 0);
+  const inicioRail = [
+    { n: liveMine.length, label: 'En juego', brand: liveMine.length > 0 },
+    { n: weekCount, label: 'Esta semana' },
+    { n: pendingCount, label: 'Pendientes', brand: pendingCount > 0 },
+    { n: summary?.tournaments_active ?? 0, label: 'Torneos activos' },
+  ];
+  const inicioSubtitle = [
+    liveMine.length > 0 && `${liveMine.length} ${liveMine.length === 1 ? 'torneo en vivo' : 'torneos en vivo'}`,
+    weekCount > 0 && `${weekCount} ${weekCount === 1 ? 'partido' : 'partidos'} esta semana`,
+  ].filter(Boolean).join(' · ') || 'Todo tranquilo por acá';
 
   if (loading) return (
     <div className="text-content font-sans pb-16">
@@ -413,7 +439,7 @@ export default function HomeView() {
 
   return (
     <div className="text-content font-sans pb-16">
-      <div className="px-4 sm:px-6 py-6 max-w-5xl mx-auto">
+      <div className={`px-4 sm:px-6 py-6 mx-auto ${isLoggedIn ? 'max-w-5xl xl:max-w-[1180px]' : 'max-w-5xl'}`}>
 
         {/* ── Hero (visitante no logueado) ── */}
         {!isLoggedIn && !committedQ && (
@@ -837,123 +863,96 @@ export default function HomeView() {
 
         {/* ══ Panel del usuario con sesión ══ */}
         {!committedQ && isLoggedIn && (
-          <>
-            <div className="flex items-end justify-between gap-4 flex-wrap mb-5">
-              <div>
-                <h1 className="font-condensed font-bold text-[22px] sm:text-[26px] text-white leading-tight m-0">
-                  Buenas{firstName && <>, <span className="text-brand">{firstName}</span></>}
-                </h1>
-                <p className="font-mono text-[12px] text-muted mt-1.5 m-0">
-                  {liveMine.length > 0
-                    ? `${liveMine.length} ${liveMine.length === 1 ? 'jornada jugándose' : 'jornadas jugándose'} ahora`
-                    : upcomingMine.length > 0
-                      ? `${upcomingMine.length} ${upcomingMine.length === 1 ? 'jornada próxima' : 'jornadas próximas'}`
-                      : 'Todo tranquilo por acá'}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+          <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10 xl:items-start">
+            <div className="min-w-0">
+              <div className="flex items-end justify-between gap-4 mb-5">
+                <div className="min-w-0">
+                  <h1 className="font-condensed font-bold text-[22px] sm:text-[26px] text-white leading-tight m-0">
+                    Buenas{firstName && <>, <span className="text-brand">{firstName}</span></>}
+                  </h1>
+                  <p className="font-sans text-[12.5px] text-muted mt-1.5 m-0">{inicioSubtitle}</p>
+                </div>
                 <button
                   onClick={() => setPaletteOpen(true)}
                   aria-label="Buscar"
-                  className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer"
+                  className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer shrink-0"
                 >
                   <Search size={16} />
                   <kbd className="hidden sm:inline font-mono text-[9.5px] tracking-wider border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
                 </button>
-                {nearbyStatus !== 'unsupported' && (
-                  <button
-                    onClick={goNearby}
-                    className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer font-sans text-[12px]"
-                  >
-                    <MapPin size={16} /><span className="hidden sm:inline">Cerca</span>
-                  </button>
-                )}
-                <Btn icon={Swords} onClick={() => navigate('/partidos')}>AMISTOSOS</Btn>
-                <Btn variant="primary" icon={Plus} onClick={openNewModal}>NUEVA</Btn>
               </div>
-            </div>
 
-            <StatRail stats={rail} />
-            <LiveBand tournaments={liveMine} onOpen={(id) => navigate(`/view/${id}`)} />
-            {liveMine.length === 0 && <NextBand t={upcomingMine[0] ?? null} onOpen={(id) => navigate(`/view/${id}`)} />}
+              <StatRail stats={inicioRail} />
+              <LiveBand tournaments={liveMine} onOpen={(id) => navigate(`/view/${id}`)} />
+              <div className="mb-4" />
 
-            {/* ── Categoría: mientras el perfil no la tenga y no la haya pospuesto ── */}
-            {!loading && !user?.category && !levelDismissed && (
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-surface border border-brand/30 rounded-lg p-4 mb-6">
-                <div className="flex-1 min-w-0">
-                  <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1">TU CATEGORÍA</div>
-                  <p className="text-soft font-sans text-[13px] m-0">
-                    Respondé 6 preguntas y te recomendamos una. La ven los organizadores cuando te inscribís.
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Btn variant="ghost" size="sm" onClick={() => { dismissLevel(); setLevelDismissed(true); }}>Después</Btn>
-                  <Btn variant="primary" size="sm" onClick={() => navigate('/nivel')}>CALCULAR</Btn>
-                </div>
-              </div>
-            )}
-
-            {/* ── Onboarding: una pregunta, después el checklist ── */}
-            {!loading && (
-              showRolePicker
-                ? <RolePicker onPick={(r) => { setPickedRole(r); setRoleDismissed(r == null); }} />
-                : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
-            )}
-
-            {/* Acceso rápido al club que administra (owned_clubs viaja siempre en el usuario logueado) */}
-            {user?.owned_clubs?.length > 0 && (
-              <div className="mb-6">
-                <div className="font-mono text-[10px] text-dim tracking-widest mb-3">
-                  {user.owned_clubs.length > 1 ? 'CLUBES QUE ADMINISTRÁS' : 'CLUB QUE ADMINISTRÁS'}
-                </div>
-                <div className="flex flex-col gap-2">
-                  {user.owned_clubs.map((c) => (
-                    <div key={c.id} onClick={() => navigate(`/club/${c.id}`)}
-                      className="flex items-center gap-3 border border-border-mid rounded-lg px-3.5 py-3 cursor-pointer hover:border-border-strong transition-colors">
-                      {c.photo_url ? (
-                        <img src={c.photo_url} alt="" className="w-9 h-9 rounded-lg object-cover shrink-0" />
-                      ) : (
-                        <div className="w-9 h-9 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
-                          <Building2 size={16} />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <div className="text-[13px] text-white font-sans font-semibold truncate">{c.name}</div>
-                        <div className="text-[11px] font-mono text-dim">Gestionar club →</div>
-                      </div>
+                {/* ── Categoría: mientras el perfil no la tenga y no la haya pospuesto ── */}
+                {!loading && !user?.category && !levelDismissed && (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-surface border border-brand/30 rounded-lg p-4 mb-6">
+                    <div className="flex-1 min-w-0">
+                      <div className="font-condensed font-bold text-[13px] tracking-[2px] text-brand mb-1">TU CATEGORÍA</div>
+                      <p className="text-soft font-sans text-[13px] m-0">
+                        Respondé 6 preguntas y te recomendamos una. La ven los organizadores cuando te inscribís.
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <Btn variant="ghost" size="sm" onClick={() => { dismissLevel(); setLevelDismissed(true); }}>Después</Btn>
+                      <Btn variant="primary" size="sm" onClick={() => navigate('/nivel')}>CALCULAR</Btn>
+                    </div>
+                  </div>
+                )}
 
-            <div id="categorias" className="scroll-mt-20">
-              <CategoryList
-                merged={merged}
-                counts={roleCounts}
-                liveGroupIds={liveGroupIds}
-                nextMap={nextMap}
-                filter={roleFilter}
-                onFilter={setRoleFilter}
-                onOpen={(id) => navigate(`/cat/${id}`)}
-                onNew={openNewModal}
-              />
+                {/* ── Onboarding: una pregunta, después el checklist ── */}
+                {!loading && (
+                  showRolePicker
+                    ? <RolePicker onPick={(r) => { setPickedRole(r); setRoleDismissed(r == null); }} />
+                    : firstSteps && <FirstSteps steps={firstSteps} onDismiss={handleDismissSteps} />
+                )}
+
+              <Pendientes friendlies={agenda?.pending?.friendlies} registrations={agenda?.pending?.registrations} />
+              <Agenda items={agenda?.items ?? null} />
+
+                <div id="categorias" className="scroll-mt-20">
+                  <CategoryList
+                    merged={merged}
+                    counts={roleCounts}
+                    liveGroupIds={liveGroupIds}
+                    nextMap={nextMap}
+                    filter={roleFilter}
+                    onFilter={setRoleFilter}
+                    onOpen={(id) => navigate(`/cat/${id}`)}
+                    onNew={openNewModal}
+                  />
+                </div>
+
+                <Discover
+                  tab={discoverTab}
+                  onTab={setDiscoverTab}
+                  signup={discoverSignup}
+                  upcoming={discoverUpcoming}
+                  loading={homeLoading}
+                  nearbyClubs={nearbyClubs}
+                  nearbyStatus={nearbyStatus}
+                  onFetchNearby={fetchNearbyClubs}
+                  onHideNearby={() => { setNearbyStatus('idle'); setNearbyClubs([]); }}
+                  onOpenTournament={(id) => navigate(`/view/${id}`)}
+                  onOpenClub={(id) => navigate(`/club/${id}`)}
+                />
             </div>
 
-            <Discover
-              tab={discoverTab}
-              onTab={setDiscoverTab}
-              signup={discoverSignup}
-              upcoming={discoverUpcoming}
-              loading={homeLoading}
-              nearbyClubs={nearbyClubs}
-              nearbyStatus={nearbyStatus}
-              onFetchNearby={fetchNearbyClubs}
-              onHideNearby={() => { setNearbyStatus('idle'); setNearbyClubs([]); }}
-              onOpenTournament={(id) => navigate(`/view/${id}`)}
-              onOpenClub={(id) => navigate(`/club/${id}`)}
-            />
-          </>
+            <aside className="hidden xl:flex flex-col gap-7 sticky top-24" aria-label="Tu resumen">
+              <ResumenCard user={user} stats={summary?.stats} />
+              <ClubesCerca
+                clubs={nearbyClubs}
+                status={nearbyStatus}
+                onFetch={fetchNearbyClubs}
+                onOpen={(id) => navigate(`/club/${id}`)}
+              />
+              <div className="flex justify-center">
+                <AdBanner slot="sidebar" />
+              </div>
+            </aside>
+          </div>
         )}
 
       </div>
