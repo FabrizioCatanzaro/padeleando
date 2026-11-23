@@ -205,18 +205,28 @@ export function VisibilityPicker({ value, onChange }) {
   )
 }
 
-// Horarios fijos cada 30 min, de 06:00 a 05:30: el input nativo arma el desplegable desde la hora actual.
-const HALF_HOURS = Array.from({ length: 48 }, (_, i) => {
-  const mins = (6 * 60 + i * 30) % (24 * 60)
-  return `${String(Math.floor(mins / 60)).padStart(2, '0')}:${mins % 60 === 0 ? '00' : '30'}`
-})
+// Hora en dos partes, de 00 a 23 y :00 o :30: el input nativo arma el desplegable desde la hora actual.
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
 
 export function TimePicker({ id, value, onChange }) {
-  const options = value && !HALF_HOURS.includes(value) ? [value, ...HALF_HOURS] : HALF_HOURS
+  const [h = '', m = ''] = value ? value.split(':') : []
+  const minutes = m && m !== '00' && m !== '30' ? ['00', '30', m].sort() : ['00', '30']
   return (
-    <select id={id} className={`${INPUT} cursor-pointer`} value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="" disabled>Elegí la hora</option>
-      {options.map((t) => <option key={t} value={t}>{t}</option>)}
-    </select>
+    <div className="flex gap-2">
+      <select id={id} aria-label="Hora" className={`${INPUT} cursor-pointer flex-1 min-w-0`} value={h}
+        onChange={(e) => onChange(`${e.target.value}:${m || '00'}`)}>
+        <option value="" disabled>Hora</option>
+        {HOURS.map((hh) => <option key={hh} value={hh}>{hh}</option>)}
+      </select>
+      <div role="group" aria-label="Minutos" className="flex shrink-0 rounded-sm border border-border-mid overflow-hidden">
+        {minutes.map((mm) => (
+          <button key={mm} type="button" aria-pressed={h !== '' && m === mm} disabled={!h}
+            onClick={() => onChange(`${h}:${mm}`)}
+            className={`min-w-12 px-2.5 font-sans text-[14px] border-0 cursor-pointer transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${h !== '' && m === mm ? 'bg-brand text-black font-bold' : 'bg-surface text-content hover:text-white'}`}>
+            :{mm}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
