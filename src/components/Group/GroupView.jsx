@@ -178,12 +178,20 @@ export default function GroupView() {
   useEffect(() => {
     setNotFound(false);
     // Sin este catch un id inexistente dejaba el esqueleto girando para siempre.
+    // ?tab= y ?accion= llegan desde Torneos › Organizar.
+    const params = new URLSearchParams(window.location.search);
+    const accion = params.get('accion');
     api.groups.get(groupId)
-      .then(setGroup)
+      .then((g) => {
+        setGroup(g);
+        if (!g.is_owner) return;
+        if (accion === 'editar') startEdit(g);
+        if (accion === 'coorg') setShowCollabModal(true);
+      })
       .catch((e) => { if (e.status === 404) setNotFound(true); else showToast(e.message, 'error'); });
     setAllTournaments([]);
     setHistLoaded(false);
-    setTab('torneos');
+    setTab(TABS.some((t) => t.id === params.get('tab')) ? params.get('tab') : 'torneos');
     setVisibleCount(5);
     setFilters(EMPTY_FILTERS);
     setFiltersOpen(false);
@@ -200,22 +208,22 @@ export default function GroupView() {
     );
   }
 
-  function startEdit() {
-    setEditName(group.name);
-    setEditDesc(group.description ?? '');
-    setEditIsPublic(group.is_public);
-    setEditEmojis(group.emojis ?? []);
-    setEditClub(entityClub(group));
+  function startEdit(g = group) {
+    setEditName(g.name);
+    setEditDesc(g.description ?? '');
+    setEditIsPublic(g.is_public);
+    setEditEmojis(g.emojis ?? []);
+    setEditClub(entityClub(g));
     setEditSignup({
-      open:     group.signup_open ?? false,
-      price:    group.signup_price ?? null,
-      unit:     group.signup_price_unit ?? 'player',
-      contacts: group.signup_contacts ?? [],
-      level:    group.level ?? null,
-      capacity: group.signup_capacity ?? null,
-      capacity_unit: group.signup_capacity_unit ?? null,
-      closes_at: group.signup_closes_at ?? null,
-      rules:    group.rules ?? null,
+      open:     g.signup_open ?? false,
+      price:    g.signup_price ?? null,
+      unit:     g.signup_price_unit ?? 'player',
+      contacts: g.signup_contacts ?? [],
+      level:    g.level ?? null,
+      capacity: g.signup_capacity ?? null,
+      capacity_unit: g.signup_capacity_unit ?? null,
+      closes_at: g.signup_closes_at ?? null,
+      rules:    g.rules ?? null,
     });
     setEditingGroup(true);
   }

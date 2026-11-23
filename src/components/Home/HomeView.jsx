@@ -141,11 +141,12 @@ export default function HomeView() {
 
   // El router no lleva al ancla: se espera a `loading` porque antes la sección no está en el DOM.
   useEffect(() => {
+    if (hash === '#categorias' && isLoggedIn) { navigate('/torneos/organizar', { replace: true }); return; }
     if (!['#categorias', '#descubrir'].includes(hash) || loading) return;
     requestAnimationFrame(() => {
       document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
-  }, [hash, navKey, loading]);
+  }, [hash, navKey, loading, isLoggedIn, navigate]);
 
   // Atajos del botón Crear de la navegación: ?nueva=categoria y ?cerca=1.
   useEffect(() => {

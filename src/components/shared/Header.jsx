@@ -326,8 +326,7 @@ export default function Header() {
           )}
 
           <div className="py-1">
-            {/* El ancla baja al listado de la portada hasta que exista Torneos › Organizar. */}
-            <button onClick={() => go('/#categorias')}
+            <button onClick={() => go('/torneos/organizar')}
               className={`${MENU_ITEM} text-content hover:text-white`}>
               <LayoutGrid size={MENU_ITEM_ICON} className="shrink-0" />
               Mis categorías
