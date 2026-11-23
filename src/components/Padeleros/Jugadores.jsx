@@ -196,7 +196,7 @@ export default function Jugadores() {
             <Users size={15} />Invitar amigos
           </button>
         </section>
-        <div className="flex justify-center"><AdBanner slot="sidebar" /></div>
+        <AdBanner />
       </aside>
       {sharing && <ShareAppModal onClose={() => setSharing(false)} />}
     </div>

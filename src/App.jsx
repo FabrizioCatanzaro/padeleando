@@ -5,7 +5,6 @@ import { Titled } from './hooks/useDocumentTitle'
 import useScrollToTop from './hooks/useScrollToTop'
 import Header       from './components/shared/Header'
 import Footer       from './components/shared/Footer'
-import AdBanner     from './components/shared/AdBanner'
 import Sidebar      from './components/Shell/Sidebar'
 import BottomNav    from './components/Shell/BottomNav'
 import { showsBottomNav } from './components/Shell/navConfig'
@@ -68,8 +67,6 @@ function RedirectAmistosos() {
   return <Navigate to={new URLSearchParams(search).get('tab') === 'mios' ? '/partidos/mios' : '/partidos'} replace />
 }
 
-const OWN_ASIDE = new Set(['/', '/torneos/organizar', '/padeleros/jugadores'])
-
 function Layout() {
   useScrollToTop()
   const { isLoggedIn } = useAuth()
@@ -84,11 +81,7 @@ function Layout() {
       <Header />
 
       <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
-        {isLoggedIn ? <Sidebar /> : (
-          <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
-            <AdBanner slot="sidebar" />
-          </aside>
-        )}
+        {isLoggedIn && <Sidebar />}
 
         <main className={`flex-1 w-full max-w-7xl min-w-0 ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
           {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra el chunk. */}
@@ -96,13 +89,6 @@ function Layout() {
             <Outlet />
           </Suspense>
         </main>
-
-        {/* Inicio, Organizar y Jugadores arman su propia columna derecha. */}
-        {!(isLoggedIn && OWN_ASIDE.has(pathname)) && (
-          <aside className="hidden xl:flex flex-col items-center pt-4 w-40 shrink-0 px-2">
-            <AdBanner slot="sidebar" />
-          </aside>
-        )}
       </div>
 
       <Footer />

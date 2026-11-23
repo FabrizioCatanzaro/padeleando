@@ -155,7 +155,7 @@ export default function Organizar() {
           <Link to="/subscription/manage" className="inline-block mt-4 font-sans text-[12px] font-bold text-brand no-underline hover:underline">{plan.premium ? 'Ver mi plan →' : 'Ver planes →'}</Link>
         </section>
         <p className="m-0 font-sans text-[12px] text-muted leading-relaxed">En una categoría donde co-organizás valen los límites del plan del dueño.</p>
-        <div className="flex justify-center"><AdBanner slot="sidebar" /></div>
+        <AdBanner />
       </aside>
     </div>
   )

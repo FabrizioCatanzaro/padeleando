@@ -36,7 +36,7 @@ padeliando/
     │   │   ├── Modal.jsx           # Generic modal wrapper
     │   │   ├── FadeInCard.jsx      # Card with fade-in animation
     │   │   ├── Skeleton.jsx        # Loading skeleton placeholder
-    │   │   ├── AdBanner.jsx        # Ad banner container (desktop sidebar)
+    │   │   ├── AdBanner.jsx        # 300×250 ad rotation (right columns of Inicio, Organizar, Jugadores)
     │   │   ├── PlayerAvatar.jsx    # User avatar with premium ring; PairAvatar for two players
     │   │   ├── AvatarCropper.jsx   # Crop/preview image before uploading avatar
     │   │   ├── AlertStack.jsx      # Floating blurred alerts (tournament news + bell); fed by AlertContext

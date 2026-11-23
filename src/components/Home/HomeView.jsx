@@ -893,9 +893,7 @@ export default function HomeView() {
                 onFetch={fetchNearbyClubs}
                 onOpen={(id) => navigate(`/club/${id}`)}
               />
-              <div className="flex justify-center">
-                <AdBanner slot="sidebar" />
-              </div>
+              <AdBanner />
             </aside>
           </div>
         )}
