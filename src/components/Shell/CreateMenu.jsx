@@ -7,7 +7,7 @@ const CREATE_OPTIONS = [
   { id: 'amistoso',  label: 'Amistoso',        sub: 'Abrí un partido o cargá uno jugado', icon: Swords,       tone: 'brand', to: '/amistosos/nuevo' },
   { id: 'torneo',    label: 'Torneo',          sub: 'Liga, Americano o Copa',             icon: Trophy,       tone: 'cyan' },
   { id: 'categoria', label: 'Categoría',       sub: 'Agrupá torneos del mismo grupo',     icon: LayoutGrid,   tone: 'muted', to: '/?nueva=categoria' },
-  { id: 'reserva',   label: 'Reservar cancha', sub: 'En clubes con turnos online',        icon: CalendarDays, tone: 'muted', to: '/?cerca=1' },
+  { id: 'reserva',   label: 'Reservar cancha', sub: 'En clubes con turnos online',        icon: CalendarDays, tone: 'muted', to: '/padeleros/clubes' },
 ]
 
 const TONE = {

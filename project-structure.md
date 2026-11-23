@@ -58,8 +58,7 @@ padeliando/
     │   ├── Home/
     │   │   ├── HomeView.jsx        # Inicio (logged in) and the visitor landing; search; new-category modal
     │   │   ├── PanelBands.jsx      # StatRail and LiveBand
-    │   │   ├── Discover.jsx        # Para sumarte: signup showcase and nearby clubs
-    │   │   └── Inicio/             # Pendientes, Agenda, ResumenCard, ClubesCerca
+    │   │   └── Inicio/             # Pendientes, Agenda, ParaSumarte, ResumenCard, ClubesCerca
     │   │
     │   ├── Torneos/
     │   │   ├── TorneosView.jsx     # Tabs /torneos, /torneos/mios, /torneos/organizar (lazy)
@@ -188,7 +187,7 @@ padeliando/
 
 | Component | Route | Purpose |
 |-----------|-------|---------|
-| `HomeView` | `/` | Inicio: rail, live, Pendientes, agenda, Discover (visitor: landing) |
+| `HomeView` | `/` | Inicio: rail, live, Pendientes, agenda, Para sumarte (visitor: landing) |
 | `FriendliesView` | `/partidos` `/partidos/mios` | Partidos › Explorar / Mis partidos |
 | `TorneosView` | `/torneos` `/torneos/mios` `/torneos/organizar` | Torneos › Explorar / Mis torneos / Organizar |
 | `PadelerosView` | `/padeleros/jugadores` `/padeleros/organizadores` `/padeleros/clubes` | Padeleros community tabs |

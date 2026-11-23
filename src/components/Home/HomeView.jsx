@@ -25,7 +25,7 @@ import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
 import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, isLevelDismissed, dismissLevel } from '../../utils/onboarding';
 import SearchPalette from './SearchPalette';
-import Discover from './Discover';
+import ParaSumarte from './Inicio/ParaSumarte';
 import { StatRail, LiveBand } from './PanelBands';
 import Pendientes from './Inicio/Pendientes';
 import Agenda from './Inicio/Agenda';
@@ -124,7 +124,6 @@ export default function HomeView() {
   const [homeLoading, setHomeLoading] = useState(true);
 
   // Listado unificado y vitrina de descubrimiento (sólo con sesión).
-  const [discoverTab,  setDiscoverTab]  = useState('signup');
   const [paletteOpen,  setPaletteOpen]  = useState(false);
   const [agenda,       setAgenda]       = useState(null);
   const summary = useSummary();
@@ -133,17 +132,13 @@ export default function HomeView() {
   const searchInputRef = useRef(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
-  const { hash, key: navKey } = useLocation();
+  const { hash } = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // El router no lleva al ancla: se espera a `loading` porque antes la sección no está en el DOM.
+  // El listado de categorías ahora vive en Torneos › Organizar.
   useEffect(() => {
-    if (hash === '#categorias' && isLoggedIn) { navigate('/torneos/organizar', { replace: true }); return; }
-    if (hash !== '#descubrir' || loading) return;
-    requestAnimationFrame(() => {
-      document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }, [hash, navKey, loading, isLoggedIn, navigate]);
+    if (hash === '#categorias' && isLoggedIn) navigate('/torneos/organizar', { replace: true });
+  }, [hash, isLoggedIn, navigate]);
 
   // Atajos del botón Crear de la navegación: ?nueva=categoria y ?cerca=1.
   useEffect(() => {
@@ -153,7 +148,7 @@ export default function HomeView() {
     if (!nueva && !cerca) return;
     setSearchParams({}, { replace: true });
     if (nueva === 'categoria') openNewModal();
-    else if (cerca) goNearby();
+    else if (cerca) navigate('/padeleros/clubes');
   }, [loading, isLoggedIn, searchParams]);
 
   const valsPrivacy = [
@@ -269,16 +264,6 @@ export default function HomeView() {
     );
   }
 
-  function goNearby() {
-    setDiscoverTab('clubs');
-    if (nearbyStatus === 'idle') fetchNearbyClubs();
-    // El scroll va en el próximo frame: la pestaña recién cambió y la sección
-    // puede haber crecido.
-    requestAnimationFrame(() => {
-      document.getElementById('descubrir')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
-
   async function handleCreate() {
     if (!name.trim() || creating) return;
     setCreating(true);
@@ -344,7 +329,6 @@ export default function HomeView() {
 
   // ── Derivados del panel ──────────────────────────────────────────────────
   const homeLive     = homeData?.live ?? [];
-  const homeUpcoming = homeData?.upcoming ?? [];
   const homeSignup   = homeData?.signup ?? [];
 
   const myGroupIds = useMemo(
@@ -364,10 +348,6 @@ export default function HomeView() {
     () => homeSignup.filter((t) => !managedIds.has(t.group_id)),
     [homeSignup, managedIds],
   );
-  const discoverUpcoming = useMemo(() => {
-    const shown = new Set(discoverSignup.map((t) => t.id));
-    return homeUpcoming.filter((t) => !managedIds.has(t.group_id) && !shown.has(t.id));
-  }, [homeUpcoming, managedIds, discoverSignup]);
 
   const weekCount = useMemo(() => {
     const limit = addDaysKey(dayKey(), 6);
@@ -902,19 +882,7 @@ export default function HomeView() {
               <Pendientes friendlies={agenda?.pending?.friendlies} registrations={agenda?.pending?.registrations} />
               <Agenda items={agenda?.items ?? null} />
 
-                <Discover
-                  tab={discoverTab}
-                  onTab={setDiscoverTab}
-                  signup={discoverSignup}
-                  upcoming={discoverUpcoming}
-                  loading={homeLoading}
-                  nearbyClubs={nearbyClubs}
-                  nearbyStatus={nearbyStatus}
-                  onFetchNearby={fetchNearbyClubs}
-                  onHideNearby={() => { setNearbyStatus('idle'); setNearbyClubs([]); }}
-                  onOpenTournament={(id) => navigate(`/view/${id}`)}
-                  onOpenClub={(id) => navigate(`/club/${id}`)}
-                />
+                <ParaSumarte signup={discoverSignup} onOpenTournament={(id) => navigate(`/view/${id}`)} />
             </div>
 
             <aside className="hidden xl:flex flex-col gap-7 sticky top-24" aria-label="Tu resumen">
