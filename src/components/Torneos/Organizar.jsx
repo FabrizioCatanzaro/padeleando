@@ -99,7 +99,7 @@ export default function Organizar() {
   const own = categories.filter((c) => c.is_owner)
 
   return (
-    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-10 xl:items-start">
+    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10 xl:items-start">
       <div className="min-w-0 flex flex-col gap-7">
         {registrations.length > 0 && (
           <section aria-labelledby="org-insc">
