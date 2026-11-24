@@ -24,6 +24,7 @@ import ClubCategories from './ClubCategories'
 import ClubInfo from './ClubInfo'
 import PremiumModal from '../shared/PremiumModal'
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const SOCIAL_ICON = { instagram: Instagram, facebook: Facebook, website: Globe }
 const SOCIAL_LABEL = { instagram: 'Instagram', facebook: 'Facebook', website: 'Sitio web' }
@@ -410,6 +411,7 @@ export default function ClubProfileView() {
               onConectarMp={handleConectarMp} onDesconectarMp={handleDesconectarMp} onPedirPremiumMp={() => setShowMpPremium(true)}
             />
           )}
+          <AdInline />
         </AdRail>
       </div>
 

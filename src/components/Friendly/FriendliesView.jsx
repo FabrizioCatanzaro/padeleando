@@ -13,6 +13,7 @@ import FriendlyOpenCard from './FriendlyOpenCard'
 import AgendaList from '../shared/AgendaList'
 import { dayKey, addDaysKey } from '../../utils/agenda'
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const RADIUS_KM = 15
 const SELECT = 'h-9 pl-8 pr-3 rounded-full border border-border-mid bg-surface text-content text-[12.5px] font-sans cursor-pointer appearance-none outline-none focus:border-border-strong'
@@ -240,6 +241,7 @@ function OpenBlock({ groups, error, empty }) {
           </div>
         </section>
       ))}
+      <AdInline className="mt-3" />
     </div>
   )
 }
@@ -249,8 +251,11 @@ function ListBlock({ rows, error, empty, showStatus = false }) {
   if (!rows) return <div className="min-h-[60vh] flex justify-center pt-10"><Loader2 size={20} className="animate-spin text-muted" /></div>
   if (rows.length === 0) return <p className="text-[13px] text-secondary min-h-[40vh]">{empty}</p>
   return (
-    <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-      {rows.map((m) => <FriendlyCard key={m.id} m={m} showStatus={showStatus} />)}
-    </div>
+    <>
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((m) => <FriendlyCard key={m.id} m={m} showStatus={showStatus} />)}
+      </div>
+      <AdInline />
+    </>
   )
 }

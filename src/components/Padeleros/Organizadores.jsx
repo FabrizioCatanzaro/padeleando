@@ -8,6 +8,7 @@ import PlayerAvatar from '../shared/PlayerAvatar'
 import { shortDay, dayKey } from '../../utils/agenda'
 import { FollowButton, Spinner, SECTION_TITLE } from './parts'
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 function lastLine(o, today) {
   if (!o.last_day) return null
@@ -87,6 +88,7 @@ export default function Organizadores() {
             </div>
           )}
         </section>
+        {rows !== null && <AdInline className="mt-4" />}
       </div>
     </AdRail>
   )

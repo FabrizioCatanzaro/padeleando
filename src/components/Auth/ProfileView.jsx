@@ -34,6 +34,7 @@ import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
 import CategoryPicker from '../shared/CategoryPicker';
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -1274,6 +1275,7 @@ export default function ProfileView() {
           {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
           {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
           {tab === 'inscripciones' && isOwnProfile && <MyRegistrationsView />}
+          <AdInline />
         </AdRail>
       </div>
 

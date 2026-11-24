@@ -37,6 +37,7 @@ import PremiosCard from "../Copa/PremiosCard";
 import { esCopa as esCopaDe, esCopaZonas, copaMinPairs, gruposArmados } from "../../utils/copa";
 import ArmarCuadro from "../Copa/ArmarCuadro";
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 // La solapa Grupos solo existe en la copa: se carga al abrirla.
 const CopaGrupos = lazy(() => import("../Copa/CopaGrupos"));
 
@@ -484,6 +485,7 @@ export default function TournamentPage({
           {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && (
             <InstagramPosts tournamentId={tournament.id} isOwner={puedeGestionar} isPremium={groupOwnerIsPremium} />
           )}
+          {!puedeGestionar && <AdInline />}
         </AdRail>
       </div>
 

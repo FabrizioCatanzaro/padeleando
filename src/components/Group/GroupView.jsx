@@ -30,6 +30,7 @@ import { profileContacts } from '../../utils/signup';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import LazyNotFound from '../NotFound/LazyNotFound';
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const EMOJI_LIST = ['🔥','⚡','🚻','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🎲','🔝','🚨','🌹','🌼','🥑','🍺','🍷','🧉','🍕','❄️','❤️‍🩹','💫','☢️','💸','🗿','♂️','♀️','🪄','🎉','👑']
 
@@ -819,6 +820,7 @@ export default function GroupView() {
           {tab === 'jugadores' && <GroupPlayers groupId={groupId} canManage={canManage} />}
 
           {tab === 'canchas' && <GroupClubs tournaments={allTournaments} loading={!histLoaded} />}
+          <AdInline />
         </AdRail>
       </div>
 

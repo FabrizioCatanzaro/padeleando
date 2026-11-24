@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const faqs = [
   {
@@ -102,6 +103,7 @@ export default function FAQView() {
             </p>
           </div>
         </div>
+        <AdInline className="mt-10 px-6" />
       </AdRail>
     </div>
   )

@@ -8,6 +8,7 @@ import courtBg from '../../assets/padelcourt.webp'
 import ClubLogo from '../shared/ClubLogo'
 import { Spinner, SECTION_TITLE, FIELD } from './parts'
 import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const cld = (src, w) => (src?.includes('/upload/') ? src.replace('/upload/', `/upload/f_auto,q_auto,w_${w},c_limit/`) : src)
 
@@ -124,6 +125,7 @@ export default function Clubes() {
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{rows.map((c) => <ClubCard key={c.id} c={c} />)}</div>
           )}
         </section>
+        {rows !== null && !waitingGeo && <AdInline className="mt-4" />}
       </div>
     </AdRail>
   )
