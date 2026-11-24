@@ -4,6 +4,7 @@ import { ChevronRight, Search, Loader2 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { FORMAT_LABEL, FORMAT_CLS, ROLE_LABEL, roleOf, phaseOf, statusLine, detailLine } from '../../utils/tournamentList'
 import AdInline from '../shared/AdInline'
+import AdRail from '../shared/AdRail'
 
 const SECTIONS = [
   { id: 'en_curso',    title: 'EN CURSO' },
@@ -93,65 +94,67 @@ export default function MisTorneos() {
   const total = SECTIONS.reduce((n, s) => n + sections[s.id].length, 0)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <div role="group" aria-label="Rol" className="flex p-0.5 rounded-lg border border-border-mid bg-surface">
-          {[['todos', 'Todos'], ['juego', 'Juego'], ['organizo', 'Organizo']].map(([id, label]) => (
-            <button key={id} type="button" aria-pressed={role === id} onClick={() => setRole(id)}
-              className={`h-9 px-3.5 rounded-md border-0 font-sans text-[12.5px] cursor-pointer transition-colors ${role === id ? 'bg-white text-(color:--color-base) font-bold' : 'bg-transparent text-content font-semibold hover:text-white'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
-        <label className="sr-only" htmlFor="mt-formato">Formato</label>
-        <select id="mt-formato" className={SELECT} value={format} onChange={(e) => setFormat(e.target.value)}>
-          <option value="todos">Formato: todos</option>
-          <option value="liga">Liga</option>
-          <option value="americano">Americano</option>
-          <option value="copa">Copa</option>
-        </select>
-        {groups.length > 1 && (
-          <>
-            <label className="sr-only" htmlFor="mt-categoria">Categoría</label>
-            <select id="mt-categoria" className={`${SELECT} max-w-56`} value={group} onChange={(e) => setGroup(e.target.value)}>
-              <option value="todas">Categoría: todas</option>
-              {groups.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
-            </select>
-          </>
-        )}
-        <label className="relative flex-1 min-w-44 sm:max-w-64 sm:ml-auto">
-          <span className="sr-only">Buscar en mis torneos</span>
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en mis torneos"
-            className="w-full h-10 pl-9 pr-3 rounded-lg border border-border-mid bg-surface text-white font-sans text-[13px] outline-none placeholder:text-muted focus:border-border-strong" />
-        </label>
-      </div>
-
-      {total === 0 && <p className="font-sans text-[13px] text-secondary">No hay torneos con estos filtros.</p>}
-
-      {SECTIONS.map((s) => {
-        const list = sections[s.id]
-        if (list.length === 0) return null
-        const shown = s.id === 'finalizados' ? list.slice(0, finishedShown) : list
-        return (
-          <section key={s.id} aria-labelledby={`mt-${s.id}`}>
-            <div className="flex items-baseline gap-2 mb-2.5">
-              <h2 id={`mt-${s.id}`} className="m-0 font-sans text-[11px] font-bold tracking-[2px] text-muted">{s.title}</h2>
-              <span className="font-sans text-[11px] text-muted">{list.length}</span>
-            </div>
-            <div className="rounded-xl bg-surface border border-border overflow-hidden">
-              {shown.map((t, i) => <Row key={t.id} t={t} phase={s.id} first={i === 0} />)}
-            </div>
-            {shown.length < list.length && (
-              <button type="button" onClick={() => setFinishedShown((n) => n + FINISHED_STEP * 4)}
-                className="mt-2.5 min-h-11 bg-transparent border-0 p-0 font-sans text-[13px] font-bold text-brand cursor-pointer hover:underline">
-                Ver {Math.min(FINISHED_STEP * 4, list.length - shown.length)} finalizados más
+    <AdRail>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div role="group" aria-label="Rol" className="flex p-0.5 rounded-lg border border-border-mid bg-surface">
+            {[['todos', 'Todos'], ['juego', 'Juego'], ['organizo', 'Organizo']].map(([id, label]) => (
+              <button key={id} type="button" aria-pressed={role === id} onClick={() => setRole(id)}
+                className={`h-9 px-3.5 rounded-md border-0 font-sans text-[12.5px] cursor-pointer transition-colors ${role === id ? 'bg-white text-(color:--color-base) font-bold' : 'bg-transparent text-content font-semibold hover:text-white'}`}>
+                {label}
               </button>
-            )}
-          </section>
-        )
-      })}
-      <AdInline className="mt-4" />
-    </div>
+            ))}
+          </div>
+          <label className="sr-only" htmlFor="mt-formato">Formato</label>
+          <select id="mt-formato" className={SELECT} value={format} onChange={(e) => setFormat(e.target.value)}>
+            <option value="todos">Formato: todos</option>
+            <option value="liga">Liga</option>
+            <option value="americano">Americano</option>
+            <option value="copa">Copa</option>
+          </select>
+          {groups.length > 1 && (
+            <>
+              <label className="sr-only" htmlFor="mt-categoria">Categoría</label>
+              <select id="mt-categoria" className={`${SELECT} max-w-56`} value={group} onChange={(e) => setGroup(e.target.value)}>
+                <option value="todas">Categoría: todas</option>
+                {groups.map(([id, name]) => <option key={id} value={id}>{name}</option>)}
+              </select>
+            </>
+          )}
+          <label className="relative flex-1 min-w-44 sm:max-w-64 sm:ml-auto">
+            <span className="sr-only">Buscar en mis torneos</span>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en mis torneos"
+              className="w-full h-10 pl-9 pr-3 rounded-lg border border-border-mid bg-surface text-white font-sans text-[13px] outline-none placeholder:text-muted focus:border-border-strong" />
+          </label>
+        </div>
+
+        {total === 0 && <p className="font-sans text-[13px] text-secondary">No hay torneos con estos filtros.</p>}
+
+        {SECTIONS.map((s) => {
+          const list = sections[s.id]
+          if (list.length === 0) return null
+          const shown = s.id === 'finalizados' ? list.slice(0, finishedShown) : list
+          return (
+            <section key={s.id} aria-labelledby={`mt-${s.id}`}>
+              <div className="flex items-baseline gap-2 mb-2.5">
+                <h2 id={`mt-${s.id}`} className="m-0 font-sans text-[11px] font-bold tracking-[2px] text-muted">{s.title}</h2>
+                <span className="font-sans text-[11px] text-muted">{list.length}</span>
+              </div>
+              <div className="rounded-xl bg-surface border border-border overflow-hidden">
+                {shown.map((t, i) => <Row key={t.id} t={t} phase={s.id} first={i === 0} />)}
+              </div>
+              {shown.length < list.length && (
+                <button type="button" onClick={() => setFinishedShown((n) => n + FINISHED_STEP * 4)}
+                  className="mt-2.5 min-h-11 bg-transparent border-0 p-0 font-sans text-[13px] font-bold text-brand cursor-pointer hover:underline">
+                  Ver {Math.min(FINISHED_STEP * 4, list.length - shown.length)} finalizados más
+                </button>
+              )}
+            </section>
+          )
+        })}
+        <AdInline className="mt-4" />
+      </div>
+    </AdRail>
   )
 }

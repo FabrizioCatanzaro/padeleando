@@ -9,6 +9,7 @@ import CategoryRow from '../shared/CategoryRow'
 import { useAuth } from '../../context/useAuth'
 import { mergeGroups, nextByGroup } from '../../utils/homePanel'
 import AdInline from '../shared/AdInline'
+import AdRail from '../shared/AdRail'
 
 const MINE_STEP = 5
 
@@ -87,20 +88,22 @@ export default function Explorar() {
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      <MyCategories rows={mine} live={data.live ?? []} upcoming={data.upcoming ?? []} onOpen={(id) => navigate(`/cat/${id}`)} />
-      <Grid title="INSCRIPCIÓN ABIERTA" rows={signup} footer onOpen={open} />
-      <Grid title="SE ESTÁN JUGANDO" rows={live} onOpen={open} />
-      <Grid title="PRÓXIMOS" rows={upcoming} onOpen={open} />
-      {featured.length > 0 && (
-        <section aria-label="Categorías activas">
-          <h2 className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">CATEGORÍAS ACTIVAS</h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {featured.map((g) => <GroupCard key={g.id} g={g} className="h-full w-full" onClick={() => navigate(`/cat/${g.id}`)} />)}
-          </div>
-        </section>
-      )}
-      <AdInline className="mt-2" />
-    </div>
+    <AdRail>
+      <div className="flex flex-col gap-8">
+        <MyCategories rows={mine} live={data.live ?? []} upcoming={data.upcoming ?? []} onOpen={(id) => navigate(`/cat/${id}`)} />
+        <Grid title="INSCRIPCIÓN ABIERTA" rows={signup} footer onOpen={open} />
+        <Grid title="SE ESTÁN JUGANDO" rows={live} onOpen={open} />
+        <Grid title="PRÓXIMOS" rows={upcoming} onOpen={open} />
+        {featured.length > 0 && (
+          <section aria-label="Categorías activas">
+            <h2 className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">CATEGORÍAS ACTIVAS</h2>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {featured.map((g) => <GroupCard key={g.id} g={g} className="h-full w-full" onClick={() => navigate(`/cat/${g.id}`)} />)}
+            </div>
+          </section>
+        )}
+        <AdInline className="mt-2" />
+      </div>
+    </AdRail>
   )
 }

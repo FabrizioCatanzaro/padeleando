@@ -1,4 +1,5 @@
 import { Mail, Phone, Linkedin, MessageCircle } from 'lucide-react'
+import AdRail from '../shared/AdRail'
 
 const channels = [
   {
@@ -39,54 +40,56 @@ export default function ContactView() {
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6">
-        <div className="mt-8 space-y-4">
-          {channels.map((ch) => {
-            const Icon = ch.icon
-            return (
-            <a
-              key={ch.label}
-              href={ch.href}
-              target={ch.external ? '_blank' : undefined}
-              rel={ch.external ? 'noopener noreferrer' : undefined}
-              className="flex items-start gap-4 bg-surface border border-border-mid rounded-lg p-5 hover:border-border-strong transition-colors group"
-            >
-              <div className="mt-0.5 p-2 rounded-md bg-base border border-border-strong">
-                <Icon size={16} className="text-brand" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[11px] font-mono text-muted uppercase tracking-widest mb-0.5">{ch.label}</p>
-                <p className="text-[14px] font-semibold text-white group-hover:text-brand transition-colors truncate">
-                  {ch.value}
-                </p>
-                <p className="text-[12px] text-muted mt-1">{ch.desc}</p>
-              </div>
-            </a>
-            )
-          })}
-        </div>
+      <AdRail className="xl:max-w-6xl xl:mx-auto xl:px-6">
+        <div className="max-w-2xl mx-auto px-6">
+          <div className="mt-8 space-y-4">
+            {channels.map((ch) => {
+              const Icon = ch.icon
+              return (
+              <a
+                key={ch.label}
+                href={ch.href}
+                target={ch.external ? '_blank' : undefined}
+                rel={ch.external ? 'noopener noreferrer' : undefined}
+                className="flex items-start gap-4 bg-surface border border-border-mid rounded-lg p-5 hover:border-border-strong transition-colors group"
+              >
+                <div className="mt-0.5 p-2 rounded-md bg-base border border-border-strong">
+                  <Icon size={16} className="text-brand" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-mono text-muted uppercase tracking-widest mb-0.5">{ch.label}</p>
+                  <p className="text-[14px] font-semibold text-white group-hover:text-brand transition-colors truncate">
+                    {ch.value}
+                  </p>
+                  <p className="text-[12px] text-muted mt-1">{ch.desc}</p>
+                </div>
+              </a>
+              )
+            })}
+          </div>
 
-        <div className="mt-10 border-t border-border pt-8">
-          <div className="flex items-start gap-3">
-            <MessageCircle size={16} className="text-muted mt-0.5 shrink-0" />
-            <div>
-              <p className="text-[13px] font-semibold text-white mb-1">Tiempo de respuesta</p>
-              <p className="text-[13px] text-muted leading-relaxed">
-                Respondemos todas las consultas dentro de las <span className="text-content">48 horas hábiles</span>.
-                Para soporte técnico urgente recomendamos WhatsApp.
-              </p>
+          <div className="mt-10 border-t border-border pt-8">
+            <div className="flex items-start gap-3">
+              <MessageCircle size={16} className="text-muted mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[13px] font-semibold text-white mb-1">Tiempo de respuesta</p>
+                <p className="text-[13px] text-muted leading-relaxed">
+                  Respondemos todas las consultas dentro de las <span className="text-content">48 horas hábiles</span>.
+                  Para soporte técnico urgente recomendamos WhatsApp.
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="mt-6 bg-surface border border-border-mid rounded-lg p-5">
-          <p className="text-[12px] text-muted leading-relaxed">
-            Si tenés conocimientos técnicos y encontraste un bug o querés proponer una funcionalidad, también podés abrir
-            un issue directamente en nuestro repositorio. Incluí capturas de pantalla y
-            pasos para reproducir el problema — eso acelera mucho la resolución.
-          </p>
+          <div className="mt-6 bg-surface border border-border-mid rounded-lg p-5">
+            <p className="text-[12px] text-muted leading-relaxed">
+              Si tenés conocimientos técnicos y encontraste un bug o querés proponer una funcionalidad, también podés abrir
+              un issue directamente en nuestro repositorio. Incluí capturas de pantalla y
+              pasos para reproducir el problema — eso acelera mucho la resolución.
+            </p>
+          </div>
         </div>
-      </div>
+      </AdRail>
     </div>
   )
 }

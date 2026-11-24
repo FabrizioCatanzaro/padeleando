@@ -7,6 +7,7 @@ import { whatsappLink } from '../Club/clubForm'
 import courtBg from '../../assets/padelcourt.webp'
 import ClubLogo from '../shared/ClubLogo'
 import { Spinner, SECTION_TITLE, FIELD } from './parts'
+import AdRail from '../shared/AdRail'
 
 const cld = (src, w) => (src?.includes('/upload/') ? src.replace('/upload/', `/upload/f_auto,q_auto,w_${w},c_limit/`) : src)
 
@@ -97,31 +98,33 @@ export default function Clubes() {
   const waitingGeo = near && !debounced && geo.status === 'loading'
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <label className="relative flex-1 min-w-52 sm:max-w-80">
-          <span className="sr-only">Buscar club</span>
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
-          <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar club o localidad"
-            className={`${FIELD} w-full pl-9 pr-3 text-white placeholder:text-muted`} />
-        </label>
-        <button type="button" aria-pressed={near} onClick={toggleNear}
-          className={`h-10 px-3.5 rounded-lg font-sans text-[12.5px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${near ? 'border border-brand/50 bg-brand/10 text-brand' : 'border border-border-mid bg-surface text-content hover:text-white'}`}>
-          <MapPin size={14} />Cerca
-        </button>
-        {near && !debounced && geo.status === 'idle' && (
-          <button type="button" onClick={locate} className="h-10 bg-transparent border-0 p-0 font-sans text-[12.5px] font-bold text-brand cursor-pointer hover:underline">Usar mi ubicación</button>
-        )}
-        {near && !debounced && geo.status === 'denied' && <span className="font-sans text-[12px] text-secondary">Sin permiso de ubicación: mostramos todos.</span>}
+    <AdRail>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <label className="relative flex-1 min-w-52 sm:max-w-80">
+            <span className="sr-only">Buscar club</span>
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" aria-hidden="true" />
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar club o localidad"
+              className={`${FIELD} w-full pl-9 pr-3 text-white placeholder:text-muted`} />
+          </label>
+          <button type="button" aria-pressed={near} onClick={toggleNear}
+            className={`h-10 px-3.5 rounded-lg font-sans text-[12.5px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${near ? 'border border-brand/50 bg-brand/10 text-brand' : 'border border-border-mid bg-surface text-content hover:text-white'}`}>
+            <MapPin size={14} />Cerca
+          </button>
+          {near && !debounced && geo.status === 'idle' && (
+            <button type="button" onClick={locate} className="h-10 bg-transparent border-0 p-0 font-sans text-[12.5px] font-bold text-brand cursor-pointer hover:underline">Usar mi ubicación</button>
+          )}
+          {near && !debounced && geo.status === 'denied' && <span className="font-sans text-[12px] text-secondary">Sin permiso de ubicación: mostramos todos.</span>}
+        </div>
+        <section aria-labelledby="pd-clubes">
+          <h2 id="pd-clubes" className={`${SECTION_TITLE} mb-3`}>{useNear ? 'CLUBES A MENOS DE 20 KM' : debounced ? 'RESULTADOS' : 'CLUBES'}</h2>
+          {(rows === null || waitingGeo) && <Spinner />}
+          {rows?.length === 0 && !waitingGeo && <p className="m-0 font-sans text-[13px] text-secondary">{useNear ? 'No hay clubes en un radio de 20 km.' : 'No hay clubes con ese nombre.'}</p>}
+          {rows?.length > 0 && !waitingGeo && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{rows.map((c) => <ClubCard key={c.id} c={c} />)}</div>
+          )}
+        </section>
       </div>
-      <section aria-labelledby="pd-clubes">
-        <h2 id="pd-clubes" className={`${SECTION_TITLE} mb-3`}>{useNear ? 'CLUBES A MENOS DE 20 KM' : debounced ? 'RESULTADOS' : 'CLUBES'}</h2>
-        {(rows === null || waitingGeo) && <Spinner />}
-        {rows?.length === 0 && !waitingGeo && <p className="m-0 font-sans text-[13px] text-secondary">{useNear ? 'No hay clubes en un radio de 20 km.' : 'No hay clubes con ese nombre.'}</p>}
-        {rows?.length > 0 && !waitingGeo && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{rows.map((c) => <ClubCard key={c.id} c={c} />)}</div>
-        )}
-      </section>
-    </div>
+    </AdRail>
   )
 }

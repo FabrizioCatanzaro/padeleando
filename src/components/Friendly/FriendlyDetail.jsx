@@ -18,6 +18,7 @@ import SlotEditor from './SlotEditor'
 import SetsEditor from './SetsEditor'
 import ShareFriendlyModal from './ShareFriendlyModal'
 import { INPUT, LABEL, LevelChip, PlayerRow, SegButtons, Sheet, StatusChip } from './parts'
+import AdBanner from '../shared/AdBanner'
 
 export default function FriendlyDetail() {
   const { id } = useParams()
@@ -227,6 +228,7 @@ export default function FriendlyDetail() {
             {v.can_cancel && <Btn variant="danger" full onClick={() => setConfirm({ kind: 'cancel' })}>Cancelar partido</Btn>}
             {canDelete && <Btn variant="danger" full onClick={() => setConfirm({ kind: 'delete' })}>Borrar partido</Btn>}
           </div>
+          <AdBanner className="hidden xl:block mt-3" />
         </aside>
       </div>
 

@@ -33,6 +33,7 @@ import SnapshotModal from '../Snapshot/SnapshotModal';
 import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
 import CategoryPicker from '../shared/CategoryPicker';
+import AdRail from '../shared/AdRail'
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -984,294 +985,296 @@ export default function ProfileView() {
           ))}
         </div>
 
-        {showSourceFilter && (
-          <div className="flex gap-1 p-1 mb-4 rounded-lg border border-border-mid bg-surface w-fit" role="tablist" aria-label="Origen de los partidos">
-            {SOURCES.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                role="tab"
-                aria-selected={source === s.id}
-                onClick={() => setSource(s.id)}
-                className={`px-3 py-1.5 rounded-md border-0 font-condensed font-bold text-[12px] tracking-wide cursor-pointer transition-colors ${
-                  source === s.id ? 'bg-brand text-base' : 'bg-transparent text-muted hover:text-brand'
-                }`}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        )}
-
-        <div className={viewLoading ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
-        {tab === 'stats' && (<>
-        {/* El interruptor de privacidad va arriba de todo: decide sobre la
-            pestaña entera, no sólo sobre el bloque premium del fondo. */}
-        {isOwnProfile && owner.is_premium && (
-          <div
-            className="flex items-center justify-between flex-wrap gap-3.5 rounded-xl px-3.5 py-3 mb-4"
-            style={{
-              borderWidth: 1,
-              borderStyle: 'solid',
-              borderColor: 'color-mix(in srgb, var(--color-premium) 30%, transparent)',
-              background:  'color-mix(in srgb, var(--color-premium) 6%, transparent)',
-            }}
-          >
-            <div className="flex flex-col min-w-0">
-              <span className="font-condensed font-bold text-[13px] text-white">
-                {advancedPublic ? 'Estadísticas avanzadas públicas' : 'Estadísticas avanzadas privadas'}
-              </span>
-              <span className="text-[11.5px] text-dim mt-[3px]">
-                {advancedPublic
-                  ? 'Cualquiera que visite tu perfil las ve'
-                  : 'Sólo vos las ves, acá y en la captura'}
-              </span>
-              {advancedError && <span className="text-[11.5px] text-danger mt-1">{advancedError}</span>}
-            </div>
-            {/* El riel deja ver que hay dos posiciones, que un botón con el
-                estado escrito no comunicaba. */}
-            <button
-              type="button"
-              onClick={handleToggleAdvancedPublic}
-              disabled={advancedBusy}
-              role="switch"
-              aria-checked={advancedPublic}
-              aria-label="Estadísticas avanzadas públicas"
-              title={advancedPublic ? 'Hacerlas privadas' : 'Hacerlas públicas'}
-              className="shrink-0 inline-flex items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer disabled:opacity-50 disabled:cursor-default"
-            >
-              <span className={`inline-flex items-center gap-1.5 font-condensed font-bold text-[10.5px] tracking-[0.1em] transition-colors ${
-                advancedPublic ? 'text-premium-hi' : 'text-muted'
-              }`}>
-                {advancedPublic ? <Globe size={12} /> : <Lock size={12} />}
-                {advancedPublic ? 'PÚBLICAS' : 'PRIVADAS'}
-              </span>
-              <span className={`relative w-[46px] h-[26px] rounded-full border transition-colors ${
-                advancedPublic ? 'bg-premium border-premium' : 'bg-base border-border-strong'
-              }`}>
-                <span
-                  className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-transform duration-200 ${
-                    advancedPublic ? 'translate-x-5' : 'translate-x-0 bg-dim'
+        <AdRail>
+          {showSourceFilter && (
+            <div className="flex gap-1 p-1 mb-4 rounded-lg border border-border-mid bg-surface w-fit" role="tablist" aria-label="Origen de los partidos">
+              {SOURCES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={source === s.id}
+                  onClick={() => setSource(s.id)}
+                  className={`px-3 py-1.5 rounded-md border-0 font-condensed font-bold text-[12px] tracking-wide cursor-pointer transition-colors ${
+                    source === s.id ? 'bg-brand text-base' : 'bg-transparent text-muted hover:text-brand'
                   }`}
-                  style={advancedPublic ? { background: 'var(--color-premium-ink)' } : undefined}
-                />
-              </span>
-            </button>
-          </div>
-        )}
-
-        <ProfileStats
-          stats={stats}
-          clubStats={club_stats ?? []}
-          partners={frequent_partners ?? []}
-          friendliesOnly={source === 'amistosos'}
-        />
-
-        {/* Estadísticas avanzadas — al fondo para no interrumpir el flujo.
-            Un visitante sólo las ve si el premium las publicó; el servidor ya
-            manda los campos vacíos cuando no corresponde. */}
-        {stats?.partidos > 0 && (canSeeAdvanced ? (
-          <>
-            <SectionRule action={<PremiumChip />}>ESTADÍSTICAS AVANZADAS</SectionRule>
-            {/* Iguala al alto del bloque completo (con sets y palizas) para que el chunk no desplace nada. */}
-            <Suspense fallback={<div className="mb-6 rounded-lg bg-surface border border-border-mid" style={{ height: 1370 }} />}>
-              <AdvancedStats
-                stats={stats}
-                monthlyStats={monthly_stats ?? []}
-                dailyActivity={view.daily_activity ?? []}
-                weekdayStats={view.weekday_stats ?? []}
-              />
-            </Suspense>
-          </>
-        ) : isOwnProfile ? (
-          <>
-            <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
-            <div className="relative mb-6 rounded-xl overflow-hidden select-none mx-auto border border-border-mid">
-              <img
-                src={statsPreview}
-                alt=""
-                aria-hidden="true"
-                draggable="false"
-                // Sin blur: lo de atrás ya es un dibujo, no datos. Difuminar el
-                // contenido real sería teatro —se saca desde el inspector—, y
-                // sobre un asset falso el desenfoque sólo lo hace ver sucio.
-                className="w-full block"
-                style={{ transform: 'scale(1.01)' }}
-              />
-              <div
-                className="absolute inset-0 grid place-items-center"
-                style={{ background: 'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-base) 55%, transparent) 55%, var(--color-base) 100%)' }}
-              >
-                <div
-                  className="text-center bg-surface rounded-2xl px-6 py-5 max-w-[min(92%,420px)] shadow-2xl"
-                  style={{ borderWidth: 1, borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--color-premium) 35%, transparent)' }}
                 >
-                  <PremiumChip className="mb-2.5" />
-                  <div className="font-condensed font-bold text-[15.5px] text-white">Tu juego, en detalle</div>
-                  <p className="text-[12.5px] text-secondary mt-1.5 mb-0 leading-relaxed max-w-[36ch] mx-auto">
-                    En qué días jugás mejor, tu mejor racha, games a favor, remontadas y palizas.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => setShowPremiumModal(true)}
-                    className="inline-flex items-center gap-2 bg-brand text-base border-0 px-5 py-2.5 mt-3.5 font-condensed font-bold text-sm tracking-wide cursor-pointer rounded-lg"
-                  >
-                    <Gem size={14} /> DESBLOQUEAR CON PREMIUM
-                  </button>
-                </div>
-              </div>
+                  {s.label}
+                </button>
+              ))}
             </div>
-          </>
-        ) : owner.is_premium ? (
-          <>
-            <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
-            <div className="border border-dashed border-border-strong rounded-xl p-8 text-center mb-6">
-              <div className="font-condensed font-bold text-[15px] text-white">Este perfil las mantiene privadas</div>
-              <p className="text-[13px] text-muted mt-2 mb-0 leading-relaxed max-w-[46ch] mx-auto">
-                Su dueño eligió que sus estadísticas avanzadas no sean públicas. Las de arriba se ven siempre.
-              </p>
-            </div>
-          </>
-        ) : null)}
-        </>)}
+          )}
 
-        {tab === 'resumen' && (<>
-        {/* Dueño verificado de un club, si eligió mostrarlo (owner_visible) */}
-        {owner.owned_clubs?.length > 0 && (
-          <div className="flex flex-col gap-2 mb-4">
-            {owner.owned_clubs.map((c) => (
-              <div
-                key={c.id}
-                onClick={() => navigate(`/club/${c.id}`)}
-                className="flex items-center gap-2.5 border border-brand/30 bg-brand/5 rounded-lg px-3.5 py-2.5 cursor-pointer hover:bg-brand/10 transition-colors"
-              >
-                <BadgeCheck size={16} className="text-brand shrink-0" />
-                <span className="text-[12.5px] text-white font-sans">
-                  Dueño verificado de <span className="font-semibold">{c.name}</span>
+          <div className={viewLoading ? 'opacity-50 pointer-events-none transition-opacity' : 'transition-opacity'}>
+          {tab === 'stats' && (<>
+          {/* El interruptor de privacidad va arriba de todo: decide sobre la
+              pestaña entera, no sólo sobre el bloque premium del fondo. */}
+          {isOwnProfile && owner.is_premium && (
+            <div
+              className="flex items-center justify-between flex-wrap gap-3.5 rounded-xl px-3.5 py-3 mb-4"
+              style={{
+                borderWidth: 1,
+                borderStyle: 'solid',
+                borderColor: 'color-mix(in srgb, var(--color-premium) 30%, transparent)',
+                background:  'color-mix(in srgb, var(--color-premium) 6%, transparent)',
+              }}
+            >
+              <div className="flex flex-col min-w-0">
+                <span className="font-condensed font-bold text-[13px] text-white">
+                  {advancedPublic ? 'Estadísticas avanzadas públicas' : 'Estadísticas avanzadas privadas'}
                 </span>
+                <span className="text-[11.5px] text-dim mt-[3px]">
+                  {advancedPublic
+                    ? 'Cualquiera que visite tu perfil las ve'
+                    : 'Sólo vos las ves, acá y en la captura'}
+                </span>
+                {advancedError && <span className="text-[11.5px] text-danger mt-1">{advancedError}</span>}
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Últimos partidos */}
-        {recent_matches?.length > 0 && (
-          <>
-          <SectionRule action={
-            recent_matches.length > 5 ? (
+              {/* El riel deja ver que hay dos posiciones, que un botón con el
+                  estado escrito no comunicaba. */}
               <button
                 type="button"
-                onClick={() => setTab('partidos')}
-                className="shrink-0 font-mono text-[11px] text-muted hover:text-brand transition-colors bg-transparent border-0 cursor-pointer"
+                onClick={handleToggleAdvancedPublic}
+                disabled={advancedBusy}
+                role="switch"
+                aria-checked={advancedPublic}
+                aria-label="Estadísticas avanzadas públicas"
+                title={advancedPublic ? 'Hacerlas privadas' : 'Hacerlas públicas'}
+                className="shrink-0 inline-flex items-center gap-2.5 bg-transparent border-0 p-0 cursor-pointer disabled:opacity-50 disabled:cursor-default"
               >
-                Ver los {recent_matches.length}
+                <span className={`inline-flex items-center gap-1.5 font-condensed font-bold text-[10.5px] tracking-[0.1em] transition-colors ${
+                  advancedPublic ? 'text-premium-hi' : 'text-muted'
+                }`}>
+                  {advancedPublic ? <Globe size={12} /> : <Lock size={12} />}
+                  {advancedPublic ? 'PÚBLICAS' : 'PRIVADAS'}
+                </span>
+                <span className={`relative w-[46px] h-[26px] rounded-full border transition-colors ${
+                  advancedPublic ? 'bg-premium border-premium' : 'bg-base border-border-strong'
+                }`}>
+                  <span
+                    className={`absolute top-[2px] left-[2px] w-5 h-5 rounded-full transition-transform duration-200 ${
+                      advancedPublic ? 'translate-x-5' : 'translate-x-0 bg-dim'
+                    }`}
+                    style={advancedPublic ? { background: 'var(--color-premium-ink)' } : undefined}
+                  />
+                </span>
               </button>
-            ) : null
-          }>ÚLTIMOS PARTIDOS</SectionRule>
-          <div className="border border-border-mid rounded-xl overflow-hidden">
-            {recent_matches.slice(0, 5).map((m) => (
-              <MatchRow
-                key={m.id}
-                m={m}
-                onOpen={() => navigate(profileMatchHref(m))}
-              />
-            ))}
+            </div>
+          )}
+
+          <ProfileStats
+            stats={stats}
+            clubStats={club_stats ?? []}
+            partners={frequent_partners ?? []}
+            friendliesOnly={source === 'amistosos'}
+          />
+
+          {/* Estadísticas avanzadas — al fondo para no interrumpir el flujo.
+              Un visitante sólo las ve si el premium las publicó; el servidor ya
+              manda los campos vacíos cuando no corresponde. */}
+          {stats?.partidos > 0 && (canSeeAdvanced ? (
+            <>
+              <SectionRule action={<PremiumChip />}>ESTADÍSTICAS AVANZADAS</SectionRule>
+              {/* Iguala al alto del bloque completo (con sets y palizas) para que el chunk no desplace nada. */}
+              <Suspense fallback={<div className="mb-6 rounded-lg bg-surface border border-border-mid" style={{ height: 1370 }} />}>
+                <AdvancedStats
+                  stats={stats}
+                  monthlyStats={monthly_stats ?? []}
+                  dailyActivity={view.daily_activity ?? []}
+                  weekdayStats={view.weekday_stats ?? []}
+                />
+              </Suspense>
+            </>
+          ) : isOwnProfile ? (
+            <>
+              <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
+              <div className="relative mb-6 rounded-xl overflow-hidden select-none mx-auto border border-border-mid">
+                <img
+                  src={statsPreview}
+                  alt=""
+                  aria-hidden="true"
+                  draggable="false"
+                  // Sin blur: lo de atrás ya es un dibujo, no datos. Difuminar el
+                  // contenido real sería teatro —se saca desde el inspector—, y
+                  // sobre un asset falso el desenfoque sólo lo hace ver sucio.
+                  className="w-full block"
+                  style={{ transform: 'scale(1.01)' }}
+                />
+                <div
+                  className="absolute inset-0 grid place-items-center"
+                  style={{ background: 'linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--color-base) 55%, transparent) 55%, var(--color-base) 100%)' }}
+                >
+                  <div
+                    className="text-center bg-surface rounded-2xl px-6 py-5 max-w-[min(92%,420px)] shadow-2xl"
+                    style={{ borderWidth: 1, borderStyle: 'solid', borderColor: 'color-mix(in srgb, var(--color-premium) 35%, transparent)' }}
+                  >
+                    <PremiumChip className="mb-2.5" />
+                    <div className="font-condensed font-bold text-[15.5px] text-white">Tu juego, en detalle</div>
+                    <p className="text-[12.5px] text-secondary mt-1.5 mb-0 leading-relaxed max-w-[36ch] mx-auto">
+                      En qué días jugás mejor, tu mejor racha, games a favor, remontadas y palizas.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setShowPremiumModal(true)}
+                      className="inline-flex items-center gap-2 bg-brand text-base border-0 px-5 py-2.5 mt-3.5 font-condensed font-bold text-sm tracking-wide cursor-pointer rounded-lg"
+                    >
+                      <Gem size={14} /> DESBLOQUEAR CON PREMIUM
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : owner.is_premium ? (
+            <>
+              <SectionRule>ESTADÍSTICAS AVANZADAS</SectionRule>
+              <div className="border border-dashed border-border-strong rounded-xl p-8 text-center mb-6">
+                <div className="font-condensed font-bold text-[15px] text-white">Este perfil las mantiene privadas</div>
+                <p className="text-[13px] text-muted mt-2 mb-0 leading-relaxed max-w-[46ch] mx-auto">
+                  Su dueño eligió que sus estadísticas avanzadas no sean públicas. Las de arriba se ven siempre.
+                </p>
+              </div>
+            </>
+          ) : null)}
+          </>)}
+
+          {tab === 'resumen' && (<>
+          {/* Dueño verificado de un club, si eligió mostrarlo (owner_visible) */}
+          {owner.owned_clubs?.length > 0 && (
+            <div className="flex flex-col gap-2 mb-4">
+              {owner.owned_clubs.map((c) => (
+                <div
+                  key={c.id}
+                  onClick={() => navigate(`/club/${c.id}`)}
+                  className="flex items-center gap-2.5 border border-brand/30 bg-brand/5 rounded-lg px-3.5 py-2.5 cursor-pointer hover:bg-brand/10 transition-colors"
+                >
+                  <BadgeCheck size={16} className="text-brand shrink-0" />
+                  <span className="text-[12.5px] text-white font-sans">
+                    Dueño verificado de <span className="font-semibold">{c.name}</span>
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Últimos partidos */}
+          {recent_matches?.length > 0 && (
+            <>
+            <SectionRule action={
+              recent_matches.length > 5 ? (
+                <button
+                  type="button"
+                  onClick={() => setTab('partidos')}
+                  className="shrink-0 font-mono text-[11px] text-muted hover:text-brand transition-colors bg-transparent border-0 cursor-pointer"
+                >
+                  Ver los {recent_matches.length}
+                </button>
+              ) : null
+            }>ÚLTIMOS PARTIDOS</SectionRule>
+            <div className="border border-border-mid rounded-xl overflow-hidden">
+              {recent_matches.slice(0, 5).map((m) => (
+                <MatchRow
+                  key={m.id}
+                  m={m}
+                  onOpen={() => navigate(profileMatchHref(m))}
+                />
+              ))}
+            </div>
+          </>
+          )}
+
+          {/* Compañeros frecuentes */}
+          {frequent_partners?.length > 0 && (
+            <>
+            <SectionRule>COMPAÑEROS FRECUENTES</SectionRule>
+            
+              <div className="rounded-lg overflow-hidden border border-border-strong">
+                {frequent_partners.map((p, i) => (
+                  <div key={i}
+                    onClick={() => p.username && navigate(`/u/${p.username}`)}
+                    className={`flex items-center gap-3 px-4 py-3 border-b border-border-strong last:border-b-0 transition-colors ${p.username ? 'cursor-pointer hover:bg-surface' : ''}`}
+                    style={{ background: '#0d0d0d' }}>
+                    <div className="shrink-0 font-condensed font-black text-[13px] w-4 text-center" style={{ color: '#333' }}>
+                      {i + 1}
+                    </div>
+                    <PlayerAvatar name={p.name} src={p.avatar_url} size={32} premium={p.is_premium} />
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[13px] font-mono truncate ${p.username ? 'text-white' : 'text-muted'}`}>
+                        {p.name}
+                      </div>
+                      {p.username && (
+                        <div className="text-[10px] font-mono text-dim">@{p.username}</div>
+                      )}
+                    </div>
+                    <div className="shrink-0 flex items-center gap-2">
+                      <div className="text-right">
+                        <div className="font-condensed font-black text-[18px] text-white leading-none">{p.partidos_juntos}</div>
+                        <div className="text-[10px] font-mono text-dim">{p.partidos_juntos === 1 ? 'partido' : 'partidos'}</div>
+                      </div>
+                      {p.username && (
+                        <ChevronUp size={13} className="text-dim rotate-90 shrink-0" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+          
+          </>
+          )}
+
+          {/* Ranking entre la gente que sigue. Sólo lo ve el dueño del perfil. */}
+          {isOwnProfile && follow_ranking?.length > 1 && (
+            <>
+            <SectionRule>ENTRE TUS SEGUIDOS</SectionRule>
+            
+              <div className="rounded-lg overflow-hidden border border-border-strong">
+                {follow_ranking.map((r, i) => (
+                  <div key={r.id}
+                    onClick={() => !r.is_me && r.username && navigate(`/u/${r.username}`)}
+                    className={`flex items-center gap-3 px-4 py-3 border-b border-border-strong last:border-b-0 transition-colors ${!r.is_me && r.username ? 'cursor-pointer hover:bg-surface' : ''}`}
+                    style={{ background: r.is_me ? '#e8f04a0d' : '#0d0d0d' }}>
+                    <div className="shrink-0 font-condensed font-black text-[13px] w-4 text-center"
+                      style={{ color: i === 0 ? '#f0d04a' : '#333' }}>
+                      {i + 1}
+                    </div>
+                    <PlayerAvatar name={r.name} src={r.avatar_url} size={32} premium={r.is_premium} />
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[13px] font-mono truncate ${r.is_me ? 'text-brand' : 'text-white'}`}>
+                        {r.name}{r.is_me && ' (vos)'}
+                      </div>
+                      <div className="text-[10px] font-mono text-dim">{r.partidos} PJ · {r.victorias}V</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="font-condensed font-black text-[18px] leading-none"
+                        style={{ color: r.win_rate >= 60 ? '#4af07a' : r.win_rate >= 40 ? '#e8f04a' : '#f07a4a' }}>
+                        {r.win_rate}%
+                      </div>
+                      <div className="text-[10px] font-mono text-dim">victorias</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+          
+          </>
+          )}
+
+          {/* Categorías */}
+          <SectionRule>CATEGORÍAS</SectionRule>
+          <ProfileCategories
+            merged={mergedGroups}
+            isOwnProfile={isOwnProfile}
+            onOpen={(id) => navigate(`/cat/${id}`)}
+          />
+
+          </>)}
+
+
+          {tab === 'partidos' && <ProfileMatches key={source} matches={recent_matches ?? []} stats={stats} />}
           </div>
-        </>
-        )}
 
-        {/* Compañeros frecuentes */}
-        {frequent_partners?.length > 0 && (
-          <>
-          <SectionRule>COMPAÑEROS FRECUENTES</SectionRule>
-            
-            <div className="rounded-lg overflow-hidden border border-border-strong">
-              {frequent_partners.map((p, i) => (
-                <div key={i}
-                  onClick={() => p.username && navigate(`/u/${p.username}`)}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-border-strong last:border-b-0 transition-colors ${p.username ? 'cursor-pointer hover:bg-surface' : ''}`}
-                  style={{ background: '#0d0d0d' }}>
-                  <div className="shrink-0 font-condensed font-black text-[13px] w-4 text-center" style={{ color: '#333' }}>
-                    {i + 1}
-                  </div>
-                  <PlayerAvatar name={p.name} src={p.avatar_url} size={32} premium={p.is_premium} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] font-mono truncate ${p.username ? 'text-white' : 'text-muted'}`}>
-                      {p.name}
-                    </div>
-                    {p.username && (
-                      <div className="text-[10px] font-mono text-dim">@{p.username}</div>
-                    )}
-                  </div>
-                  <div className="shrink-0 flex items-center gap-2">
-                    <div className="text-right">
-                      <div className="font-condensed font-black text-[18px] text-white leading-none">{p.partidos_juntos}</div>
-                      <div className="text-[10px] font-mono text-dim">{p.partidos_juntos === 1 ? 'partido' : 'partidos'}</div>
-                    </div>
-                    {p.username && (
-                      <ChevronUp size={13} className="text-dim rotate-90 shrink-0" />
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          
-        </>
-        )}
-
-        {/* Ranking entre la gente que sigue. Sólo lo ve el dueño del perfil. */}
-        {isOwnProfile && follow_ranking?.length > 1 && (
-          <>
-          <SectionRule>ENTRE TUS SEGUIDOS</SectionRule>
-            
-            <div className="rounded-lg overflow-hidden border border-border-strong">
-              {follow_ranking.map((r, i) => (
-                <div key={r.id}
-                  onClick={() => !r.is_me && r.username && navigate(`/u/${r.username}`)}
-                  className={`flex items-center gap-3 px-4 py-3 border-b border-border-strong last:border-b-0 transition-colors ${!r.is_me && r.username ? 'cursor-pointer hover:bg-surface' : ''}`}
-                  style={{ background: r.is_me ? '#e8f04a0d' : '#0d0d0d' }}>
-                  <div className="shrink-0 font-condensed font-black text-[13px] w-4 text-center"
-                    style={{ color: i === 0 ? '#f0d04a' : '#333' }}>
-                    {i + 1}
-                  </div>
-                  <PlayerAvatar name={r.name} src={r.avatar_url} size={32} premium={r.is_premium} />
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-[13px] font-mono truncate ${r.is_me ? 'text-brand' : 'text-white'}`}>
-                      {r.name}{r.is_me && ' (vos)'}
-                    </div>
-                    <div className="text-[10px] font-mono text-dim">{r.partidos} PJ · {r.victorias}V</div>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="font-condensed font-black text-[18px] leading-none"
-                      style={{ color: r.win_rate >= 60 ? '#4af07a' : r.win_rate >= 40 ? '#e8f04a' : '#f07a4a' }}>
-                      {r.win_rate}%
-                    </div>
-                    <div className="text-[10px] font-mono text-dim">victorias</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          
-        </>
-        )}
-
-        {/* Categorías */}
-        <SectionRule>CATEGORÍAS</SectionRule>
-        <ProfileCategories
-          merged={mergedGroups}
-          isOwnProfile={isOwnProfile}
-          onOpen={(id) => navigate(`/cat/${id}`)}
-        />
-
-        </>)}
-
-
-        {tab === 'partidos' && <ProfileMatches key={source} matches={recent_matches ?? []} stats={stats} />}
-        </div>
-
-        {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
-        {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
-        {tab === 'inscripciones' && isOwnProfile && <MyRegistrationsView />}
+          {/* isOwnProfile también acá: las reservas nunca se montan en un perfil ajeno */}
+          {tab === 'reservas' && isOwnProfile && <MyBookingsView />}
+          {tab === 'inscripciones' && isOwnProfile && <MyRegistrationsView />}
+        </AdRail>
       </div>
 
       {cropFile && (
