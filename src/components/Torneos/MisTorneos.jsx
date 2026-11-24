@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight, Search, Loader2 } from 'lucide-react'
 import { api } from '../../utils/api'
 import { FORMAT_LABEL, FORMAT_CLS, ROLE_LABEL, roleOf, phaseOf, statusLine, detailLine } from '../../utils/tournamentList'
+import AdInline from '../shared/AdInline'
 
 const SECTIONS = [
   { id: 'en_curso',    title: 'EN CURSO' },
@@ -150,6 +151,7 @@ export default function MisTorneos() {
           </section>
         )
       })}
+      <AdInline className="mt-4" />
     </div>
   )
 }

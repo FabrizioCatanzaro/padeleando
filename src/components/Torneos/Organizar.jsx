@@ -5,6 +5,7 @@ import { api } from '../../utils/api'
 import ActionMenu from '../shared/ActionMenu'
 import ClubLogo from '../shared/ClubLogo'
 import AdBanner from '../shared/AdBanner'
+import AdInline from '../shared/AdInline'
 import { dayKey, shortDay } from '../../utils/agenda'
 
 function quotaOf(c, plan) {
@@ -157,6 +158,7 @@ export default function Organizar() {
         <p className="m-0 font-sans text-[12px] text-muted leading-relaxed">En una categoría donde co-organizás valen los límites del plan del dueño.</p>
         <AdBanner />
       </aside>
+      <AdInline />
     </div>
   )
 }

@@ -8,6 +8,7 @@ import GroupCard from '../shared/GroupCard'
 import CategoryRow from '../shared/CategoryRow'
 import { useAuth } from '../../context/useAuth'
 import { mergeGroups, nextByGroup } from '../../utils/homePanel'
+import AdInline from '../shared/AdInline'
 
 const MINE_STEP = 5
 
@@ -99,6 +100,7 @@ export default function Explorar() {
           </div>
         </section>
       )}
+      <AdInline className="mt-2" />
     </div>
   )
 }

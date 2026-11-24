@@ -32,6 +32,7 @@ import Agenda from './Inicio/Agenda';
 import ResumenCard from './Inicio/ResumenCard';
 import ClubesCerca from './Inicio/ClubesCerca';
 import AdBanner from '../shared/AdBanner';
+import AdInline from '../shared/AdInline';
 import { useSummary } from '../../hooks/useSummary';
 import { dayKey, addDaysKey } from '../../utils/agenda';
 import useHomeSearch from '../../hooks/useHomeSearch';
@@ -895,6 +896,7 @@ export default function HomeView() {
               />
               <AdBanner />
             </aside>
+            <AdInline />
           </div>
         )}
 
