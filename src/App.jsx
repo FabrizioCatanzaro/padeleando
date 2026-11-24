@@ -83,7 +83,7 @@ function Layout() {
       <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
         {isLoggedIn && <Sidebar />}
 
-        <main className={`flex-1 w-full max-w-7xl min-w-0 ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
+        <main className={`flex-1 w-full max-w-7xl min-w-0 min-h-screen ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
           {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra el chunk. */}
           <Suspense fallback={<Loader />}>
             <Outlet />
