@@ -133,20 +133,27 @@ export default function ProfileView() {
   const [showStory,       setShowStory]       = useState(false);
 
   useEffect(() => {
+    let alive = true;
+    setLoading(true);
+    setError(null);
     api.groups.byUsername(username)
       .then((d) => {
+        if (!alive) return;
         setData(d);
         setAvatarUrl(d.owner.avatar_url ?? null);
         setAdvancedPublic(d.owner.advanced_stats_public === true);
         setIsFollowing(d.is_following ?? false);
         setFollowersCount(d.owner.followers_count ?? 0);
         setFollowingCount(d.owner.following_count ?? 0);
+        setLoading(false);
       })
       .catch((e) => {
+        if (!alive) return;
         if (e.status === 404 && e.data?.moved_to) { navigate(`/u/${e.data.moved_to}`, { replace: true }); return; }
         setError(e.status === 404 ? 'notfound' : e.message);
-      })
-      .finally(() => setLoading(false));
+        setLoading(false);
+      });
+    return () => { alive = false; };
   }, [username, navigate]);
 
   useEffect(() => { setSource('todos'); setBySource({}); }, [username]);
