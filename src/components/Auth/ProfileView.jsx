@@ -1,14 +1,13 @@
 import { useState, useEffect, useRef, useCallback, useMemo, lazy, Suspense } from 'react';
 import { api } from '../../utils/api';
-import { fmt, calcNivel } from '../../utils/helpers';
+import { calcNivel } from '../../utils/helpers';
 import { mergeGroups } from '../../utils/homePanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { BadgeCheck, ChevronUp, Gem, Globe, Link, Lock, Pencil, Share2, UserCheck, UserPlus, X } from 'lucide-react';
+import { BadgeCheck, ChevronUp, Gem, Globe, Lock, Pencil, Share2, UserCheck, UserPlus, X } from 'lucide-react';
 // Recharts sólo lo necesita este bloque, que además casi nunca se muestra.
 const AdvancedStats = lazy(() => import('./AdvancedStats'));
-import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons';
 import FadeInCard from '../shared/FadeInCard';
 import PremiumModal from '../shared/PremiumModal';
 import Modal from '../shared/Modal';
@@ -36,25 +35,6 @@ import AdInline from '../shared/AdInline'
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
-
-function SiIcon({ icon, size = 14 }) {
-  return (
-    <svg role="img" viewBox="0 0 24 24" width={size} height={size} fill="currentColor">
-      <path d={icon.path} />
-    </svg>
-  );
-}
-
-const NETWORKS = [
-  { id: 'instagram', label: 'Instagram',  prefix: 'https://www.instagram.com/', color: `#${siInstagram.hex}`, Icon: ({ size }) => <SiIcon icon={siInstagram} size={size} /> },
-  // El color de marca de X es negro puro: sobre el fondo oscuro no se veía ni
-  // el icono ni el handle. Se usa el color de texto del tema, que en claro
-  // vuelve a ser prácticamente el negro original.
-  { id: 'twitter',   label: 'Twitter / X', prefix: 'https://x.com/',            color: 'var(--color-content)', Icon: ({ size }) => <SiIcon icon={siX}         size={size} /> },
-  { id: 'facebook',  label: 'Facebook',   prefix: 'https://www.facebook.com/',  color: `#${siFacebook.hex}`,  Icon: ({ size }) => <SiIcon icon={siFacebook}  size={size} /> },
-  { id: 'whatsapp',  label: 'WhatsApp',   prefix: 'https://wa.me/54',             color: `#${siWhatsapp.hex}`,  Icon: ({ size }) => <SiIcon icon={siWhatsapp}  size={size} /> },
-  { id: 'other',     label: 'Otro',       prefix: '',                           color: '#888',                Icon: ({ size }) => <Link size={size} /> },
-];
 
 const SOURCES = [
   { id: 'todos',     label: 'Todos' },
@@ -84,46 +64,6 @@ function avatarZoomUrl(src) {
 function avatarThumbUrl(src, px) {
   if (!src?.includes('/upload/')) return src;
   return src.replace('/upload/', `/upload/f_auto,q_auto,w_${px * 2},c_limit/`);
-}
-
-function SocialLinksDisplay({ links }) {
-  if (!links?.length) return null;
-  // Las privadas solo las ve el dueño en el editor; el resto nunca las recibe.
-  const filtered = links.filter(l => l.url?.trim() && l.private !== true);
-  if (!filtered.length) return null;
-
-  const items = filtered.map((l, i) => {
-    const net = NETWORKS.find(n => n.id === l.network);
-    const prefix = net?.prefix ?? '';
-    const display = prefix && l.url.startsWith(prefix) ? l.url.slice(prefix.length) : l.url;
-    const title = `${net?.label ?? 'Enlace'}${display ? `: ${display}` : ''}`;
-    return { key: i, url: l.url, net, display, title };
-  });
-
-  return (
-    <>
-      <div className="flex sm:hidden flex-wrap justify-center gap-2 mt-3">
-        {items.map(({ key, url, net, title }) => (
-          <a key={key} href={url} target="_blank" rel="noopener noreferrer"
-            title={title} aria-label={title}
-            className="w-9 h-9 flex items-center justify-center bg-surface border border-border-mid rounded-full hover:border-border-strong transition-colors"
-            style={{ color: net?.color ?? '#888' }}>
-            {net ? <net.Icon size={15} /> : <Link size={15} />}
-          </a>
-        ))}
-      </div>
-      <div className="hidden sm:flex flex-wrap gap-2 mt-3">
-        {items.map(({ key, url, net, display, title }) => (
-          <a key={key} href={url} target="_blank" rel="noopener noreferrer" title={title}
-            className="inline-flex items-center gap-1.5 bg-surface border border-border-mid rounded-full px-3 py-1 text-xs font-mono hover:border-border-strong transition-colors max-w-[200px] overflow-hidden"
-            style={{ color: net?.color ?? '#888', textDecoration: 'none' }}>
-            {net && <net.Icon size={12} className="shrink-0" />}
-            <span className="truncate">{display || url}</span>
-          </a>
-        ))}
-      </div>
-    </>
-  );
 }
 
 const ROUND_LABEL = {
@@ -169,19 +109,6 @@ export default function ProfileView() {
   const [advancedError,  setAdvancedError]  = useState(null);
 
 
-  // El avatar necesita dos tamaños reales (no sólo CSS) porque PlayerAvatar
-  // deriva de `size` el cuerpo de las iniciales y el borde premium. El valor
-  // inicial sale de matchMedia, así que en el primer pintado ya es el correcto
-  // y no hay salto de layout.
-  const [isDesktop, setIsDesktop] = useState(
-    () => typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(min-width: 640px)');
-    const onChange = e => setIsDesktop(e.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
-  }, []);
 
   // Mini cabecera pegajosa: aparece cuando la cabecera real ya salió de
   // pantalla. El observador se engancha con un ref de callback porque el
@@ -215,9 +142,12 @@ export default function ProfileView() {
         setFollowersCount(d.owner.followers_count ?? 0);
         setFollowingCount(d.owner.following_count ?? 0);
       })
-      .catch((e) => setError(e.status === 404 ? 'notfound' : e.message))
+      .catch((e) => {
+        if (e.status === 404 && e.data?.moved_to) { navigate(`/u/${e.data.moved_to}`, { replace: true }); return; }
+        setError(e.status === 404 ? 'notfound' : e.message);
+      })
       .finally(() => setLoading(false));
-  }, [username]);
+  }, [username, navigate]);
 
   useEffect(() => { setSource('todos'); setBySource({}); }, [username]);
 
@@ -259,7 +189,6 @@ export default function ProfileView() {
   const showSourceFilter = data.amistosos > 0 && ['resumen', 'partidos', 'stats'].includes(tab);
   const displayAvatar = avatarUrl ?? (isOwnProfile ? user?.avatar_url : null) ?? null;
 
-  const avatarSize  = isDesktop ? 128 : 104;
   const headerPct   = data.stats?.partidos > 0 ? Math.round((data.stats.victorias / data.stats.partidos) * 100) : null;
   const headerNivel = calcNivel(data.stats?.partidos ?? 0, headerPct ?? 0);
 
@@ -329,15 +258,6 @@ export default function ProfileView() {
     { value: mergedGroups.length, label: 'Categorías' },
     { value: data.club_stats?.length ?? 0, label: 'Clubes' },
   ] : [];
-
-  const so = owner.socials ?? {};
-  const savedLinks = [
-    so.instagram && { network: 'instagram', url: `https://www.instagram.com/${so.instagram}` },
-    so.twitter   && { network: 'twitter',   url: `https://x.com/${so.twitter}` },
-    so.facebook  && { network: 'facebook',  url: `https://www.facebook.com/${so.facebook}` },
-    owner.whatsapp && { network: 'whatsapp', url: `https://wa.me/${owner.whatsapp.replace(/\D/g, '')}` },
-    so.website   && { network: 'other',     url: so.website },
-  ].filter(Boolean);
 
   function pickAvatar() {
     if (avatarBusy) return;
@@ -486,11 +406,9 @@ export default function ProfileView() {
         <ProfileHero
           owner={owner}
           isOwnProfile={isOwnProfile}
-          avatarSrc={avatarThumbUrl(displayAvatar, avatarSize)}
-          avatarSize={avatarSize}
+          avatarSrc={avatarThumbUrl(displayAvatar, 190)}
           nivel={headerNivel}
           isPremium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
-          joinedAt={fmt(owner.created_at)}
           onAvatarOpen={() => displayAvatar && setAvatarZoom(true)}
           onPickAvatar={pickAvatar}
           onDeleteAvatar={() => setConfirmAvatarDelete(true)}
@@ -498,7 +416,6 @@ export default function ProfileView() {
           avatarError={avatarError}
           fileInputRef={fileInputRef}
           onFileChange={handleAvatarChange}
-          socials={<SocialLinksDisplay links={savedLinks} />}
           followersCount={followersCount}
           followingCount={followingCount}
           onOpenFollowers={() => openFollowModal('followers')}
