@@ -14,6 +14,7 @@ import { INPUT, Row, Section, VisTag, AffixInput, Select, FieldError, Switch, In
 import { buildWhatsapp, localWhatsapp, dialCode } from '../../utils/phone'
 import AddressFields from './AddressFields'
 import ClaimPremiumRequest from '../shared/ClaimPremiumRequest'
+import { renderGoogleButton } from '../../utils/googleIdentity'
 
 const AvatarCropper = lazy(() => import('../shared/AvatarCropper'))
 const PremiumModal = lazy(() => import('../shared/PremiumModal'))
@@ -121,6 +122,42 @@ function useActiveSection(ids, ready) {
   }, [ids, ready])
   const refFor = useCallback((id) => (node) => { nodes.current[id] = node }, [])
   return [active, refFor]
+}
+
+function GoogleRow({ profile, onChange }) {
+  const btnRef = useRef(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const connected = profile.has_google
+
+  useEffect(() => {
+    if (connected) return
+    let alive = true
+    renderGoogleButton(btnRef.current, async (credential) => {
+      if (!alive) return
+      setError(null)
+      try { onChange(await api.auth.connectGoogle(credential)) } catch (e) { setError(e.message) }
+    }, { text: 'signin_with', width: Math.min(btnRef.current?.offsetWidth || 280, 320) })
+      .catch(() => { if (alive) setError('No pudimos cargar el botón de Google') })
+    return () => { alive = false }
+  }, [connected, onChange])
+
+  async function disconnect() {
+    setBusy(true)
+    setError(null)
+    try { onChange(await api.auth.disconnectGoogle()) } catch (e) { setError(e.message) } finally { setBusy(false) }
+  }
+
+  return (
+    <Row label="Google" hint={connected
+      ? (profile.has_password ? `Conectada como ${profile.google_email ?? 'tu cuenta de Google'}.` : `Conectada como ${profile.google_email ?? 'tu cuenta de Google'}. Para desconectarla, primero creá una contraseña.`)
+      : 'Conectala para entrar con un toque. Puede tener otro email.'}>
+      {connected
+        ? (profile.has_password && <Btn onClick={disconnect} loading={busy}>Desconectar Google</Btn>)
+        : <div ref={btnRef} className="max-w-[320px] min-h-11" />}
+      <FieldError>{error}</FieldError>
+    </Row>
+  )
 }
 
 export default function ProfileEditView() {
@@ -574,9 +611,7 @@ export default function ProfileEditView() {
                   ? <p className="m-0 sm:pt-2.5 text-sm text-green">Te mandamos el link a {resetSent}.</p>
                   : <Btn onClick={sendResetLink} loading={resetBusy}>{profile.has_password ? 'Enviar link para cambiarla' : 'Crear contraseña'}</Btn>}
               </Row>
-              <Row label="Google">
-                <p className="m-0 sm:pt-2.5 text-sm text-content">{profile.has_google ? 'Cuenta de Google conectada.' : 'Sin cuenta de Google conectada.'}</p>
-              </Row>
+              <GoogleRow profile={profile} onChange={(g) => setProfile((p) => ({ ...p, ...g }))} />
               <Row label="Eliminar cuenta" hint="Es permanente y no se puede deshacer." last>
                 <Btn variant="danger" icon={Trash2} onClick={() => { setDeletePassword(''); setDeleteError(null); setShowDelete(true) }}>Eliminar mi cuenta</Btn>
               </Row>

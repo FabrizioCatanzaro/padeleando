@@ -5,7 +5,8 @@ import Modal from "../shared/Modal";
 import PlayerAvatar from "../shared/PlayerAvatar";
 import ActionMenu from "../shared/ActionMenu";
 import CollapsibleSection from "../shared/CollapsibleSection";
-import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink, Link2, Copy, AlertTriangle } from "lucide-react";
+import { Pencil, Trash2, UserPlus, X, Clock, Check, Unlink, Link2, Copy, AlertTriangle, IdCard } from "lucide-react";
+import PlayerSheet from "../shared/PlayerSheet";
 import { api } from "../../utils/api";
 import { useAuth } from "../../context/useAuth";
 import { managementWarnings, LIGA_MIN_PLAYERS } from "../../utils/helpers";
@@ -18,6 +19,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
   const [showAdd, setShowAdd]           = useState(false);
   const [unlinkTarget, setUnlinkTarget] = useState(null);
   const [unlinkBusy, setUnlinkBusy]     = useState(false);
+  const [fichaFor, setFichaFor]         = useState(null);
 
   // Estado de invitaciones por jugador: { [playerId]: { open, identifier, sending, error } }
   const [inviteState, setInviteState] = useState({});
@@ -126,6 +128,7 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
       items.push({ label: "Generar link de invitación", icon: <Link2 size={15} />, onClick: () => createLink(p) });
     }
     if (p.user_id) {
+      items.push({ label: "Ver ficha", icon: <IdCard size={15} />, onClick: () => setFichaFor(p.user_id) });
       items.push({ label: "Desvincular cuenta", icon: <Unlink size={15} />, onClick: () => setUnlinkTarget(p) });
     }
     if (p.invitation_status === 'pending') {
@@ -254,6 +257,17 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
                         </>
                       )}
                       {/* Desvincular la cuenta del slot (el jugador y su historial quedan) */}
+                      {p.user_id && (
+                        <button
+                          type="button"
+                          onClick={() => setFichaFor(p.user_id)}
+                          title="Ver ficha"
+                          aria-label={`Ver ficha de ${p.name}`}
+                          className="bg-transparent border-0 text-muted cursor-pointer px-1.5 py-0.5 hover:text-brand transition-colors"
+                        >
+                          <IdCard size={14} />
+                        </button>
+                      )}
                       {p.user_id && (
                         <div
                           onClick={() => setUnlinkTarget(p)}
@@ -406,6 +420,8 @@ export default function PlayerManager({ tournament, isOwner, onAdd, onEdit, onDe
           onCancel={() => setDeleteTarget(null)}
         />
       )}
+
+      {fichaFor && <PlayerSheet groupId={tournament.group_id} userId={fichaFor} onClose={() => setFichaFor(null)} />}
 
       {unlinkTarget && (
         <Modal

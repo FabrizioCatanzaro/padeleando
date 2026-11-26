@@ -4,35 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Check, Circle } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
+import { renderGoogleButton } from '../../utils/googleIdentity'
 import logoUrl from '../../assets/padeleando.svg'
-
-let googleInitialized = false
-
-// El script de Google Identity pesa 98,6 KB y Lighthouse midió que el 83 % no
-// se ejecuta. Estaba en index.html, así que lo descargaba toda visita aunque
-// sólo se use en esta pantalla. Ahora se pide al montar el formulario.
-const GSI_SRC = 'https://accounts.google.com/gsi/client'
-let gsiPromise = null
-
-function loadGoogleIdentity() {
-  if (window.google?.accounts?.id) return Promise.resolve()
-  // Una sola descarga aunque se entre y salga de /login varias veces.
-  if (!gsiPromise) {
-    gsiPromise = new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${GSI_SRC}"]`)
-      const script = existing ?? document.createElement('script')
-      script.addEventListener('load', () => resolve())
-      script.addEventListener('error', () => { gsiPromise = null; reject(new Error('No se pudo cargar Google')) })
-      if (!existing) {
-        script.src = GSI_SRC
-        script.async = true
-        script.defer = true
-        document.head.appendChild(script)
-      }
-    })
-  }
-  return gsiPromise
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -180,40 +153,19 @@ export default function AuthView({ mode: initialMode }) {
   }, [username, isRegister])
 
   useEffect(() => {
-    function initGoogle() {
-      if (!googleDivRef.current) return
-      if (!googleInitialized) {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: async ({ credential }) => {
-            try {
-              const { user } = await api.auth.google(credential)
-              login(user)
-              navigate(afterAuth)
-            } catch (e) {
-              setError(e.message)
-            }
-          },
-        })
-        googleInitialized = true
-      }
-      window.google.accounts.id.renderButton(googleDivRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        width: googleDivRef.current.offsetWidth,
-        text: 'continue_with',
-        locale: 'es',
-      })
-    }
-
     let cancelled = false
-    loadGoogleIdentity()
-      .then(() => { if (!cancelled) initGoogle() })
-      .catch(() => {
-        // Si el script de Google no carga, el formulario de email y contraseña
-        // sigue funcionando: sólo no aparece el botón de Google.
-      })
+    renderGoogleButton(googleDivRef.current, async (credential) => {
+      if (cancelled) return
+      try {
+        const { user } = await api.auth.google(credential)
+        login(user)
+        navigate(afterAuth)
+      } catch (e) {
+        setError(e.message)
+      }
+    }).catch(() => {
+      // Si el script de Google no carga, el formulario de email y contraseña sigue funcionando.
+    })
     return () => { cancelled = true }
   }, [])
 

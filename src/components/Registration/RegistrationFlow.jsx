@@ -27,7 +27,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   const [dispCompa, setDispCompa] = useState({ slots: [], note: '' });
   const [dispDe, setDispDe]   = useState('yo');
   const [whatsapp, setWhatsapp] = useState(() => whatsappDePerfil(user));
-  const [mostrarWa, setMostrarWa] = useState(false);
+  const [mostrarWa, setMostrarWa] = useState(() => user?.whatsapp_public === true);
   const [kind, setKind]       = useState('pair');
   const [hasAccount, setHasAccount] = useState(true);
   const [query, setQuery]     = useState('');

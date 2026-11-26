@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Settings, FileCheck, Clock } from 'lucide-react';
+import { AlertTriangle, Settings, FileCheck, Clock, IdCard } from 'lucide-react';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
 import { whatsappHref } from '../../utils/copa';
 import { api } from '../../utils/api';
@@ -7,6 +7,7 @@ import { refreshSummary } from '../../hooks/useSummary';
 import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Btn from '../shared/Btn';
+import PlayerSheet from '../shared/PlayerSheet';
 import { fmtCierre, cupoTexto, ESTADO_META } from './format';
 
 const FILTROS = [
@@ -28,7 +29,7 @@ function hace(iso) {
   return d === 1 ? 'ayer' : `hace ${d} días`;
 }
 
-function Jugador({ name, username, avatar, category, stats, guestPhone }) {
+function Jugador({ name, username, avatar, category, stats, guestPhone, onFicha }) {
   const pct = stats?.pj > 0 ? Math.round((stats.pg / stats.pj) * 100) : null;
   return (
     <div className="flex items-center gap-2.5">
@@ -43,6 +44,12 @@ function Jugador({ name, username, avatar, category, stats, guestPhone }) {
             : `${category ?? 'Sin categoría'} · ${stats?.pj ? `${stats.pj} PJ · ${pct}% ganados` : 'sin partidos en la app'}`}
         </div>
       </div>
+      {onFicha && (
+        <button type="button" onClick={onFicha} aria-label={`Ver ficha de ${name}`} title="Ver ficha"
+          className="shrink-0 w-10 h-10 rounded-lg border border-border-strong bg-transparent text-secondary hover:text-white hover:border-soft flex items-center justify-center cursor-pointer transition-colors">
+          <IdCard size={16} />
+        </button>
+      )}
     </div>
   );
 }
@@ -50,6 +57,7 @@ function Jugador({ name, username, avatar, category, stats, guestPhone }) {
 // Pestaña INSCRIPCIONES del organizador: aprobar, rechazar, lista de espera,
 // armar parejas con los que se anotaron solos y marcar pagos.
 export default function RegistrationsPanel({ tournament, onTournamentChanged, onAddPair, onConfigure, onPendingCount }) {
+  const [ficha, setFicha] = useState(null);
   const [data, setData]       = useState(null);
   const [error, setError]     = useState(null);
   const [filtro, setFiltro]   = useState('pending');
@@ -134,10 +142,10 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
             <span className={`text-[12px] font-bold px-2 py-0.5 rounded-full border ${meta.color}`}>{meta.label}</span>
           )}
         </div>
-        <Jugador name={r.p1_name} username={r.p1_username} avatar={r.p1_avatar_url} category={r.p1_category} stats={r.p1_stats} />
+        <Jugador name={r.p1_name} username={r.p1_username} avatar={r.p1_avatar_url} category={r.p1_category} stats={r.p1_stats} onFicha={() => setFicha(r.p1_user_id)} />
         {r.kind === 'pair' && (
           r.p2_user_id
-            ? <Jugador name={r.p2_user_name} username={r.p2_username} avatar={r.p2_avatar_url} category={r.p2_category} stats={r.p2_stats} />
+            ? <Jugador name={r.p2_user_name} username={r.p2_username} avatar={r.p2_avatar_url} category={r.p2_category} stats={r.p2_stats} onFicha={() => setFicha(r.p2_user_id)} />
             : <Jugador name={r.p2_name} guestPhone={r.p2_phone} />
         )}
         {issues.length > 0 && (
@@ -288,6 +296,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
           </div>
         </div>
       )}
+      {ficha && <PlayerSheet groupId={tournament.group_id} userId={ficha} onClose={() => setFicha(null)} />}
     </div>
   );
 }
