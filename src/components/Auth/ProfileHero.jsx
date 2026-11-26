@@ -136,7 +136,7 @@ export default function ProfileHero({
               <div className="flex justify-center sm:justify-end shrink-0">{actions}</div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-3 mt-4">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-4 gap-y-3 mt-4 sm:pb-6">
               <button type="button" onClick={onOpenFollowers}
                 className="bg-transparent border-0 p-0 cursor-pointer text-[13px] text-secondary hover:text-white transition-colors">
                 <b className="font-condensed font-bold text-white mr-1">{followersCount}</b>seguidores
