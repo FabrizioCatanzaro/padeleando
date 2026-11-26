@@ -1,11 +1,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
-import { Search, Crown, ShieldCheck, ChevronLeft, ChevronRight, ArrowLeft, Trash2 } from 'lucide-react'
+import { Search, Crown, ShieldCheck, ChevronLeft, ChevronRight, ArrowLeft, Trash2, AtSign, Venus } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import Loader from '../Loader/Loader'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import Modal from '../shared/Modal'
+import DropdownSelect from '../shared/DropdownSelect'
 
 const PAGE_SIZE = 25
 const DURATION_OPTIONS = [
@@ -15,6 +16,11 @@ const DURATION_OPTIONS = [
   { value: 90,  label: '90 días' },
   { value: 180, label: '180 días' },
   { value: 365, label: '1 año' },
+]
+const GENDER_OPTIONS = [
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'femenino',  label: 'Femenino' },
+  { value: 'no_decir',  label: 'Prefiere no decirlo' },
 ]
 
 function fmtDate(s) {
@@ -53,6 +59,10 @@ export default function AdminUsers() {
   const [deleteUser,   setDeleteUser]   = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [modalError,   setModalError]   = useState(null)
+  const [genderUser,   setGenderUser]   = useState(null)
+  const [genderValue,  setGenderValue]  = useState('')
+  const [usernameUser, setUsernameUser] = useState(null)
+  const [notice,       setNotice]       = useState(null)
 
   const fetchUsers = useCallback(async (opts) => {
     setLoading(true)
@@ -133,6 +143,35 @@ export default function AdminUsers() {
     finally     { setBusyId(null) }
   }
 
+  function openGenderModal(user) {
+    setModalError(null)
+    setGenderValue(user.gender ?? '')
+    setGenderUser(user)
+  }
+
+  async function confirmGender() {
+    setBusyId(genderUser.id)
+    setModalError(null)
+    try {
+      await api.admin.setGender(genderUser.id, genderValue || null)
+      setGenderUser(null)
+      await fetchUsers({ q, page, limit: PAGE_SIZE })
+    } catch (e) { setModalError(e.message) }
+    finally     { setBusyId(null) }
+  }
+
+  async function confirmUsernameChange() {
+    setBusyId(usernameUser.id)
+    setModalError(null)
+    try {
+      await api.admin.allowUsernameChange(usernameUser.id)
+      setNotice(`@${usernameUser.username} ya puede cambiar su nombre de usuario.`)
+      setUsernameUser(null)
+      await fetchUsers({ q, page, limit: PAGE_SIZE })
+    } catch (e) { setModalError(e.message) }
+    finally     { setBusyId(null) }
+  }
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
 
   return (
@@ -159,6 +198,7 @@ export default function AdminUsers() {
       </div>
 
       {error && <p className="text-danger text-xs font-mono mb-3">{error}</p>}
+      {notice && <p role="status" className="text-green text-xs font-mono mb-3">{notice}</p>}
 
       {loading ? <Loader /> : (
         <div className="bg-surface border border-border rounded-lg overflow-hidden">
@@ -230,6 +270,24 @@ export default function AdminUsers() {
                               DAR PREMIUM
                             </button>
                           )}
+                          <button
+                            disabled={busyId === u.id}
+                            onClick={() => openGenderModal(u)}
+                            title="Editar género"
+                            aria-label={`Editar género de ${u.name}`}
+                            className="text-muted hover:text-white hover:bg-white/5 cursor-pointer p-1.5 rounded disabled:opacity-50 transition-colors"
+                          >
+                            <Venus size={14} />
+                          </button>
+                          <button
+                            disabled={busyId === u.id}
+                            onClick={() => { setModalError(null); setUsernameUser(u) }}
+                            title="Habilitar cambio de usuario"
+                            aria-label={`Habilitar cambio de usuario a ${u.name}`}
+                            className="text-muted hover:text-white hover:bg-white/5 cursor-pointer p-1.5 rounded disabled:opacity-50 transition-colors"
+                          >
+                            <AtSign size={14} />
+                          </button>
                           {u.id !== me?.id && (
                             <button
                               disabled={busyId === u.id}
@@ -325,6 +383,45 @@ export default function AdminUsers() {
             Se cancelará el plan premium de{' '}
             <span className="text-white font-semibold">{revokeUser.name}</span> y volverá a free de inmediato.
           </p>
+          {modalError && <p className="text-danger text-xs font-mono mt-3">{modalError}</p>}
+        </Modal>
+      )}
+
+      {genderUser && (
+        <Modal
+          title="Editar género"
+          confirmText={busyId === genderUser.id ? 'Guardando...' : 'Guardar'}
+          confirmDisabled={busyId === genderUser.id || (genderUser.gender ?? '') === genderValue}
+          onConfirm={confirmGender}
+          onCancel={() => setGenderUser(null)}
+        >
+          <p className="mb-4">
+            El usuario no puede cambiarlo después de guardarlo. Corregilo solo si te lo pidió{' '}
+            <span className="text-white font-semibold">{genderUser.name}</span> (@{genderUser.username}).
+          </p>
+          <DropdownSelect
+            id="admin-gender"
+            label="Género"
+            value={genderValue}
+            onChange={setGenderValue}
+            options={[{ value: '', label: 'Sin cargar' }, ...GENDER_OPTIONS]}
+          />
+          {modalError && <p className="text-danger text-xs font-mono mt-3">{modalError}</p>}
+        </Modal>
+      )}
+
+      {usernameUser && (
+        <Modal
+          title="Habilitar cambio de usuario"
+          confirmText={busyId === usernameUser.id ? 'Habilitando...' : 'Habilitar'}
+          confirmDisabled={busyId === usernameUser.id}
+          onConfirm={confirmUsernameChange}
+          onCancel={() => setUsernameUser(null)}
+        >
+          <p className="mb-2">
+            <span className="text-white font-semibold">{usernameUser.name}</span> va a poder cambiar @{usernameUser.username} ahora, sin esperar los 90 días.
+          </p>
+          <p className="text-[12px] text-muted">El límite vuelve a correr desde ese cambio.</p>
           {modalError && <p className="text-danger text-xs font-mono mt-3">{modalError}</p>}
         </Modal>
       )}

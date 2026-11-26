@@ -51,7 +51,7 @@ export default function FriendlyCreate() {
   const [duration, setDuration] = useState(90)
   const [total, setTotal]       = useState('')
   const [each, setEach]         = useState('')
-  const [me, setMe]             = useState(() => ({ side: null, hand: null, whatsapp: whatsappDePerfil(user?.social_links) }))
+  const [me, setMe]             = useState(() => ({ side: user?.side ?? null, hand: user?.hand ?? null, whatsapp: whatsappDePerfil(user) }))
   const [slots, setSlots]       = useState({})
   const [setsFormat, setSetsFormat] = useState(1)
   const [sets, setSets]         = useState(emptySets(1))

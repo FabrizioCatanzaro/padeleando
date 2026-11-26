@@ -1,97 +1,75 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
-// Anuncios por slot. Cada entrada: { src, href? }
-// - href opcional: si existe, la imagen es clickeable y abre en nueva pestaña.
-// - Para el slot 'sidebar' solo tenemos imágenes verticales (desktop).
-// - mobile-top / mobile-bottom quedan pendientes hasta tener las imágenes horizontales.
-const ADS = {
-  sidebar: [
-    {
-      src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776916486/Skycraper_canchas_zi0c5c.png',
-      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
-    },
-    {
-      src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776917142/skycraper_carniceria_xmkjpv.png',
-      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
-    },
-    {
-      src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776916486/skycraper_indumentaria_asbock.png',
-      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
-    },
-    {
-      src:  'https://res.cloudinary.com/dm80qflwa/image/upload/v1776917143/skycraper_hamburguesa_jqoxkj.png',
-      href: 'mailto:soporte@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!',
-    },
-  ],
-  'mobile-top':    [],
-  'mobile-bottom': [],
-}
+const CONTACT_HREF = 'mailto:publicidad@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!'
 
-const SLOT_CLASSES = {
-  sidebar:         'w-40 aspect-[160/600]',
-  'mobile-top':    'w-full h-14',
-  'mobile-bottom': 'w-full h-14 bg-base',
-}
+const CDN = 'https://res.cloudinary.com/dm80qflwa/image/upload'
 
-// Tamaño renderizado de cada slot, en px CSS. Se pide a Cloudinary el doble
-// para pantallas de alta densidad.
-const SLOT_SIZE = {
-  sidebar:         { w: 160, h: 600 },
-  'mobile-top':    { w: 412, h: 56  },
-  'mobile-bottom': { w: 412, h: 56  },
-}
+const ADS = [
+  { src: `${CDN}/v1795467118/ads/banner_padeleando_sumate.jpg`,       href: CONTACT_HREF },
+  { src: `${CDN}/v1795467129/ads/banner_torneo_abierto.jpg`,          href: CONTACT_HREF },
+  { src: `${CDN}/v1795467140/ads/banner_punto_de_oro_padel_shop.jpg`, href: CONTACT_HREF },
+  { src: `${CDN}/v1795467150/ads/banner_la_smasheria.jpg`,            href: CONTACT_HREF },
+  { src: `${CDN}/v1795467160/ads/banner_carniceria_el_tanito.jpg`,    href: CONTACT_HREF },
+]
 
-// Los originales pesan ~1,6 MB cada uno y se mostraban a 160x600. Cloudinary
-// transforma por URL: f_auto elige el formato según el navegador (AVIF/WebP),
-// q_auto ajusta la calidad y w_ redimensiona en el servidor.
-function cdnUrl(src, width) {
-  return src.replace('/upload/', `/upload/f_auto,q_auto,w_${width},c_limit/`)
-}
+// Los originales miden 2304x1856: el slot usa esa proporción y nunca recorta.
+const WIDTH = 300
+const HEIGHT = 242
+const SIZES = [300, 600, 900]
+
+const cdnUrl = (src, w) => src.replace('/upload/', `/upload/f_auto,q_auto,c_limit,w_${w}/`)
+const srcSet = (src) => SIZES.map((w) => `${cdnUrl(src, w)} ${w}w`).join(', ')
 
 const ROTATION_MS = 7_000
 
-export default function AdBanner({ slot = 'sidebar' }) {
-  const ads = ADS[slot] ?? []
-  const [idx, setIdx] = useState(0)
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+export default function AdBanner({ className = '' }) {
+  const ref = useRef(null)
+  const [start] = useState(() => Math.floor(Math.random() * ADS.length))
+  const [step, setStep] = useState(0)
+  const [visible, setVisible] = useState(false)
+  const idx = (start + step) % ADS.length
 
   useEffect(() => {
-    if (ads.length <= 1) return
-    const id = setInterval(() => {
-      setIdx(i => (i + 1) % ads.length)
-    }, ROTATION_MS)
+    const el = ref.current
+    if (!el || typeof IntersectionObserver === 'undefined') return
+    const obs = new IntersectionObserver(([e]) => setVisible(e.isIntersecting))
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [])
+
+  useEffect(() => {
+    if (!visible || ADS.length <= 1 || reducedMotion()) return
+    const id = setInterval(() => setStep((s) => s + 1), ROTATION_MS)
     return () => clearInterval(id)
-  }, [ads.length])
-
-  if (ads.length === 0) return null
-
-  const { w, h } = SLOT_SIZE[slot] ?? SLOT_SIZE.sidebar
+  }, [visible])
 
   return (
-    <div className={`relative overflow-hidden rounded ${SLOT_CLASSES[slot]}`}>
-      {ads.map((ad, i) => {
+    <div ref={ref} className={`relative overflow-hidden rounded-xl bg-surface w-full max-w-[300px] aspect-[2304/1856] mx-auto ${className}`}>
+      {ADS.map((ad, i) => {
+        if ((i - start + ADS.length) % ADS.length > step + 1) return null
         const active = i === idx
-        const wrapperClass = `absolute inset-0 transition-opacity duration-700 ${active ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
+        const wrapperClass = `absolute inset-0 transition-opacity duration-700 motion-reduce:transition-none ${active ? 'opacity-100' : 'opacity-0 pointer-events-none'}`
         const img = (
           <img
-            src={cdnUrl(ad.src, w * 2)}
+            src={cdnUrl(ad.src, WIDTH * 2)}
+            srcSet={srcSet(ad.src)}
+            sizes={`${WIDTH}px`}
             alt="Publicidad"
-            width={w}
-            height={h}
-            // lazy en todos: en móvil los sidebars viven dentro de un contenedor
-            // `hidden xl:flex`, y una imagen diferida dentro de un contenedor
-            // oculto no se descarga. Antes se bajaban los cuatro originales
-            // —6,3 MB— en pantallas donde ni siquiera se muestran.
+            width={WIDTH}
+            height={HEIGHT}
             loading="lazy"
             decoding="async"
             className="w-full h-full object-contain"
           />
         )
         return ad.href ? (
-          <a key={i} href={ad.href} target="_blank" rel="noopener noreferrer" className={wrapperClass}>
+          <a key={ad.src} href={ad.href} target="_blank" rel="noopener noreferrer" className={wrapperClass} tabIndex={active ? 0 : -1} aria-hidden={!active}>
             {img}
           </a>
         ) : (
-          <div key={i} className={wrapperClass}>
+          <div key={ad.src} className={wrapperClass} aria-hidden={!active}>
             {img}
           </div>
         )

@@ -26,8 +26,8 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   const [disp, setDisp]       = useState({ slots: [], note: '' });
   const [dispCompa, setDispCompa] = useState({ slots: [], note: '' });
   const [dispDe, setDispDe]   = useState('yo');
-  const [whatsapp, setWhatsapp] = useState(() => whatsappDePerfil(user?.social_links));
-  const [mostrarWa, setMostrarWa] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(() => whatsappDePerfil(user));
+  const [mostrarWa, setMostrarWa] = useState(() => user?.whatsapp_public === true);
   const [kind, setKind]       = useState('pair');
   const [hasAccount, setHasAccount] = useState(true);
   const [query, setQuery]     = useState('');
@@ -54,7 +54,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   const temporada = pideDatos(tournament);
   const orden = ['tipo', ...(kind === 'pair' ? ['companero'] : []), ...(temporada ? ['contacto'] : []), ...(temporada ? ['disp'] : []), 'resumen'];
   const NOMBRES = { tipo: 'Tipo', companero: 'Compañero', contacto: 'Contacto', disp: 'Horarios', resumen: 'Resumen' };
-  const waPerfil = whatsappDePerfil(user?.social_links);
+  const waPerfil = whatsappDePerfil(user);
   const waValido = /^[+\d][\d\s()-]{5,24}$/.test(whatsapp.trim());
   const nombreCompa = hasAccount ? (partner?.name ?? 'tu compañero') : (guest.name.trim() || 'tu compañero');
   const pasos = orden.map((p) => NOMBRES[p]);

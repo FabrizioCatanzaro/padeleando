@@ -375,7 +375,7 @@ export default function Setup() {
                     capacity_unit: group?.signup_capacity_unit ?? null,
                     rules:    group?.rules ?? null,
                   }}
-                  profile={profileContacts(group?.owner_social_links)}
+                  profile={profileContacts(group?.owner_profile)}
                 />
                 <p className="text-[12px] mt-2 mb-0 text-secondary">Lo que cargues vale sólo para este torneo. Lo que dejes vacío se hereda de la categoría.</p>
               </div>

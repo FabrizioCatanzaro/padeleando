@@ -2,12 +2,13 @@
 
 ## Project Overview
 
-PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports three tournament formats (Liga/Americano/Copa), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries, avatar uploads). An admin dashboard is available to users with `role = 'admin'`.
+PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports three tournament formats (Liga/Americano/Copa), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries). Profile photos are free for everyone. An admin dashboard is available to users with `role = 'admin'`.
 
 ---
 
-## Current Status (updated 2026-11-23)
+## Current Status (updated 2026-11-26)
 
+- **In progress: Perfil** — branch `feat/perfil`, the five stages done, pending review and the merge into `staging`. The API carries the new profile (see the API's CLAUDE.md › Perfil), `/perfil/editar` is live, the register form asks for Nombre/s and Apellido/s, `/u/:username` has the new header (vertical photo, name on two lines, attribute strip) and an old username redirects through `moved_to`. Organizers open the player sheet from Jugadores, Gestión and Inscripciones; Seguridad connects or disconnects Google; the admin corrects the gender and lifts the username wait. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
 - **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
 - **Previous sprint: Amistosos** — merged to `main` (front PR #45, API PR #38). Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
 - **The friendly schema is in production since that deploy**: `db:init` creates `friendly_matches`, `friendly_match_players` and `friendly_match_proposals`, widens `notifications_type_check` and adds `uq_friendly_reminder`. It was tested on a Neon branch that has been deleted.
@@ -16,7 +17,7 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 - **Local dev points at the production database** (`padeliando-api/.env`, backed up in `produccion.env`). For risky work, create a Neon branch of `production` (project `weathered-morning-55905272`), point `.env` at it, and delete the branch when done. Test data is named `TEST …` and deleted at the end.
 - **Git flow:** feature branch from `staging` → commits authored by Fabrizio Catanzaro → `merge --ff-only` into `staging` → Fabrizio pushes and opens the PR `staging` → `main`. Never commit `.claude/` or `.mcp.json`.
 - **Open items:**
-  - Navegación follow-ups: Feed and Ranking in Padeleros (shown as "Próximamente"); unconfirmed club bookings in Inicio › Pendientes once bookings ship; a player directory with a category filter in Padeleros › Jugadores; the 300×250 ad images for the right column.
+  - Navegación follow-ups: Feed and Ranking in Padeleros (shown as "Próximamente"); unconfirmed club bookings in Inicio › Pendientes once bookings ship; a player directory with a category filter in Padeleros › Jugadores.
   - Amistosos follow-ups: playing data (dominant hand, preferred side) on the user's profile; a locality filter once clubs carry their locality (`GET /friendlies/localities` is kept for it); email reminders through a scheduled GitHub Actions workflow; linking a friendly to a club booking.
   - Super tie-break as a match format (left out of the Copa sprint on purpose, "option b").
   - TV mode (`TvOverlay`) shows the main bracket only, not the copa de plata.
@@ -211,14 +212,30 @@ Rules that keep the three from drifting:
 
 - The logged-in frame lives in `src/components/Shell/`. `navConfig.js` is the single source of the modules, their routes, icons, badge counters and the routes that hide the bottom bar (`HIDE_BOTTOM_NAV`: full-screen forms such as `/amistosos/nuevo`).
 - `Sidebar` shows from 1024 px: icons only up to 1279 px, full from 1280 px. It carries the Crear button, the modules and "Tus clubes" (only when the user owns a club). `BottomNav` is the glass bar below 1024 px; its `＋` opens `CreateMenu` as a sheet. `SectionTabs` is the header and tab row of every module; a tab with `soon` renders "Próximamente".
+- `<main>` is `min-h-screen`, so the footer never shows on the first screen while a page loads: before, it showed and then jumped down, 0.03–0.23 CLS on every mobile page.
 - On mobile the Layout adds `pb-[calc(104px+env(safe-area-inset-bottom))]`. Anything fixed to the bottom (sticky bars, `InstallPrompt`) must sit above the bar with the same offset. `GroupView` and `TournamentPage` show their own tabs at the top for this reason.
-- The right column is the Layout's `AdBanner` aside, except on the routes in `OWN_ASIDE` (`/`, `/torneos/organizar`, `/padeleros/jugadores`): those build their own aside with widgets and the ad. Add a route there only if it renders its own.
+- Ads: `AdBanner` keeps the real proportion of the originals (2304:1856, 300×242 at 300 px): Cloudinary `c_limit` with a 300/600/900 `srcset` and `object-contain`, so a banner is never cropped; one in another proportion gets bars. It mounts only the active image and the next one, starts on a random banner, rotates every 7 s only while on screen and stays still with `prefers-reduced-motion`. The images live in Cloudinary under `ads/`, and every banner links to `publicidad@padeleando.ar`.
+- **Where ads go.** From 1280 px, a 300 px right column. `AdRail` wraps the content below the page's header and tabs: Partidos, Torneos › Explorar and Mis torneos, Padeleros › Organizadores and Clubes, Notificaciones, FAQ and the legal pages, plus the wide pages (category, tournament and `/view`, profile, club), whose hero and tabs stay full width. Inicio, Organizar and Jugadores have their own right column with the ad at the bottom; `FriendlyDetail` puts it at the foot of its 320 px column. The Layout has no ad column.
+- Below 1280 px, `AdInline` shows the banner centered at 300 px at the end of the content, before the footer: Inicio, Torneos, Partidos, Padeleros › Organizadores and Clubes, category, tournament (only when the viewer can't manage it, so `/view` and players), profile, club and FAQ. Not in Notificaciones, nor in a tournament you manage. Never a fixed bar: the bottom nav owns the bottom edge.
+- No ads on full-screen forms (`HIDE_BOTTOM_NAV`), Setup, `/nivel`, login and register, admin, subscription or TV mode.
+- Put `AdInline` inside the view, after its data arrived: content loading above it would push it down and count as CLS. Wide content inside `AdRail` must scroll inside its column (the bracket uses `xl:overflow-x-auto`): at 1280 px with a session the central column is about 630 px.
 - Counters come from one request: `useSummary()` is a shared store over `GET /me/summary`, refreshed on route change and on tab focus (15 s apart at most). Call `refreshSummary()` after an action that changes a pending count. No module asks for its counters separately.
 - Routes: `/partidos`, `/partidos/mios`, `/torneos`, `/torneos/mios`, `/torneos/organizar`, `/padeleros/jugadores`, `/padeleros/organizadores`, `/padeleros/clubes`. `/amistosos` redirects to `/partidos` and `/#categorias` to `/torneos/organizar`; `/amistoso/:id` didn't change.
 - **Inicio**: `StatRail`, `LiveBand`, `Pendientes` and `Agenda` (`GET /me/agenda`, shared rows in `shared/AgendaList.jsx`), then `ParaSumarte`: open friendlies (within 15 km when location is granted) and tournaments with open signup. Right column: `ResumenCard`, `ClubesCerca`, ad. The category list of the old "Panel" home is gone.
 - **Torneos**: Explorar (the `/api/home` showcase plus "Tus categorías": favorites and categories where you play, minus your own), Mis torneos (`GET /me/tournaments`, flat list, phases in `utils/tournamentList.js`) and Organizar (`GET /me/organize`). Organizar links into `GroupView` with `?tab=jugadores|estadisticas` and `?accion=editar|coorg` (owner only). Its quota bar uses the category owner's plan, like every plan gate.
 - **Padeleros**: Jugadores (`GET /padeleros/players`), Organizadores (`GET /padeleros/organizers`, "Cerca de mí" sends lat/lon) and Clubes (`api.clubs.browse` / `nearbyStats`, i.e. `?stats=1`). Location goes through `hooks/useGeolocation.js`: it asks on tap, or on mount when the permission is already granted. The club page opens on the booking tab with `?tab=reservar`.
 - The avatar menu hides "Tus clubes" and "Mis categorías" on desktop (the sidebar has them); the mobile sheet keeps them.
+
+### Perfil
+
+- `/perfil/editar` (`components/ProfileEdit/`) loads `api.auth.profile()` and saves only the changed keys with one `PATCH /auth/me`. After saving it merges only the session fields into `login()`: document, address and emergency contacts never go to localStorage.
+- Every field carries who sees it (`VisTag`: PÚBLICO, ORGANIZADORES, SOLO VOS). Changing the username or setting the gender for the first time asks for confirmation; both are irreversible for the user.
+- Countries come from `utils/countries.js` (ISO codes, Spanish names from `Intl`). Flags are local SVGs in `src/assets/flags/` (country-flag-icons, MIT), loaded one at a time by `CountryFlag`.
+- Argentina's provinces and localities come from Georef (`utils/georef.js`, cached per session); if it fails, the fields fall back to free text.
+- The page hides the bottom nav (`HIDE_BOTTOM_NAV`) because its save bar owns the bottom edge.
+- **Ficha del jugador** (`shared/PlayerSheet.jsx`, `api.groups.ficha`): the private data a player loaded, for whoever manages the category. It opens from `GroupPlayers`, `PlayerManager` and `RegistrationsPanel` for players with an account. The API decides who may see it.
+- Google Identity loads from `utils/googleIdentity.js` (`renderGoogleButton`), shared by login and Seguridad. Connecting may use another Google email; disconnecting needs a password.
+- Registration prefills the WhatsApp visibility from `user.whatsapp_public`.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.

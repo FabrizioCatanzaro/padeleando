@@ -38,7 +38,7 @@ export default function TournamentCard({ t, group, delay = 0, onClick }) {
 
   // La inscripción se hereda de la categoría, así que sin las guardas de
   // showsSignup la insignia aparecería en todas las jornadas.
-  const signup = resolveSignup(t, group, group?.owner_social_links);
+  const signup = resolveSignup(t, group, group?.owner_profile);
   const showSignup = showsSignup(t, signup);
   const price = formatPrice(signup.price, signup.unit);
   const contacts = (signup.contacts ?? []).slice(0, 3);

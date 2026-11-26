@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { UserPlus, X, Clock, Unlink, Pencil, Check, Search, ArrowUp, ArrowDown, Trash2, Link2, Copy } from 'lucide-react';
+import { UserPlus, X, Clock, Unlink, Pencil, Check, Search, ArrowUp, ArrowDown, Trash2, Link2, Copy, IdCard } from 'lucide-react';
 import { api } from '../../utils/api';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import ActionMenu from '../shared/ActionMenu';
 import Modal from '../shared/Modal';
 import Btn from '../shared/Btn';
 import { CardSkeleton } from '../shared/Skeleton';
+import PlayerSheet from '../shared/PlayerSheet';
 
 // Cuántas filas se pintan de entrada. El filtro corre siempre sobre el plantel
 // completo (5000 jugadores se filtran en 1,5 ms), así que este tope existe sólo
@@ -34,6 +35,7 @@ const norm = (s) => (s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 // solo slot por categoría y el vínculo vale para todos sus torneos. Hacerlas
 // desde la pantalla de un torneo hacía creer que sólo afectaban a esa fecha.
 export default function GroupPlayers({ groupId, canManage }) {
+  const [fichaFor, setFichaFor] = useState(null);
   const [q,       setQ]       = useState('');
   const [filtro,  setFiltro]  = useState('all');
   const [orden,   setOrden]   = useState('name');
@@ -143,6 +145,7 @@ export default function GroupPlayers({ groupId, canManage }) {
       items.push({ label: 'Cancelar invitación', icon: <X size={15} />, onClick: () => cancelInvite(p) });
     }
     if (p.user_id) {
+      items.push({ label: 'Ver ficha', icon: <IdCard size={15} />, onClick: () => setFichaFor(p.user_id) });
       items.push({ label: 'Desvincular cuenta', icon: <Unlink size={15} />, onClick: () => setUnlinkTarget(p) });
     }
     items.push({ label: 'Renombrar', icon: <Pencil size={15} />, onClick: () => { setRenameFor(p.id); setRenameValue(p.name); } });
@@ -416,6 +419,8 @@ export default function GroupPlayers({ groupId, canManage }) {
           onCancel={() => setRemoveTarget(null)}
         />
       )}
+
+      {fichaFor && <PlayerSheet groupId={groupId} userId={fichaFor} onClose={() => setFichaFor(null)} />}
 
       {unlinkTarget && (
         <Modal

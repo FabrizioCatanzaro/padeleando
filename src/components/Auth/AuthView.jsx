@@ -4,35 +4,8 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Eye, EyeOff, Check, Circle } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
+import { renderGoogleButton } from '../../utils/googleIdentity'
 import logoUrl from '../../assets/padeleando.svg'
-
-let googleInitialized = false
-
-// El script de Google Identity pesa 98,6 KB y Lighthouse midió que el 83 % no
-// se ejecuta. Estaba en index.html, así que lo descargaba toda visita aunque
-// sólo se use en esta pantalla. Ahora se pide al montar el formulario.
-const GSI_SRC = 'https://accounts.google.com/gsi/client'
-let gsiPromise = null
-
-function loadGoogleIdentity() {
-  if (window.google?.accounts?.id) return Promise.resolve()
-  // Una sola descarga aunque se entre y salga de /login varias veces.
-  if (!gsiPromise) {
-    gsiPromise = new Promise((resolve, reject) => {
-      const existing = document.querySelector(`script[src="${GSI_SRC}"]`)
-      const script = existing ?? document.createElement('script')
-      script.addEventListener('load', () => resolve())
-      script.addEventListener('error', () => { gsiPromise = null; reject(new Error('No se pudo cargar Google')) })
-      if (!existing) {
-        script.src = GSI_SRC
-        script.async = true
-        script.defer = true
-        document.head.appendChild(script)
-      }
-    })
-  }
-  return gsiPromise
-}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -117,7 +90,8 @@ function Brand({ title, subtitle }) {
 
 export default function AuthView({ mode: initialMode }) {
   const [mode,      setMode]      = useState(initialMode)
-  const [name,      setName]      = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName,  setLastName]  = useState('')
   const [username,  setUsername]  = useState('')
   const [usernameStatus, setUsernameStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid'
   const [email,     setEmail]     = useState('')
@@ -149,7 +123,7 @@ export default function AuthView({ mode: initialMode }) {
   // Sugerir un username libre a partir del nombre (mientras no lo haya editado a mano)
   useEffect(() => {
     if (!isRegister || usernameEdited.current) return
-    const n = name.trim()
+    const n = `${firstName.trim()} ${lastName.trim()}`.trim()
     if (n.length < 3) { setUsername(''); setUsernameStatus(null); return }
     const t = setTimeout(async () => {
       try {
@@ -158,7 +132,7 @@ export default function AuthView({ mode: initialMode }) {
       } catch { /* ignorar — el usuario puede escribirlo a mano */ }
     }, 500)
     return () => clearTimeout(t)
-  }, [name, isRegister])
+  }, [firstName, lastName, isRegister])
 
   // Verificar disponibilidad cuando el usuario edita el username a mano
   useEffect(() => {
@@ -179,40 +153,19 @@ export default function AuthView({ mode: initialMode }) {
   }, [username, isRegister])
 
   useEffect(() => {
-    function initGoogle() {
-      if (!googleDivRef.current) return
-      if (!googleInitialized) {
-        window.google.accounts.id.initialize({
-          client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
-          callback: async ({ credential }) => {
-            try {
-              const { user } = await api.auth.google(credential)
-              login(user)
-              navigate(afterAuth)
-            } catch (e) {
-              setError(e.message)
-            }
-          },
-        })
-        googleInitialized = true
-      }
-      window.google.accounts.id.renderButton(googleDivRef.current, {
-        type: 'standard',
-        theme: 'outline',
-        size: 'large',
-        width: googleDivRef.current.offsetWidth,
-        text: 'continue_with',
-        locale: 'es',
-      })
-    }
-
     let cancelled = false
-    loadGoogleIdentity()
-      .then(() => { if (!cancelled) initGoogle() })
-      .catch(() => {
-        // Si el script de Google no carga, el formulario de email y contraseña
-        // sigue funcionando: sólo no aparece el botón de Google.
-      })
+    renderGoogleButton(googleDivRef.current, async (credential) => {
+      if (cancelled) return
+      try {
+        const { user } = await api.auth.google(credential)
+        login(user)
+        navigate(afterAuth)
+      } catch (e) {
+        setError(e.message)
+      }
+    }).catch(() => {
+      // Si el script de Google no carga, el formulario de email y contraseña sigue funcionando.
+    })
     return () => { cancelled = true }
   }, [])
 
@@ -244,6 +197,7 @@ export default function AuthView({ mode: initialMode }) {
 
   function getFormError() {
     if (!isRegister) return null
+    if (!firstName.trim() || !lastName.trim()) return 'Completá tu nombre y tu apellido'
     const u = username.trim().toLowerCase()
     if (!u) return 'Elegí un nombre de usuario'
     if (u.length < 3 || u.length > 20 || !/^[a-z0-9_]+$/.test(u))
@@ -264,7 +218,7 @@ export default function AuthView({ mode: initialMode }) {
     setLoading(true)
     try {
       if (isRegister) {
-        const res = await api.auth.register({ name, email, password, username: username.trim().toLowerCase() })
+        const res = await api.auth.register({ first_name: firstName.trim(), last_name: lastName.trim(), email, password, username: username.trim().toLowerCase() })
         if (res.pending_verification) {
           setVerificationSent(res.email ?? email)
         } else if (res.user) {
@@ -457,12 +411,18 @@ export default function AuthView({ mode: initialMode }) {
             {isRegister && (
               <>
                 <div>
-                  <label className={labelBase}>Nombre</label>
-                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={3} maxLength={50}
-                    className={inputCls} />
+                  <label htmlFor="reg-first" className={labelBase}>Nombre/s</label>
+                  <input id="reg-first" placeholder="Tu nombre" value={firstName} onChange={e => setFirstName(e.target.value)} maxLength={40}
+                    autoComplete="given-name" className={inputCls} />
                 </div>
 
                 <div>
+                  <label htmlFor="reg-last" className={labelBase}>Apellido/s</label>
+                  <input id="reg-last" placeholder="Tu apellido" value={lastName} onChange={e => setLastName(e.target.value)} maxLength={40}
+                    autoComplete="family-name" className={inputCls} />
+                </div>
+
+                <div className="sm:col-span-2">
                   <label className={labelBase}>Nombre de usuario</label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-sm font-condensed pointer-events-none">@</span>

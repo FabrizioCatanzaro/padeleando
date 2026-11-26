@@ -23,6 +23,8 @@ import ClubBookingManage from './ClubBookingManage'
 import ClubCategories from './ClubCategories'
 import ClubInfo from './ClubInfo'
 import PremiumModal from '../shared/PremiumModal'
+import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const SOCIAL_ICON = { instagram: Instagram, facebook: Facebook, website: Globe }
 const SOCIAL_LABEL = { instagram: 'Instagram', facebook: 'Facebook', website: 'Sitio web' }
@@ -397,17 +399,20 @@ export default function ClubProfileView() {
       </div>
 
       <div className="px-5 sm:px-6 py-5">
-        {tab === 'agenda'   && <ClubAgenda events={events} todos={todos} />}
-        {tab === 'reservar' && <ClubBooking club={club} canManage={canManageBookings} />}
-        {tab === 'gestion'  && canManageBookings && <ClubBookingManage club={club} onPendingCountChange={handlePendingBookingsChange} />}
-        {tab === 'cats'     && <ClubCategories categorias={categorias} organizadores={organizadores} />}
-        {tab === 'info'   && (
-          <ClubInfo
-            club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage}
-            onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)}
-            onConectarMp={handleConectarMp} onDesconectarMp={handleDesconectarMp} onPedirPremiumMp={() => setShowMpPremium(true)}
-          />
-        )}
+        <AdRail>
+          {tab === 'agenda'   && <ClubAgenda events={events} todos={todos} />}
+          {tab === 'reservar' && <ClubBooking club={club} canManage={canManageBookings} />}
+          {tab === 'gestion'  && canManageBookings && <ClubBookingManage club={club} onPendingCountChange={handlePendingBookingsChange} />}
+          {tab === 'cats'     && <ClubCategories categorias={categorias} organizadores={organizadores} />}
+          {tab === 'info'   && (
+            <ClubInfo
+              club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage}
+              onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)}
+              onConectarMp={handleConectarMp} onDesconectarMp={handleDesconectarMp} onPedirPremiumMp={() => setShowMpPremium(true)}
+            />
+          )}
+          <AdInline />
+        </AdRail>
       </div>
 
       {showEditRequest && (

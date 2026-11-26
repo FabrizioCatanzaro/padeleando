@@ -14,7 +14,7 @@ export function profileItem(username) {
   return { id: 'perfil', label: 'Perfil', to, icon: User, match: (p) => p === to }
 }
 
-const HIDE_BOTTOM_NAV = [/^\/amistosos\/nuevo$/, /^\/amistoso\/[^/]+\/editar$/, /^\/cat\/[^/]+\/torneo\/new$/, /^\/nivel$/]
+const HIDE_BOTTOM_NAV = [/^\/perfil\/editar$/, /^\/amistosos\/nuevo$/, /^\/amistoso\/[^/]+\/editar$/, /^\/cat\/[^/]+\/torneo\/new$/, /^\/nivel$/]
 
 export function showsBottomNav(pathname) {
   return !HIDE_BOTTOM_NAV.some((re) => re.test(pathname))

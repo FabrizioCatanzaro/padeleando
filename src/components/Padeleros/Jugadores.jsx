@@ -102,7 +102,7 @@ export default function Jugadores() {
   const searching = results !== null
 
   return (
-    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-10 xl:items-start">
+    <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10 xl:items-start">
       <div className="min-w-0 flex flex-col gap-7">
         <div className="flex flex-wrap items-center gap-2.5">
           <label className="relative flex-1 min-w-52 sm:max-w-80">
@@ -196,7 +196,7 @@ export default function Jugadores() {
             <Users size={15} />Invitar amigos
           </button>
         </section>
-        <div className="flex justify-center"><AdBanner slot="sidebar" /></div>
+        <AdBanner />
       </aside>
       {sharing && <ShareAppModal onClose={() => setSharing(false)} />}
     </div>

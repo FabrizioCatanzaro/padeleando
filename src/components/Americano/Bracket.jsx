@@ -9,6 +9,7 @@ import SnapshotModal from "../Snapshot/SnapshotModal";
 import BracketStory from "../Snapshot/BracketStory";
 import { ScoreRow } from "../Matches/MatchCard";
 import AvisoDirectas from "./AvisoDirectas";
+import useDragScroll from "../../hooks/useDragScroll";
 
 const PHASE_TITLE = { dieciseisavos: "16AVOS DE FINAL", octavos: "OCTAVOS", cuartos: "CUARTOS DE FINAL", semis: "SEMIFINALES", final: "FINAL", tercer: "TERCER PUESTO" };
 const SLOT_LABEL  = { dieciseisavos: "16avos", octavos: "Octavos", cuartos: "Cuartos", semis: "Semi", final: "la Final", tercer: "el tercer puesto" };
@@ -494,6 +495,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
 
   // Persist liveMatches + sync onSetLiveMatch
   const prevLiveRef = useRef(liveMatches);
+  const dragRef = useDragScroll();
   const findBracketMatchWithPhase = useCallback((matchId) => {
     const found = bracketNodes(bracket).find((m) => m.id === matchId);
     return found ? { match: found, phase: found.phase } : null;
@@ -972,7 +974,7 @@ export default function Bracket({ tournament, isOwner, onGenerateBracket, onUpda
       })()}
 
       {/* Con 16avos son cinco columnas: en desktop no entran y la caja scrollea a lo ancho. */}
-      <div className={`${editMode ? '' : 'hidden sm:block'} overflow-auto max-h-[75vh] lg:max-h-none ${phases.length > 4 ? 'lg:overflow-x-auto lg:overflow-y-visible' : 'lg:overflow-visible'}`}>
+      <div ref={dragRef} className={`${editMode ? '' : 'hidden sm:block'} overflow-auto max-h-[75vh] lg:max-h-none ${phases.length > 4 ? 'lg:overflow-x-auto lg:overflow-y-visible' : 'lg:overflow-visible xl:overflow-x-auto xl:overflow-y-visible'}`}>
         <div
           className="flex gap-10 pb-4 items-stretch"
           style={{ minHeight: `${Math.max(...phases.map(p => p.items.length)) * (esCopa ? 180 : 140)}px` }}

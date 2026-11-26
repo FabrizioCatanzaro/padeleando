@@ -7,6 +7,7 @@ import { notifSummary, registrationText, registrationHref, isRegistrationNotif, 
 import { useAuth } from '../../context/useAuth';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Loader from '../Loader/Loader';
+import AdRail from '../shared/AdRail'
 
 const PAGE_SIZE = 20;
 
@@ -133,59 +134,61 @@ export default function NotificationsView() {
   }
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-6 pb-16">
-      <div className="flex items-center justify-between mb-5">
-        <div className="font-condensed font-bold text-[22px] tracking-[3px] text-white">NOTIFICACIONES</div>
-        {notifs.some(n => !n.read) && (
-          <button
-            onClick={() => {
-              api.notifications.markAllRead().catch(() => {});
-              setNotifs(prev => prev.map(n => ({ ...n, read: true })));
-            }}
-            className="text-[11px] font-mono text-muted hover:text-white transition-colors cursor-pointer bg-transparent border-none"
-          >
-            Marcar todo leído
-          </button>
-        )}
-      </div>
-
-      {notifs.length === 0 && (
-        <div className="text-center text-dim text-sm font-mono py-16">
-          No tenés notificaciones todavía.
+    <div className="max-w-xl xl:max-w-5xl mx-auto px-4 py-6 pb-16">
+      <AdRail>
+        <div className="flex items-center justify-between mb-5">
+          <div className="font-condensed font-bold text-[22px] tracking-[3px] text-white">NOTIFICACIONES</div>
+          {notifs.some(n => !n.read) && (
+            <button
+              onClick={() => {
+                api.notifications.markAllRead().catch(() => {});
+                setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+              }}
+              className="text-[11px] font-mono text-muted hover:text-white transition-colors cursor-pointer bg-transparent border-none"
+            >
+              Marcar todo leído
+            </button>
+          )}
         </div>
-      )}
 
-      {groups.map(group => (
-        <div key={group.label} className="mb-5">
-          <div className="font-mono text-[10px] tracking-[3px] text-[#444] mb-2">{group.label}</div>
-          <div className="flex flex-col gap-1.5">
-            {group.items.map(n => (
-              <NotifRow
-                key={n.id}
-                n={n}
-                navigate={navigate}
-                onFollow={() => handleFollow(n)}
-                onInvitation={(action) => handleInvitation(n, action)}
-                onJoinRequest={(action, playerId) => handleJoinRequest(n, action, playerId)}
-                onCollabInvite={(action) => handleCollabInvite(n, action)}
-                onTransfer={(action) => handleTransfer(n, action)}
-              />
-            ))}
+        {notifs.length === 0 && (
+          <div className="text-center text-dim text-sm font-mono py-16">
+            No tenés notificaciones todavía.
           </div>
-        </div>
-      ))}
+        )}
 
-      {hasMore && (
-        <div className="flex justify-center mt-4">
-          <button
-            onClick={() => load(offset, false)}
-            disabled={loadingMore}
-            className="text-[12px] font-mono text-muted hover:text-white transition-colors cursor-pointer bg-transparent border border-border-strong px-4 py-2 rounded disabled:opacity-40"
-          >
-            {loadingMore ? 'Cargando...' : 'Cargar más'}
-          </button>
-        </div>
-      )}
+        {groups.map(group => (
+          <div key={group.label} className="mb-5">
+            <div className="font-mono text-[10px] tracking-[3px] text-[#444] mb-2">{group.label}</div>
+            <div className="flex flex-col gap-1.5">
+              {group.items.map(n => (
+                <NotifRow
+                  key={n.id}
+                  n={n}
+                  navigate={navigate}
+                  onFollow={() => handleFollow(n)}
+                  onInvitation={(action) => handleInvitation(n, action)}
+                  onJoinRequest={(action, playerId) => handleJoinRequest(n, action, playerId)}
+                  onCollabInvite={(action) => handleCollabInvite(n, action)}
+                  onTransfer={(action) => handleTransfer(n, action)}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+
+        {hasMore && (
+          <div className="flex justify-center mt-4">
+            <button
+              onClick={() => load(offset, false)}
+              disabled={loadingMore}
+              className="text-[12px] font-mono text-muted hover:text-white transition-colors cursor-pointer bg-transparent border border-border-strong px-4 py-2 rounded disabled:opacity-40"
+            >
+              {loadingMore ? 'Cargando...' : 'Cargar más'}
+            </button>
+          </div>
+        )}
+      </AdRail>
     </div>
   );
 }

@@ -29,6 +29,8 @@ import SignupEditor from '../shared/SignupEditor';
 import { profileContacts } from '../../utils/signup';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import LazyNotFound from '../NotFound/LazyNotFound';
+import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const EMOJI_LIST = ['🔥','⚡','🚻','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🎲','🔝','🚨','🌹','🌼','🥑','🍺','🍷','🧉','🍕','❄️','❤️‍🩹','💫','☢️','💸','🗿','♂️','♀️','🪄','🎉','👑']
 
@@ -638,7 +640,7 @@ export default function GroupView() {
                 <SignupEditor
                   value={editSignup}
                   onChange={setEditSignup}
-                  profile={profileContacts(group.owner_social_links)}
+                  profile={profileContacts(group.owner_profile)}
                 />
                 <p className="text-[10px] text-dim font-mono mt-2">Cada torneo lo hereda y puede cambiarlo.</p>
               </div>
@@ -787,36 +789,39 @@ export default function GroupView() {
       </div>
 
       <div className="px-4 sm:px-6 py-6">
-        {tab === 'torneos' && (
-          <GroupTournaments
-            group={group} groupId={groupId} canManage={canManage}
-            filters={filters} changeFilters={changeFilters}
-            filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
-            activeFilters={activeFilters} filtered={filtered}
-            visibleCount={visibleCount} setVisibleCount={setVisibleCount}
-            sort={sort} setSort={setSort}
-            onNewTournament={handleNewTournament}
-          />
-        )}
-
-        {/* Recharts pesa 111 KB: sigue entrando por lazy, ahora además sólo
-            cuando el usuario abre la pestaña. */}
-        {tab === 'estadisticas' && (
-          <Suspense fallback={<div style={{ minHeight: 680 }} />}>
-            <HistoricalStats
-              tournaments={allTournaments}
-              showTorneos={false}
-              showClubs={false}
-              ownerIsPremium={group.owner_is_premium ?? false}
-              groupName={group.name}
-              title="ESTADÍSTICAS HISTÓRICAS"
+        <AdRail>
+          {tab === 'torneos' && (
+            <GroupTournaments
+              group={group} groupId={groupId} canManage={canManage}
+              filters={filters} changeFilters={changeFilters}
+              filtersOpen={filtersOpen} setFiltersOpen={setFiltersOpen}
+              activeFilters={activeFilters} filtered={filtered}
+              visibleCount={visibleCount} setVisibleCount={setVisibleCount}
+              sort={sort} setSort={setSort}
+              onNewTournament={handleNewTournament}
             />
-          </Suspense>
-        )}
+          )}
 
-        {tab === 'jugadores' && <GroupPlayers groupId={groupId} canManage={canManage} />}
+          {/* Recharts pesa 111 KB: sigue entrando por lazy, ahora además sólo
+              cuando el usuario abre la pestaña. */}
+          {tab === 'estadisticas' && (
+            <Suspense fallback={<div style={{ minHeight: 680 }} />}>
+              <HistoricalStats
+                tournaments={allTournaments}
+                showTorneos={false}
+                showClubs={false}
+                ownerIsPremium={group.owner_is_premium ?? false}
+                groupName={group.name}
+                title="ESTADÍSTICAS HISTÓRICAS"
+              />
+            </Suspense>
+          )}
 
-        {tab === 'canchas' && <GroupClubs tournaments={allTournaments} loading={!histLoaded} />}
+          {tab === 'jugadores' && <GroupPlayers groupId={groupId} canManage={canManage} />}
+
+          {tab === 'canchas' && <GroupClubs tournaments={allTournaments} loading={!histLoaded} />}
+          <AdInline />
+        </AdRail>
       </div>
 
       {/* Modal emojis */}

@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 const faqs = [
   {
@@ -78,28 +80,31 @@ export default function FAQView() {
         </p>
       </div>
 
-      <div className="max-w-2xl mx-auto px-6 mt-2">
-        {faqs.map((item, i) => (
-          <FAQItem
-            key={i}
-            item={item}
-            open={openIndex === i}
-            onToggle={() => setOpenIndex(openIndex === i ? null : i)}
-          />
-        ))}
-      </div>
-
-      <div className="max-w-2xl mx-auto px-6 mt-10">
-        <div className="bg-surface border border-border-mid rounded-lg p-5">
-          <p className="text-[13px] text-content">
-            ¿No encontraste lo que buscabas?{' '}
-            <a href="/contacto" className="text-brand hover:underline">
-              Escribinos
-            </a>{' '}
-            y te respondemos a la brevedad.
-          </p>
+      <AdRail className="xl:max-w-6xl xl:mx-auto xl:px-6">
+        <div className="max-w-2xl mx-auto px-6 mt-2">
+          {faqs.map((item, i) => (
+            <FAQItem
+              key={i}
+              item={item}
+              open={openIndex === i}
+              onToggle={() => setOpenIndex(openIndex === i ? null : i)}
+            />
+          ))}
         </div>
-      </div>
+
+        <div className="max-w-2xl mx-auto px-6 mt-10">
+          <div className="bg-surface border border-border-mid rounded-lg p-5">
+            <p className="text-[13px] text-content">
+              ¿No encontraste lo que buscabas?{' '}
+              <a href="/contacto" className="text-brand hover:underline">
+                Escribinos
+              </a>{' '}
+              y te respondemos a la brevedad.
+            </p>
+          </div>
+        </div>
+        <AdInline className="mt-10 px-6" />
+      </AdRail>
     </div>
   )
 }

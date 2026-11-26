@@ -78,8 +78,8 @@ test('formatos', () => {
 
 test('whatsapp: del perfil y como link', async () => {
   const { whatsappDePerfil, whatsappHref, pideDatos } = await import('../src/utils/copa.js');
-  assert.equal(whatsappDePerfil([{ network: 'instagram', url: 'x' }, { network: 'whatsapp', url: 'https://wa.me/541125031107', private: true }]), '+541125031107');
-  assert.equal(whatsappDePerfil([{ network: 'whatsapp', url: '' }]), '');
+  assert.equal(whatsappDePerfil({ whatsapp: '+541125031107', whatsapp_public: false }), '+541125031107');
+  assert.equal(whatsappDePerfil({ whatsapp: null }), '');
   assert.equal(whatsappDePerfil(null), '');
   assert.equal(whatsappHref('+54 11 5555-0101'), 'https://wa.me/541155550101');
   assert.equal(whatsappHref(''), null);

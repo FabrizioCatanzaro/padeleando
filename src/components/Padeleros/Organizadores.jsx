@@ -7,6 +7,8 @@ import { useGeolocation } from '../../hooks/useGeolocation'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import { shortDay, dayKey } from '../../utils/agenda'
 import { FollowButton, Spinner, SECTION_TITLE } from './parts'
+import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 
 function lastLine(o, today) {
   if (!o.last_day) return null
@@ -65,26 +67,29 @@ export default function Organizadores() {
   const today = dayKey()
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-2.5">
-        <button type="button" aria-pressed={near} onClick={toggleNear}
-          className={`h-10 px-3.5 rounded-lg font-sans text-[12.5px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${near ? 'border border-brand/50 bg-brand/10 text-brand' : 'border border-border-mid bg-surface text-content hover:text-white'}`}>
-          <MapPin size={14} />Cerca de mí
-        </button>
-        {near && geo.status === 'loading' && <span className="font-sans text-[12px] text-secondary">Buscando tu ubicación…</span>}
-        {near && geo.status === 'denied' && <span className="font-sans text-[12px] text-secondary">Sin permiso de ubicación: ordenamos por actividad.</span>}
-        <span className="sm:ml-auto font-sans text-[12px] text-secondary">Con categorías públicas y un torneo en los últimos 90 días</span>
+    <AdRail>
+      <div className="flex flex-col gap-6">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button type="button" aria-pressed={near} onClick={toggleNear}
+            className={`h-10 px-3.5 rounded-lg font-sans text-[12.5px] font-bold cursor-pointer inline-flex items-center gap-1.5 transition-colors ${near ? 'border border-brand/50 bg-brand/10 text-brand' : 'border border-border-mid bg-surface text-content hover:text-white'}`}>
+            <MapPin size={14} />Cerca de mí
+          </button>
+          {near && geo.status === 'loading' && <span className="font-sans text-[12px] text-secondary">Buscando tu ubicación…</span>}
+          {near && geo.status === 'denied' && <span className="font-sans text-[12px] text-secondary">Sin permiso de ubicación: ordenamos por actividad.</span>}
+          <span className="sm:ml-auto font-sans text-[12px] text-secondary">Con categorías públicas y un torneo en los últimos 90 días</span>
+        </div>
+        <section aria-labelledby="pd-orgs">
+          <h2 id="pd-orgs" className={`${SECTION_TITLE} mb-3`}>{coords ? 'ORGANIZADORES CERCA' : 'ORGANIZADORES ACTIVOS'}</h2>
+          {rows === null && <Spinner />}
+          {rows?.length === 0 && <p className="m-0 font-sans text-[13px] text-secondary">No hay organizadores activos en los últimos 90 días.</p>}
+          {rows?.length > 0 && (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {rows.map((o) => <OrganizerCard key={o.id} o={o} canFollow={isLoggedIn} today={today} />)}
+            </div>
+          )}
+        </section>
+        {rows !== null && <AdInline className="mt-4" />}
       </div>
-      <section aria-labelledby="pd-orgs">
-        <h2 id="pd-orgs" className={`${SECTION_TITLE} mb-3`}>{coords ? 'ORGANIZADORES CERCA' : 'ORGANIZADORES ACTIVOS'}</h2>
-        {rows === null && <Spinner />}
-        {rows?.length === 0 && <p className="m-0 font-sans text-[13px] text-secondary">No hay organizadores activos en los últimos 90 días.</p>}
-        {rows?.length > 0 && (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {rows.map((o) => <OrganizerCard key={o.id} o={o} canFollow={isLoggedIn} today={today} />)}
-          </div>
-        )}
-      </section>
-    </div>
+    </AdRail>
   )
 }

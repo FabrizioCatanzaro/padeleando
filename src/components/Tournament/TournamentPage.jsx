@@ -36,6 +36,8 @@ import RegistrationsPanel from "../Registration/RegistrationsPanel";
 import PremiosCard from "../Copa/PremiosCard";
 import { esCopa as esCopaDe, esCopaZonas, copaMinPairs, gruposArmados } from "../../utils/copa";
 import ArmarCuadro from "../Copa/ArmarCuadro";
+import AdRail from '../shared/AdRail'
+import AdInline from '../shared/AdInline'
 // La solapa Grupos solo existe en la copa: se carga al abrirla.
 const CopaGrupos = lazy(() => import("../Copa/CopaGrupos"));
 
@@ -322,166 +324,169 @@ export default function TournamentPage({
       </div>
 
       <div className="p-6">
-        {activeTab === 'standings' && (copaZonas ? (
-          <Suspense fallback={<div style={{ minHeight: 400 }} />}>
-            <CopaGrupos
-              tournament={tournament} puedeGestionar={puedeGestionar} acciones={acciones}
-              myPairIds={tournament.pairs.filter((p) => myPlayerIds.includes(p.p1) || myPlayerIds.includes(p.p2)).map((p) => p.id)}
-            />
-          </Suspense>
-        ) : <Standings tournament={tournament} />)}
-
-        {activeTab === 'stats' && (
-          <Suspense fallback={<div style={{ minHeight: 400 }} />}>
-            <Stats tournament={tournament} ownerIsPremium={groupOwnerIsPremium} />
-          </Suspense>
-        )}
-
-        {activeTab === 'players' && <ReadonlyPlayers tournament={tournament} />}
-
-        {/* PARTIDOS (liga) o PREVIA (americano). El que gestiona carga resultados;
-            el que mira ve lo que se está jugando y lo que ya se jugó. */}
-        {activeTab === 'matches' && (
-          puedeGestionar ? (
-            esAmericano ? (
-              <Previa
-                tournament={tournament}
-                isOwner={canEditMatches}
-                categoryName={groupName}
-                myPlayerIds={myPlayerIds}
-                onAddMatch={acciones.onAddMatch}
-                onEditMatch={acciones.onEditMatch}
-                onDeleteMatch={acciones.onDeleteMatch}
-                onSetLiveMatch={acciones.onSetLiveMatch}
-                onAddScheduled={acciones.onAddScheduled}
-                onEditScheduled={acciones.onEditScheduled}
-                onDeleteScheduled={acciones.onDeleteScheduled}
-                onGenerateSchedule={acciones.onGenerateSchedule}
-                onGenerateBracket={acciones.onGenerateBracket}
+        <AdRail>
+          {activeTab === 'standings' && (copaZonas ? (
+            <Suspense fallback={<div style={{ minHeight: 400 }} />}>
+              <CopaGrupos
+                tournament={tournament} puedeGestionar={puedeGestionar} acciones={acciones}
+                myPairIds={tournament.pairs.filter((p) => myPlayerIds.includes(p.p1) || myPlayerIds.includes(p.p2)).map((p) => p.id)}
               />
+            </Suspense>
+          ) : <Standings tournament={tournament} />)}
+
+          {activeTab === 'stats' && (
+            <Suspense fallback={<div style={{ minHeight: 400 }} />}>
+              <Stats tournament={tournament} ownerIsPremium={groupOwnerIsPremium} />
+            </Suspense>
+          )}
+
+          {activeTab === 'players' && <ReadonlyPlayers tournament={tournament} />}
+
+          {/* PARTIDOS (liga) o PREVIA (americano). El que gestiona carga resultados;
+              el que mira ve lo que se está jugando y lo que ya se jugó. */}
+          {activeTab === 'matches' && (
+            puedeGestionar ? (
+              esAmericano ? (
+                <Previa
+                  tournament={tournament}
+                  isOwner={canEditMatches}
+                  categoryName={groupName}
+                  myPlayerIds={myPlayerIds}
+                  onAddMatch={acciones.onAddMatch}
+                  onEditMatch={acciones.onEditMatch}
+                  onDeleteMatch={acciones.onDeleteMatch}
+                  onSetLiveMatch={acciones.onSetLiveMatch}
+                  onAddScheduled={acciones.onAddScheduled}
+                  onEditScheduled={acciones.onEditScheduled}
+                  onDeleteScheduled={acciones.onDeleteScheduled}
+                  onGenerateSchedule={acciones.onGenerateSchedule}
+                  onGenerateBracket={acciones.onGenerateBracket}
+                />
+              ) : (
+                <Matches
+                  tournament={tournament}
+                  isOwner={canEditMatches}
+                  categoryName={groupName}
+                  myPlayerIds={myPlayerIds}
+                  onAddMatch={acciones.onAddMatch}
+                  onEditMatch={acciones.onEditMatch}
+                  onDeleteMatch={acciones.onDeleteMatch}
+                  onSetLiveMatch={acciones.onSetLiveMatch}
+                  onAddScheduled={acciones.onAddScheduled}
+                  onEditScheduled={acciones.onEditScheduled}
+                  onDeleteScheduled={acciones.onDeleteScheduled}
+                  onPreviewFecha={acciones.onPreviewFecha}
+                  onSaveFecha={acciones.onSaveFecha}
+                  onDeleteFecha={acciones.onDeleteFecha}
+                />
+              )
             ) : (
-              <Matches
-                tournament={tournament}
-                isOwner={canEditMatches}
-                categoryName={groupName}
-                myPlayerIds={myPlayerIds}
-                onAddMatch={acciones.onAddMatch}
-                onEditMatch={acciones.onEditMatch}
-                onDeleteMatch={acciones.onDeleteMatch}
-                onSetLiveMatch={acciones.onSetLiveMatch}
-                onAddScheduled={acciones.onAddScheduled}
-                onEditScheduled={acciones.onEditScheduled}
-                onDeleteScheduled={acciones.onDeleteScheduled}
-                onPreviewFecha={acciones.onPreviewFecha}
-                onSaveFecha={acciones.onSaveFecha}
-                onDeleteFecha={acciones.onDeleteFecha}
-              />
+              <>
+                <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="previa" />
+                {esTemporada(tournament)
+                  ? <ReadonlyFechas tournament={tournament} />
+                  : <ReadonlyMatches tournament={tournament} groupName={groupName} />}
+              </>
             )
-          ) : (
-            <>
-              <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="previa" />
-              {esTemporada(tournament)
-                ? <ReadonlyFechas tournament={tournament} />
-                : <ReadonlyMatches tournament={tournament} groupName={groupName} />}
-            </>
-          )
-        )}
+          )}
 
-        {activeTab === 'bracket' && esCopa && !tournament.bracket && (
-          <ArmarCuadro
-            tournament={tournament}
-            isOwner={canEditMatches}
-            onPropuesta={acciones?.onPropuestaCopa}
-            onArmar={acciones?.onArmarCopa}
-          />
-        )}
-
-        {activeTab === 'bracket' && !(esCopa && !tournament.bracket) && (
-          <>
-            {!puedeGestionar && (
-              <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="bracket" />
-            )}
-            <Bracket
+          {activeTab === 'bracket' && esCopa && !tournament.bracket && (
+            <ArmarCuadro
               tournament={tournament}
               isOwner={canEditMatches}
-              onGenerateBracket={acciones?.onGenerateBracket}
+              onPropuesta={acciones?.onPropuestaCopa}
+              onArmar={acciones?.onArmarCopa}
+            />
+          )}
+
+          {activeTab === 'bracket' && !(esCopa && !tournament.bracket) && (
+            <>
+              {!puedeGestionar && (
+                <SpectatorLive tournament={tournament} isAmericano={esAmericano} scope="bracket" />
+              )}
+              <Bracket
+                tournament={tournament}
+                isOwner={canEditMatches}
+                onGenerateBracket={acciones?.onGenerateBracket}
+                onUpdateMatch={acciones?.onUpdateBracketMatch}
+                onClearMatch={acciones?.onClearBracketMatch}
+                onSetBracket={acciones?.onSetBracket}
+                onDeleteBracket={acciones?.onDeleteBracket}
+                onSetLiveMatch={acciones?.onSetLiveMatch}
+                onProgramar={esCopa ? acciones?.onProgramarCruce : undefined}
+              />
+            </>
+          )}
+
+          {activeTab === 'plata' && tournament.bracket_plata && (
+            <Bracket
+              tournament={tournament}
+              cup="plata"
+              isOwner={canEditMatches}
               onUpdateMatch={acciones?.onUpdateBracketMatch}
               onClearMatch={acciones?.onClearBracketMatch}
               onSetBracket={acciones?.onSetBracket}
-              onDeleteBracket={acciones?.onDeleteBracket}
               onSetLiveMatch={acciones?.onSetLiveMatch}
-              onProgramar={esCopa ? acciones?.onProgramarCruce : undefined}
+              onProgramar={acciones?.onProgramarCruce}
             />
-          </>
-        )}
+          )}
 
-        {activeTab === 'plata' && tournament.bracket_plata && (
-          <Bracket
-            tournament={tournament}
-            cup="plata"
-            isOwner={canEditMatches}
-            onUpdateMatch={acciones?.onUpdateBracketMatch}
-            onClearMatch={acciones?.onClearBracketMatch}
-            onSetBracket={acciones?.onSetBracket}
-            onSetLiveMatch={acciones?.onSetLiveMatch}
-            onProgramar={acciones?.onProgramarCruce}
-          />
-        )}
+          {activeTab === 'registrations' && puedeGestionar && (
+            <RegistrationsPanel
+              tournament={tournament}
+              onTournamentChanged={acciones?.onRefresh}
+              onAddPair={acciones?.onAddPair}
+              onConfigure={() => irATab('management')}
+              onPendingCount={setPendientes}
+            />
+          )}
 
-        {activeTab === 'registrations' && puedeGestionar && (
-          <RegistrationsPanel
-            tournament={tournament}
-            onTournamentChanged={acciones?.onRefresh}
-            onAddPair={acciones?.onAddPair}
-            onConfigure={() => irATab('management')}
-            onPendingCount={setPendientes}
-          />
-        )}
+          {activeTab === 'management' && puedeGestionar && (
+            <Management
+              tournament={tournament}
+              isOwner={puedeGestionar}
+              onAddPlayer={acciones.onAddPlayer}
+              onEditPlayer={acciones.onEditPlayer}
+              onDeletePlayer={acciones.onDeletePlayer}
+              onAddPair={acciones.onAddPair}
+              onEditPair={acciones.onEditPair}
+              onDeletePair={acciones.onDeletePair}
+              onGeneratePlayoffs={async () => { if (await acciones.onGeneratePlayoffs()) irATab('bracket'); }}
+              onUpdateLiga={acciones.onUpdateLiga}
+              onUploadFlyer={acciones.onUploadFlyer}
+              onDeleteFlyer={acciones.onDeleteFlyer}
+              onWithdrawPair={acciones.onWithdrawPair}
+              onResetScores={acciones.onResetScores}
+              onDeleteTournament={async () => {
+                await acciones.onDeleteTournament();
+                navigate(`/cat/${groupId ?? tournament.group_id}`);
+              }}
+              onToggleStatus={acciones.onToggleStatus}
+              onUpdateMode={acciones.onUpdateMode}
+              onUpdateClubEvent={acciones.onUpdateClubEvent}
+              onUpdateSignup={acciones.onUpdateSignup}
+              onUpdateDatos={acciones.onUpdateDatos}
+              onRefresh={acciones.onRefresh}
+              onUpdateCopa={acciones.onUpdateCopa}
+              onSavePrizes={acciones.onSavePrizes}
+              onPrizeWinner={acciones.onPrizeWinner}
+              onUpdatePlayerDatos={acciones.onUpdatePlayerDatos}
+            />
+          )}
 
-        {activeTab === 'management' && puedeGestionar && (
-          <Management
-            tournament={tournament}
+          {/* Fotos cuando el torneo arrancó: antes de que haya jugadores el botón
+              competía con la acción principal (auditoría UI). */}
+          {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && <PhotoGallery
+            tournamentId={tournament.id}
             isOwner={puedeGestionar}
-            onAddPlayer={acciones.onAddPlayer}
-            onEditPlayer={acciones.onEditPlayer}
-            onDeletePlayer={acciones.onDeletePlayer}
-            onAddPair={acciones.onAddPair}
-            onEditPair={acciones.onEditPair}
-            onDeletePair={acciones.onDeletePair}
-            onGeneratePlayoffs={async () => { if (await acciones.onGeneratePlayoffs()) irATab('bracket'); }}
-            onUpdateLiga={acciones.onUpdateLiga}
-            onUploadFlyer={acciones.onUploadFlyer}
-            onDeleteFlyer={acciones.onDeleteFlyer}
-            onWithdrawPair={acciones.onWithdrawPair}
-            onResetScores={acciones.onResetScores}
-            onDeleteTournament={async () => {
-              await acciones.onDeleteTournament();
-              navigate(`/cat/${groupId ?? tournament.group_id}`);
-            }}
-            onToggleStatus={acciones.onToggleStatus}
-            onUpdateMode={acciones.onUpdateMode}
-            onUpdateClubEvent={acciones.onUpdateClubEvent}
-            onUpdateSignup={acciones.onUpdateSignup}
-            onUpdateDatos={acciones.onUpdateDatos}
-            onRefresh={acciones.onRefresh}
-            onUpdateCopa={acciones.onUpdateCopa}
-            onSavePrizes={acciones.onSavePrizes}
-            onPrizeWinner={acciones.onPrizeWinner}
-            onUpdatePlayerDatos={acciones.onUpdatePlayerDatos}
-          />
-        )}
-
-        {/* Fotos cuando el torneo arrancó: antes de que haya jugadores el botón
-            competía con la acción principal (auditoría UI). */}
-        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && <PhotoGallery
-          tournamentId={tournament.id}
-          isOwner={puedeGestionar}
-          isPremium={groupOwnerIsPremium}
-          canUpload={puedeGestionar}
-        />}
-        {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && (
-          <InstagramPosts tournamentId={tournament.id} isOwner={puedeGestionar} isPremium={groupOwnerIsPremium} />
-        )}
+            isPremium={groupOwnerIsPremium}
+            canUpload={puedeGestionar}
+          />}
+          {(tournament.status === 'finished' || playedCount > 0 || isLive(tournament)) && (
+            <InstagramPosts tournamentId={tournament.id} isOwner={puedeGestionar} isPremium={groupOwnerIsPremium} />
+          )}
+          {!puedeGestionar && <AdInline />}
+        </AdRail>
       </div>
 
       {tvMode && (

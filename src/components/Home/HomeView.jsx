@@ -32,6 +32,7 @@ import Agenda from './Inicio/Agenda';
 import ResumenCard from './Inicio/ResumenCard';
 import ClubesCerca from './Inicio/ClubesCerca';
 import AdBanner from '../shared/AdBanner';
+import AdInline from '../shared/AdInline';
 import { useSummary } from '../../hooks/useSummary';
 import { dayKey, addDaysKey } from '../../utils/agenda';
 import useHomeSearch from '../../hooks/useHomeSearch';
@@ -893,10 +894,9 @@ export default function HomeView() {
                 onFetch={fetchNearbyClubs}
                 onOpen={(id) => navigate(`/club/${id}`)}
               />
-              <div className="flex justify-center">
-                <AdBanner slot="sidebar" />
-              </div>
+              <AdBanner />
             </aside>
+            <AdInline />
           </div>
         )}
 
@@ -1042,7 +1042,7 @@ export default function HomeView() {
                 <SignupEditor
                   value={signup}
                   onChange={setSignup}
-                  profile={profileContacts(user?.social_links)}
+                  profile={profileContacts(user)}
                 />
                 <p className="text-[11px] text-dim font-mono mt-2">
                   Se muestra en la vista pública para que se anoten. Cada torneo lo hereda y puede cambiarlo.
