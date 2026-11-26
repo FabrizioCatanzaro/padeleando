@@ -8,7 +8,7 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ## Current Status (updated 2026-11-26)
 
-- **In progress: Perfil** — branch `feat/perfil`. Stage 2 of 5 done: the API carries the new profile (see the API's CLAUDE.md › Perfil) and the client already reads `owner_profile` and `user.whatsapp`/`hand`/`side` for signup contacts and prefills. Next: `/perfil/editar`, then the profile header. `ProfileView` still shows the old form until then. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
+- **In progress: Perfil** — branch `feat/perfil`. Stages 2 and 3 of 5 done: the API carries the new profile (see the API's CLAUDE.md › Perfil), `/perfil/editar` is live and the register form asks for Nombre/s and Apellido/s. Next: the profile header (stage 4), then the organizer's player sheet, Google connect and admin actions (stage 5). Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
 - **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
 - **Previous sprint: Amistosos** — merged to `main` (front PR #45, API PR #38). Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
 - **The friendly schema is in production since that deploy**: `db:init` creates `friendly_matches`, `friendly_match_players` and `friendly_match_proposals`, widens `notifications_type_check` and adds `uq_friendly_reminder`. It was tested on a Neon branch that has been deleted.
@@ -225,6 +225,14 @@ Rules that keep the three from drifting:
 - **Torneos**: Explorar (the `/api/home` showcase plus "Tus categorías": favorites and categories where you play, minus your own), Mis torneos (`GET /me/tournaments`, flat list, phases in `utils/tournamentList.js`) and Organizar (`GET /me/organize`). Organizar links into `GroupView` with `?tab=jugadores|estadisticas` and `?accion=editar|coorg` (owner only). Its quota bar uses the category owner's plan, like every plan gate.
 - **Padeleros**: Jugadores (`GET /padeleros/players`), Organizadores (`GET /padeleros/organizers`, "Cerca de mí" sends lat/lon) and Clubes (`api.clubs.browse` / `nearbyStats`, i.e. `?stats=1`). Location goes through `hooks/useGeolocation.js`: it asks on tap, or on mount when the permission is already granted. The club page opens on the booking tab with `?tab=reservar`.
 - The avatar menu hides "Tus clubes" and "Mis categorías" on desktop (the sidebar has them); the mobile sheet keeps them.
+
+### Perfil
+
+- `/perfil/editar` (`components/ProfileEdit/`) loads `api.auth.profile()` and saves only the changed keys with one `PATCH /auth/me`. After saving it merges only the session fields into `login()`: document, address and emergency contacts never go to localStorage.
+- Every field carries who sees it (`VisTag`: PÚBLICO, ORGANIZADORES, SOLO VOS). Changing the username or setting the gender for the first time asks for confirmation; both are irreversible for the user.
+- Countries come from `utils/countries.js` (ISO codes, Spanish names from `Intl`). Flags are local SVGs in `src/assets/flags/` (country-flag-icons, MIT), loaded one at a time by `CountryFlag`.
+- Argentina's provinces and localities come from Georef (`utils/georef.js`, cached per session); if it fails, the fields fall back to free text.
+- The page hides the bottom nav (`HIDE_BOTTOM_NAV`) because its save bar owns the bottom edge.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.

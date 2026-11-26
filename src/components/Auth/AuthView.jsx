@@ -117,7 +117,8 @@ function Brand({ title, subtitle }) {
 
 export default function AuthView({ mode: initialMode }) {
   const [mode,      setMode]      = useState(initialMode)
-  const [name,      setName]      = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName,  setLastName]  = useState('')
   const [username,  setUsername]  = useState('')
   const [usernameStatus, setUsernameStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid'
   const [email,     setEmail]     = useState('')
@@ -149,7 +150,7 @@ export default function AuthView({ mode: initialMode }) {
   // Sugerir un username libre a partir del nombre (mientras no lo haya editado a mano)
   useEffect(() => {
     if (!isRegister || usernameEdited.current) return
-    const n = name.trim()
+    const n = `${firstName.trim()} ${lastName.trim()}`.trim()
     if (n.length < 3) { setUsername(''); setUsernameStatus(null); return }
     const t = setTimeout(async () => {
       try {
@@ -158,7 +159,7 @@ export default function AuthView({ mode: initialMode }) {
       } catch { /* ignorar — el usuario puede escribirlo a mano */ }
     }, 500)
     return () => clearTimeout(t)
-  }, [name, isRegister])
+  }, [firstName, lastName, isRegister])
 
   // Verificar disponibilidad cuando el usuario edita el username a mano
   useEffect(() => {
@@ -244,6 +245,7 @@ export default function AuthView({ mode: initialMode }) {
 
   function getFormError() {
     if (!isRegister) return null
+    if (!firstName.trim() || !lastName.trim()) return 'Completá tu nombre y tu apellido'
     const u = username.trim().toLowerCase()
     if (!u) return 'Elegí un nombre de usuario'
     if (u.length < 3 || u.length > 20 || !/^[a-z0-9_]+$/.test(u))
@@ -264,7 +266,7 @@ export default function AuthView({ mode: initialMode }) {
     setLoading(true)
     try {
       if (isRegister) {
-        const res = await api.auth.register({ name, email, password, username: username.trim().toLowerCase() })
+        const res = await api.auth.register({ first_name: firstName.trim(), last_name: lastName.trim(), email, password, username: username.trim().toLowerCase() })
         if (res.pending_verification) {
           setVerificationSent(res.email ?? email)
         } else if (res.user) {
@@ -457,12 +459,18 @@ export default function AuthView({ mode: initialMode }) {
             {isRegister && (
               <>
                 <div>
-                  <label className={labelBase}>Nombre</label>
-                  <input placeholder="Tu nombre" value={name} onChange={e => setName(e.target.value)} minLength={3} maxLength={50}
-                    className={inputCls} />
+                  <label htmlFor="reg-first" className={labelBase}>Nombre/s</label>
+                  <input id="reg-first" placeholder="Tu nombre" value={firstName} onChange={e => setFirstName(e.target.value)} maxLength={40}
+                    autoComplete="given-name" className={inputCls} />
                 </div>
 
                 <div>
+                  <label htmlFor="reg-last" className={labelBase}>Apellido/s</label>
+                  <input id="reg-last" placeholder="Tu apellido" value={lastName} onChange={e => setLastName(e.target.value)} maxLength={40}
+                    autoComplete="family-name" className={inputCls} />
+                </div>
+
+                <div className="sm:col-span-2">
                   <label className={labelBase}>Nombre de usuario</label>
                   <div className="relative">
                     <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted text-sm font-condensed pointer-events-none">@</span>

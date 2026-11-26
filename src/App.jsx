@@ -21,6 +21,7 @@ import AuthView     from './components/Auth/AuthView'
 // compilaba el panel de admin y las pantallas de suscripción.
 const GroupView    = lazy(() => import('./components/Group/GroupView'))
 const ProfileView  = lazy(() => import('./components/Auth/ProfileView'))
+const ProfileEditView = lazy(() => import('./components/ProfileEdit/ProfileEditView'))
 const ResetPassword = lazy(() => import('./components/Auth/ResetPassword'))
 const VerifyEmail   = lazy(() => import('./components/Auth/VerifyEmail'))
 const LevelQuizView = lazy(() => import('./components/Auth/LevelQuizView'))
@@ -128,6 +129,7 @@ export default function App() {
         <Route path="/reset-password/:token"                     element={<Titled title="Restablecer contraseña"><ResetPassword /></Titled>} />
         <Route path="/verify-email/:token"                       element={<Titled title="Verificar email"><VerifyEmail /></Titled>} />
         <Route path="/u/:username"                               element={<ProfileView />} />
+        <Route path="/perfil/editar"                            element={<PrivateRoute><Titled title="Editar perfil"><ProfileEditView /></Titled></PrivateRoute>} />
         <Route path="/nivel"                                     element={<PrivateRoute><Titled title="Tu nivel"><LevelQuizView /></Titled></PrivateRoute>} />
         <Route path="/partidos"                                  element={<FriendliesView tab="abiertos" />} />
         <Route path="/partidos/mios"                             element={<PrivateRoute><FriendliesView tab="mios" /></PrivateRoute>} />

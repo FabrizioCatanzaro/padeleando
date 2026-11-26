@@ -5,13 +5,12 @@ import { mergeGroups } from '../../utils/homePanel';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import { useDocumentTitle } from '../../hooks/useDocumentTitle';
-import { Badge, BadgeCheck, Camera, Check, ChevronDown, ChevronUp, Circle, Copy, Eye, EyeOff, Gem, Globe, Link, Lock, MapPin, Pencil, Share2, Trash2, UserCheck, UserPlus, Users, X } from 'lucide-react';
+import { BadgeCheck, ChevronUp, Gem, Globe, Link, Lock, Pencil, Share2, UserCheck, UserPlus, X } from 'lucide-react';
 // Recharts sólo lo necesita este bloque, que además casi nunca se muestra.
 const AdvancedStats = lazy(() => import('./AdvancedStats'));
 import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons';
 import FadeInCard from '../shared/FadeInCard';
 import PremiumModal from '../shared/PremiumModal';
-import ClaimPremiumRequest from '../shared/ClaimPremiumRequest';
 import Modal from '../shared/Modal';
 import statsPreview from '../../assets/advanced-stats-preview.svg';
 import Loader from '../Loader/Loader';
@@ -32,7 +31,6 @@ import ShareProfileModal from '../shared/ShareProfileModal';
 import SnapshotModal from '../Snapshot/SnapshotModal';
 import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
-import CategoryPicker from '../shared/CategoryPicker';
 import AdRail from '../shared/AdRail'
 import AdInline from '../shared/AdInline'
 
@@ -57,8 +55,6 @@ const NETWORKS = [
   { id: 'whatsapp',  label: 'WhatsApp',   prefix: 'https://wa.me/54',             color: `#${siWhatsapp.hex}`,  Icon: ({ size }) => <SiIcon icon={siWhatsapp}  size={size} /> },
   { id: 'other',     label: 'Otro',       prefix: '',                           color: '#888',                Icon: ({ size }) => <Link size={size} /> },
 ];
-
-const EMPTY_LINK = { network: '', url: '' };
 
 const SOURCES = [
   { id: 'todos',     label: 'Todos' },
@@ -90,126 +86,6 @@ function avatarThumbUrl(src, px) {
   return src.replace('/upload/', `/upload/f_auto,q_auto,w_${px * 2},c_limit/`);
 }
 
-function ensureTrailingEmpty(links) {
-  const last = links[links.length - 1];
-  if (!last || last.network !== '' || last.url !== '') return [...links, { ...EMPTY_LINK }];
-  return links;
-}
-
-function NetworkPicker({ value, onChange }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-  const net = NETWORKS.find(n => n.id === value);
-
-  useEffect(() => {
-    function handleClick(e) { if (ref.current && !ref.current.contains(e.target)) setOpen(false); }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, []);
-
-  return (
-    <div ref={ref} className="relative shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        title={net?.label ?? 'Elegir red'}
-        className="w-9 h-9 flex items-center justify-center bg-surface border border-border-mid rounded-sm cursor-pointer hover:border-border-strong transition-colors"
-        style={{ color: net?.color ?? '#555' }}
-      >
-        {net ? <net.Icon size={15} /> : <ChevronDown size={14} />}
-      </button>
-      {open && (
-        <div className="absolute top-full left-0 mt-1 z-50 bg-[#111827] border border-border-mid rounded-sm p-1.5 flex gap-1 shadow-lg">
-          {NETWORKS.map(n => (
-            <button
-              key={n.id}
-              type="button"
-              title={n.label}
-              onClick={() => { onChange(n.id); setOpen(false); }}
-              className="w-8 h-8 flex items-center justify-center rounded-sm cursor-pointer border transition-colors"
-              style={{
-                color: n.color,
-                borderColor: value === n.id ? n.color : 'transparent',
-                background: value === n.id ? `${n.color}18` : 'transparent',
-              }}
-            >
-              <n.Icon size={14} />
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function SocialLinksEditor({ value, onChange }) {
-  function updateLink(i, field, val) {
-    const next = value.map((l, idx) => idx === i ? { ...l, [field]: val } : l);
-    if (field === 'network') {
-      const net = NETWORKS.find(n => n.id === val);
-      const old = NETWORKS.find(n => n.id === value[i].network);
-      const curUrl = value[i].url;
-      if (!curUrl || curUrl === (old?.prefix ?? '')) {
-        next[i].url = net?.prefix ?? '';
-      }
-    }
-    onChange(ensureTrailingEmpty(next.filter((l, idx) => {
-      if (idx === next.length - 1) return true;
-      return l.network !== '' || l.url !== '';
-    })));
-  }
-
-  function removeLink(i) {
-    onChange(ensureTrailingEmpty(value.filter((_, idx) => idx !== i)));
-  }
-
-  return (
-    <div className="flex flex-col gap-2">
-      {value.map((link, i) => {
-        const net = NETWORKS.find(n => n.id === link.network);
-        const isLast = i === value.length - 1;
-        return (
-          <div key={i} className="flex items-center gap-2">
-            <NetworkPicker value={link.network} onChange={val => updateLink(i, 'network', val)} />
-            <input
-              className="flex-1 bg-surface border border-border-mid text-white px-3 py-2 text-xs font-mono rounded-sm outline-none min-w-0"
-              placeholder={net?.prefix ? `${net.prefix}usuario` : 'https://...'}
-              value={link.url}
-              onChange={e => updateLink(i, 'url', e.target.value)}
-              type="url"
-              name={`social-link-${i}`}
-              autoComplete="off"
-              autoCorrect="off"
-              spellCheck={false}
-              data-lpignore="true"
-              data-1p-ignore=""
-              data-form-type="other"
-            />
-            {!isLast && (
-              <button type="button" onClick={() => removeLink(i)}
-                className="shrink-0 text-[#555] hover:text-danger transition-colors bg-transparent border-none cursor-pointer">
-                <X size={14} />
-              </button>
-            )}
-            {/* El WhatsApp puede quedar privado: solo lo usás para inscribirte. */}
-            {link.network === 'whatsapp' && link.url && (
-              <label className="shrink-0 flex items-center gap-1.5 text-[11px] text-secondary cursor-pointer whitespace-nowrap">
-                <input type="checkbox" checked={link.private === true} className="accent-brand cursor-pointer"
-                  onChange={(e) => onChange(value.map((l, idx) => (idx === i ? { ...l, private: e.target.checked } : l)))} />
-                Privado
-              </label>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// En mobile la columna es demasiado angosta para píldoras con texto: cuatro
-// redes se apilaban en cuatro filas y mostraban cosas como un teléfono suelto o
-// una URL cortada a la mitad. Ahí van sólo los iconos, en una fila. En desktop
-// sobra ancho, así que se conserva el handle visible.
 function SocialLinksDisplay({ links }) {
   if (!links?.length) return null;
   // Las privadas solo las ve el dueño en el editor; el resto nunca las recibe.
@@ -257,57 +133,6 @@ const ROUND_LABEL = {
   final:   'Final',
 };
 
-function PasswordInput({ value, onChange, placeholder = '* * * * * * *', autoComplete = 'off' }) {
-  const [show, setShow] = useState(false);
-  return (
-    <div className="relative">
-      <input
-        type={show ? 'text' : 'password'}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 rounded text-sm outline-none pr-10 font-mono"
-      />
-      <button type="button" onClick={() => setShow(v => !v)}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#aaa] transition-colors bg-transparent border-0 cursor-pointer">
-        {show ? <EyeOff size={14} /> : <Eye size={14} />}
-      </button>
-    </div>
-  );
-}
-
-function validatePassword(p) {
-  if (p.length < 8)       return 'Mínimo 8 caracteres';
-  if (!/[A-Z]/.test(p))   return 'Al menos una mayúscula';
-  if (!/[a-z]/.test(p))   return 'Al menos una minúscula';
-  if (!/[0-9]/.test(p))   return 'Al menos un número';
-  return null;
-}
-
-function PasswordStrength({ password }) {
-  if (!password) return null;
-  const checks = [
-    { ok: password.length >= 8,    label: '8+ chars' },
-    { ok: /[A-Z]/.test(password),  label: 'Mayúscula' },
-    { ok: /[a-z]/.test(password),  label: 'Minúscula' },
-    { ok: /[0-9]/.test(password),  label: 'Número' },
-  ];
-  return (
-    <div className="flex gap-1.5 flex-wrap mt-2">
-      {checks.map(({ ok, label }) => (
-        <span key={label} className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border transition-colors
-          ${ok ? 'text-green bg-[#1a2e1a] border-[#4af07a44]' : 'text-[#555] bg-[#111] border-border-strong'}`}>
-          {ok ? <Check size={11} strokeWidth={3} className="shrink-0" />
-              : <Circle size={11} strokeWidth={2.5} className="shrink-0" />}
-          {label}
-        </span>
-      ))}
-    </div>
-  );
-}
-
-
 export default function ProfileView() {
   const [data,    setData]    = useState(null);
   const [source,  setSource]  = useState('todos');
@@ -316,7 +141,7 @@ export default function ProfileView() {
   const [error,   setError]   = useState(null);
   const { username } = useParams();
   const navigate = useNavigate();
-  const { user, login, logout } = useAuth();
+  const { user, login } = useAuth();
 
   const [isFollowing,      setIsFollowing]      = useState(false);
   const [followBusy,       setFollowBusy]       = useState(false);
@@ -328,20 +153,7 @@ export default function ProfileView() {
   const [followList,       setFollowList]        = useState([]);
   const [followListLoading, setFollowListLoading] = useState(false);
 
-  const [editOpen,     setEditOpen]     = useState(false);
-  const [editName,     setEditName]     = useState('');
-  const [editUsername, setEditUsername] = useState('');
-  const [editBio,      setEditBio]      = useState('');
-  const [editCategory, setEditCategory] = useState(null);
-  const [socialLinks,  setSocialLinks]  = useState([{ ...EMPTY_LINK }]);
   const [tab,            setTab]            = useState('resumen');
-  const [currentPass,  setCurrentPass]  = useState('');
-  const [newPass,      setNewPass]      = useState('');
-  const [newPass2,     setNewPass2]     = useState('');
-  const [saving,       setSaving]       = useState(false);
-  const [saveError,    setSaveError]    = useState(null);
-  const [saveOk,       setSaveOk]       = useState(false);
-  const [copied,       setCopied]       = useState(false);
 
   const fileInputRef = useRef(null);
   const [avatarUrl,   setAvatarUrl]   = useState(null);
@@ -351,7 +163,6 @@ export default function ProfileView() {
   const [avatarZoom,  setAvatarZoom]  = useState(false);
   const [confirmAvatarDelete, setConfirmAvatarDelete] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
-  const [showClaimHelp,    setShowClaimHelp]    = useState(false);
 
   const [advancedPublic, setAdvancedPublic] = useState(false);
   const [advancedBusy,   setAdvancedBusy]   = useState(false);
@@ -393,21 +204,11 @@ export default function ProfileView() {
 
   const [showShare,       setShowShare]       = useState(false);
   const [showStory,       setShowStory]       = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletePassword,  setDeletePassword]  = useState('');
-  const [deleteBusy,      setDeleteBusy]      = useState(false);
-  const [deleteError,     setDeleteError]     = useState(null);
 
   useEffect(() => {
     api.groups.byUsername(username)
       .then((d) => {
         setData(d);
-        setEditName(d.owner.name);
-        setEditUsername(d.owner.username);
-        setEditBio(d.owner.bio ?? '');
-        setEditCategory(d.owner.category ?? null);
-        const existing = Array.isArray(d.owner.social_links) ? d.owner.social_links : [];
-        setSocialLinks(ensureTrailingEmpty(existing));
         setAvatarUrl(d.owner.avatar_url ?? null);
         setAdvancedPublic(d.owner.advanced_stats_public === true);
         setIsFollowing(d.is_following ?? false);
@@ -480,7 +281,7 @@ export default function ProfileView() {
       </button>
       {isOwnProfile ? (
         <button
-          onClick={() => setEditOpen(v => !v)}
+          onClick={() => navigate('/perfil/editar')}
           className="flex items-center gap-2 px-4 py-2 rounded-lg font-sans text-[13px] border border-border-strong text-content bg-transparent hover:bg-border-mid hover:text-white transition-colors cursor-pointer"
         >
           <Pencil size={14} />Editar perfil
@@ -529,37 +330,14 @@ export default function ProfileView() {
     { value: data.club_stats?.length ?? 0, label: 'Clubes' },
   ] : [];
 
-  const savedLinks    = Array.isArray(owner.social_links) ? owner.social_links.filter(l => l.url?.trim()) : [];
-  const filledLinks   = socialLinks.filter(l => {
-    const url = l.url?.trim();
-    if (!url) return false;
-    const prefix = NETWORKS.find(n => n.id === l.network)?.prefix ?? '';
-    return url !== prefix;
-  });
-
-  const hasChanges =
-    editName.trim() !== owner.name ||
-    editUsername.trim() !== owner.username ||
-    editBio.trim() !== (owner.bio ?? '') ||
-    (editCategory ?? null) !== (owner.category ?? null) ||
-    newPass !== '' || currentPass !== '' ||
-    JSON.stringify(filledLinks) !== JSON.stringify(savedLinks);
-
-  function handleCancel() {
-    setEditName(owner.name);
-    setEditUsername(owner.username);
-    setEditBio(owner.bio ?? '');
-    setEditCategory(owner.category ?? null);
-    setSocialLinks(ensureTrailingEmpty(savedLinks));
-    setCurrentPass(''); setNewPass(''); setNewPass2('');
-    setSaveError(null); setSaveOk(false);
-  }
-
-  function handleCopyUsername() {
-    navigator.clipboard.writeText(editUsername);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  }
+  const so = owner.socials ?? {};
+  const savedLinks = [
+    so.instagram && { network: 'instagram', url: `https://www.instagram.com/${so.instagram}` },
+    so.twitter   && { network: 'twitter',   url: `https://x.com/${so.twitter}` },
+    so.facebook  && { network: 'facebook',  url: `https://www.facebook.com/${so.facebook}` },
+    owner.whatsapp && { network: 'whatsapp', url: `https://wa.me/${owner.whatsapp.replace(/\D/g, '')}` },
+    so.website   && { network: 'other',     url: so.website },
+  ].filter(Boolean);
 
   function pickAvatar() {
     if (avatarBusy) return;
@@ -627,79 +405,6 @@ export default function ProfileView() {
     }
   }
 
-  async function handleSave() {
-    setSaveError(null); setSaveOk(false);
-    const body = {};
-
-    const trimmedName = editName.trim();
-    if (trimmedName && trimmedName !== owner.name) body.name = trimmedName;
-
-    const trimmedUsername = editUsername.trim();
-    if (trimmedUsername && trimmedUsername !== owner.username) body.username = trimmedUsername;
-
-    const trimmedBio = editBio.trim();
-    if (trimmedBio !== (owner.bio ?? '')) body.bio = trimmedBio;
-
-    if ((editCategory ?? null) !== (owner.category ?? null)) body.category = editCategory;
-
-    if (newPass) {
-      const pwErr = validatePassword(newPass);
-      if (pwErr) { setSaveError(pwErr); return; }
-      if (newPass !== newPass2) { setSaveError('Las contraseñas no coinciden'); return; }
-      if (!currentPass) { setSaveError('Ingresá tu contraseña actual'); return; }
-      body.current_password = currentPass;
-      body.new_password = newPass;
-    }
-
-    if (JSON.stringify(filledLinks) !== JSON.stringify(savedLinks)) {
-      body.social_links = filledLinks;
-    }
-
-    if (Object.keys(body).length === 0) return;
-
-    setSaving(true);
-    try {
-      const updated = await api.auth.updateMe(body);
-      const newUsername = updated.username ?? user.username;
-      login({ ...user, name: updated.name ?? user.name, username: newUsername });
-      setData(d => ({
-        ...d,
-        owner: {
-          ...d.owner,
-          name: updated.name ?? d.owner.name,
-          username: newUsername,
-          bio: updated.bio ?? d.owner.bio,
-          category: updated.category !== undefined ? updated.category : d.owner.category,
-          social_links: updated.social_links ?? d.owner.social_links,
-        },
-      }));
-      setSocialLinks(ensureTrailingEmpty(updated.social_links ?? filledLinks));
-      setSaveOk(true);
-      setCurrentPass(''); setNewPass(''); setNewPass2('');
-      setTimeout(() => {
-        setSaveOk(false);
-        if (newUsername !== username) navigate(`/u/${newUsername}`, { replace: true });
-      }, 1200);
-    } catch (e) {
-      setSaveError(e.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  async function handleDeleteAccount() {
-    setDeleteBusy(true);
-    setDeleteError(null);
-    try {
-      await api.auth.deleteMe(deletePassword);
-      await logout();
-      navigate('/', { replace: true });
-    } catch (e) {
-      setDeleteError(e.message);
-      setDeleteBusy(false);
-    }
-  }
-
   async function handleFollowToggle() {
     if (followBusy) return;
     setFollowBusy(true);
@@ -729,9 +434,6 @@ export default function ProfileView() {
     } catch { /* ignore */ }
     finally { setFollowListLoading(false); }
   }
-
-  const label = { display: 'block', fontSize: 11, letterSpacing: 2, color: '#555',
-                  fontFamily: "'Albert Sans',monospace", marginBottom: 6, marginTop: 16 };
 
   return (
     <div className="bg-base text-content font-sans pb-15">
@@ -818,151 +520,6 @@ export default function ProfileView() {
 
         {/* Centinela de la mini cabecera: cuando sale de pantalla, entra la barra. */}
         <div ref={setSentinel} aria-hidden="true" className="h-px mb-5" />
-
-        {/* Editar perfil (colapsable) */}
-        {isOwnProfile && (
-          <div className="bg-surface border border-border-mid rounded-lg mb-4 sm:mb-6 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => setEditOpen(v => !v)}
-              className="w-full flex items-center justify-between px-5 py-4 cursor-pointer bg-transparent border-none text-left"
-            >
-              <span className="font-condensed font-bold text-sm tracking-[3px] text-[#555]">EDITAR PERFIL</span>
-              {editOpen ? <ChevronUp size={16} className="text-muted" /> : <ChevronDown size={16} className="text-muted" />}
-            </button>
-
-            {editOpen && (
-              <div className="px-5 pb-5">
-                <label style={label}>NOMBRE</label>
-                <input
-                  className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 rounded text-sm outline-none font-sans"
-                  value={editName} onChange={e => setEditName(e.target.value)} minLength={3} maxLength={50}
-                  autoComplete="off" name="profile-name"
-                />
-
-                <label style={label}>NOMBRE DE USUARIO</label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#555] text-sm font-mono select-none">@</span>
-                  <input
-                    className="w-full bg-surface border border-border-mid text-white pl-7 pr-10 py-2.5 rounded text-sm outline-none font-mono"
-                    value={editUsername}
-                    onChange={e => setEditUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
-                    minLength={3} maxLength={20}
-                    autoComplete="off" name="profile-username"
-                  />
-                  <button type="button" onClick={handleCopyUsername}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#555] hover:text-[#aaa] transition-colors bg-transparent border-0 cursor-pointer">
-                    {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
-                  </button>
-                </div>
-
-                <label style={label}>BIO</label>
-                <div className="relative">
-                  <textarea
-                    className="w-full bg-surface border border-border-mid text-white px-3.5 py-2.5 rounded text-sm outline-none font-sans resize-none"
-                    rows={2}
-                    maxLength={200}
-                    placeholder="Contá algo sobre vos..."
-                    value={editBio}
-                    onChange={e => setEditBio(e.target.value)}
-                  />
-                  <span className="absolute bottom-2 right-3 text-[10px] text-dim font-mono">{editBio.length}/200</span>
-                </div>
-
-                <label style={label}>CATEGORÍA</label>
-                <CategoryPicker value={editCategory} onChange={setEditCategory} emptyLabel="Elegí tu categoría" />
-                <p className="text-[11px] text-dim font-sans mt-1.5 mb-0">
-                  La ven los organizadores cuando te inscribís a un torneo. El 1 es el nivel más alto.
-                </p>
-
-                <label style={label}>MAIL</label>
-                <div className="w-full bg-surface border border-border-mid text-muted px-3.5 py-2.5 rounded text-sm font-sans">
-                  {user?.email}
-                </div>
-
-                <label style={label}>REDES SOCIALES</label>
-                <SocialLinksEditor value={socialLinks} onChange={setSocialLinks} />
-
-                {user?.subscription?.plan !== 'premium' && (
-                  <div className="mt-5 pt-4 border-t border-border-mid">
-                    <button
-                      type="button"
-                      onClick={() => setShowClaimHelp(true)}
-                      className="text-[12px] text-dim hover:text-secondary transition-colors bg-transparent border-0 p-0 cursor-pointer underline underline-offset-2"
-                    >
-                      ¿Pagaste y no se activó tu Premium?
-                    </button>
-                  </div>
-                )}
-
-                <div style={{ borderTop: '1px solid #222', marginTop: 20, paddingTop: 4 }}>
-                  <div style={{ fontSize: 11, color: '#444', fontFamily: "'Albert Sans',monospace", marginBottom: 4 }}>
-                    Dejá en blanco si no querés cambiar la contraseña
-                  </div>
-                  <label style={label}>CONTRASEÑA ACTUAL</label>
-                  <PasswordInput value={currentPass} onChange={e => setCurrentPass(e.target.value)} autoComplete="current-password" />
-
-                  <label style={label}>NUEVA CONTRASEÑA</label>
-                  <PasswordInput value={newPass} onChange={e => setNewPass(e.target.value)} autoComplete="new-password" />
-                  {newPass && <PasswordStrength password={newPass} />}
-
-                  <label style={label}>REPETIR NUEVA CONTRASEÑA</label>
-                  <PasswordInput value={newPass2} onChange={e => setNewPass2(e.target.value)} autoComplete="new-password" />
-                  {newPass2 && newPass !== newPass2 && (
-                    <div style={{ fontSize: 11, color: '#e05252', fontFamily: "'Albert Sans',monospace", marginTop: 4 }}>
-                      Las contraseñas no coinciden
-                    </div>
-                  )}
-                </div>
-
-                {saveError && (
-                  <div style={{ fontSize: 12, color: '#e05252', fontFamily: "'Albert Sans',monospace", marginTop: 12 }}>
-                    {saveError}
-                  </div>
-                )}
-                {saveOk && (
-                  <div style={{ fontSize: 12, color: '#4af07a', fontFamily: "'Albert Sans',monospace", marginTop: 12,
-                                display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <Check size={13} strokeWidth={3} /> Guardado
-                  </div>
-                )}
-
-                <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
-                  <button onClick={handleSave} disabled={saving || !hasChanges}
-                    style={{ flex: 1, background: '#e8f04a', color: '#0a0e1a', border: 'none', padding: '10px',
-                             fontFamily: "'Unbounded',sans-serif", fontWeight: 900, fontSize: 14,
-                             letterSpacing: 2, borderRadius: 4, cursor: saving || !hasChanges ? 'default' : 'pointer',
-                             opacity: saving || !hasChanges ? 0.4 : 1 }}>
-                    {saving ? 'GUARDANDO...' : 'GUARDAR'}
-                  </button>
-                  <button onClick={handleCancel}
-                    className="bg-transparent border border-border-strong text-[#555] px-4 py-2 text-xs rounded cursor-pointer hover:text-white transition-colors">
-                    Cancelar
-                  </button>
-                </div>
-
-                {/* Zona de peligro */}
-                <div style={{ borderTop: '1px solid #3a1a1a', marginTop: 24, paddingTop: 16 }}>
-                  <div className="flex items-center gap-2 mb-1">
-                    <Trash2 size={13} className="text-danger" />
-                    <span className="font-condensed font-bold text-sm tracking-[3px] text-danger">ELIMINAR CUENTA</span>
-                  </div>
-                  <div style={{ fontSize: 12, color: '#777', fontFamily: "'Albert Sans',monospace", marginBottom: 12 }}>
-                    Se borra tu cuenta de forma permanente. Tus categorías y torneos se conservan bajo una cuenta anónima
-                    y tus partidos en categorías de otros quedan sin vincular. No se puede deshacer.
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => { setDeletePassword(''); setDeleteError(null); setShowDeleteModal(true); }}
-                    className="bg-transparent border border-danger/50 text-danger px-4 py-2 text-xs rounded cursor-pointer hover:bg-danger/10 transition-colors font-condensed font-bold tracking-widest"
-                  >
-                    ELIMINAR MI CUENTA
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Pestañas. Antes eran diez bloques apilados en una sola columna: con
             cuatro partidos era scroll vacío y con doscientos, un muro. */}
@@ -1289,48 +846,6 @@ export default function ProfileView() {
 
       {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} />}
 
-      {showClaimHelp && (
-        <div
-          className="fixed inset-0 bg-black/90 flex items-center justify-center z-[1000] p-4"
-          onClick={() => setShowClaimHelp(false)}
-        >
-          <div
-            className="bg-surface border border-border-strong rounded-2xl w-full max-w-sm p-6 flex flex-col gap-4"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <h3 className="font-condensed font-bold text-xl text-white tracking-wide">
-                ¿Pagaste y no se activó?
-              </h3>
-              <button
-                type="button"
-                onClick={() => setShowClaimHelp(false)}
-                className="text-muted hover:text-white transition p-1"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <p className="text-sm text-secondary leading-relaxed">
-              Para activar tu Premium, al terminar el pago en Mercado Pago tenés que tocar el botón{' '}
-              <span className="text-soft font-semibold">"Volver al sitio del vendedor"</span>. Eso confirma tu pago y activa tu cuenta al instante.
-            </p>
-            <p className="text-sm text-secondary leading-relaxed">
-              Si ya pagaste y no volviste al sitio, dejanos el email de tu cuenta de Mercado Pago y lo activamos:
-            </p>
-
-            <ClaimPremiumRequest compact />
-
-            <button
-              type="button"
-              onClick={() => setShowClaimHelp(false)}
-              className="w-full py-2.5 rounded-xl bg-surface-alt border border-border-strong text-white font-semibold text-sm hover:bg-surface transition"
-            >
-              Cerrar
-            </button>
-          </div>
-        </div>
-      )}
 
       {showShare && (
         <ShareProfileModal
@@ -1363,31 +878,6 @@ export default function ProfileView() {
             />
           )}
         />
-      )}
-
-      {showDeleteModal && (
-        <Modal
-          title="Eliminar cuenta"
-          confirmText={deleteBusy ? 'Eliminando...' : 'Eliminar cuenta'}
-          confirmDisabled={deleteBusy || !deletePassword.trim()}
-          confirmDanger
-          onConfirm={handleDeleteAccount}
-          onCancel={() => { if (!deleteBusy) setShowDeleteModal(false); }}
-        >
-          <p className="mb-3">
-            Esta acción es permanente y no se puede deshacer. Tus categorías y torneos se conservan bajo una
-            cuenta anónima; tus partidos en categorías de otros quedan sin vincular.
-          </p>
-          <label className="block text-[11px] tracking-widest text-muted font-mono mb-1.5">
-            CONTRASEÑA
-          </label>
-          <PasswordInput
-            value={deletePassword}
-            onChange={e => setDeletePassword(e.target.value)}
-            placeholder="Tu contraseña (o escribí BORRAR si usás Google)"
-          />
-          {deleteError && <p className="text-danger text-xs font-mono mt-3">{deleteError}</p>}
-        </Modal>
       )}
 
       {showInviteModal && (

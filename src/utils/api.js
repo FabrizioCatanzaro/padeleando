@@ -82,6 +82,7 @@ export const api = {
     login:          (body) => req('POST', '/auth/login',    body),
     google:         (cred) => req('POST', '/auth/google',   { credential: cred }),
     me:             ()     => req('GET',  '/auth/me'),
+    profile:        ()     => req('GET',  '/auth/me/profile'),
     logout:         ()     => req('POST', '/auth/logout'),
     search:         (q)    => req('GET',  `/auth/search?q=${encodeURIComponent(q)}`),
     forgotPassword: (email)       => req('POST',  '/auth/forgot-password',  { email }),
