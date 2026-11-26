@@ -10,7 +10,8 @@ import CategoryPicker from '../shared/CategoryPicker'
 import CountryFlag from '../shared/CountryFlag'
 import { SegButtons } from '../Friendly/parts'
 import { COUNTRY_OPTIONS } from '../../utils/countries'
-import { INPUT, Row, Section, VisTag, PrefixInput, Select, FieldError, Switch } from './fields'
+import { INPUT, Row, Section, VisTag, AffixInput, Select, FieldError, Switch, InstagramIcon, XIcon, FacebookIcon, WebIcon } from './fields'
+import { buildWhatsapp, localWhatsapp, dialCode } from '../../utils/phone'
 import AddressFields from './AddressFields'
 import ClaimPremiumRequest from '../shared/ClaimPremiumRequest'
 
@@ -33,16 +34,19 @@ const SECTIONS = [
   { id: 'seguridad', label: 'Seguridad' },
 ]
 
+const SECTION_IDS = SECTIONS.map((s) => s.id)
+
 const GENDER_OPTIONS = [
-  { id: 'masculino', label: 'Masculino' },
-  { id: 'femenino', label: 'Femenino' },
-  { id: 'no_decir', label: 'Prefiero no decirlo' },
+  { value: 'masculino', label: 'Masculino' },
+  { value: 'femenino', label: 'Femenino' },
+  { value: 'no_decir', label: 'Prefiero no decirlo' },
 ]
 const DOC_OPTIONS = [
-  { id: 'dni', label: 'DNI' },
-  { id: 'pasaporte', label: 'Pasaporte' },
-  { id: 'otro', label: 'Otro' },
+  { value: 'dni', label: 'DNI' },
+  { value: 'pasaporte', label: 'Pasaporte' },
+  { value: 'otro', label: 'Otro' },
 ]
+const COUNTRY_SELECT = COUNTRY_OPTIONS.map((c) => ({ value: c.code, label: c.name }))
 const HAND_OPTIONS = [
   { id: 'diestro', label: 'Derecha' },
   { id: 'zurdo', label: 'Izquierda' },
@@ -70,19 +74,24 @@ function fromProfile(p) {
   const f = {}
   for (const k of TEXT_KEYS) f[k] = p[k] ?? ''
   f.birth_date = p.birth_date ? String(p.birth_date).slice(0, 10) : ''
+  f.whatsapp = localWhatsapp(waCountry(f), p.whatsapp)
+  f.website = f.website.replace(/^https?:\/\//i, '')
   f.whatsapp_public = p.whatsapp_public === true
   f.advanced_stats_public = p.advanced_stats_public === true
   f.emergency_contacts = Array.isArray(p.emergency_contacts) ? p.emergency_contacts.map((c) => ({ ...EMPTY_CONTACT, ...c })) : []
   return f
 }
 
+const waCountry = (f) => f.nationality || f.country || 'AR'
 const filledContacts = (list) => list.filter((c) => c.name.trim() || c.relation.trim() || c.phone.trim())
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 const stripHandle = (v) => v.trim().replace(/^https?:\/\/(www\.|m\.|mobile\.|web\.)?[^/]+\//i, '').replace(/^@+/, '').replace(/[/?#].*$/, '')
 const fmtDay = (iso) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'long', year: 'numeric' })
 
-function toPatch(k, v) {
+function toPatch(k, v, form) {
   if (k === 'emergency_contacts') return filledContacts(v)
+  if (k === 'whatsapp') return buildWhatsapp(waCountry(form), v) || null
+  if (k === 'website') return v.trim() ? `https://${v.trim().replace(/^https?:\/\//i, '')}` : null
   if (typeof v === 'boolean') return v
   const t = String(v).trim()
   if (k === 'first_name' || k === 'last_name' || k === 'username') return t
@@ -94,13 +103,22 @@ function useActiveSection(ids, ready) {
   const nodes = useRef({})
   useEffect(() => {
     if (!ready) return
-    const io = new IntersectionObserver((entries) => {
-      const hit = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0]
-      if (hit) setActive(hit.target.id)
-    }, { rootMargin: '-25% 0px -65% 0px' })
-    Object.values(nodes.current).forEach((n) => n && io.observe(n))
-    return () => io.disconnect()
-  }, [ready])
+    let frame = 0
+    const update = () => {
+      frame = 0
+      const line = window.innerHeight * 0.3
+      let current = ids[0]
+      for (const id of ids) {
+        const n = nodes.current[id]
+        if (n && n.getBoundingClientRect().top <= line) current = id
+      }
+      setActive(current)
+    }
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update) }
+    update()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame) }
+  }, [ids, ready])
   const refFor = useCallback((id) => (node) => { nodes.current[id] = node }, [])
   return [active, refFor]
 }
@@ -151,12 +169,12 @@ export default function ProfileEditView() {
 
   const dirtyKeys = useMemo(() => {
     if (!form || !initial) return []
-    return Object.keys(form).filter((k) => (
-      k === 'emergency_contacts'
-        ? !same(filledContacts(form[k]), filledContacts(initial[k]))
-        : !same(form[k], initial[k])
-    ))
-  }, [form, initial])
+    return Object.keys(form).filter((k) => {
+      if (k === 'emergency_contacts') return !same(filledContacts(form[k]), filledContacts(initial[k]))
+      if (k === 'whatsapp') return buildWhatsapp(waCountry(form), form[k]) !== (profile?.whatsapp ?? '')
+      return !same(form[k], initial[k])
+    })
+  }, [form, initial, profile])
   const dirty = dirtyKeys.length > 0
 
   useEffect(() => {
@@ -166,7 +184,7 @@ export default function ProfileEditView() {
     return () => window.removeEventListener('beforeunload', onBeforeUnload)
   }, [dirty])
 
-  const [active, refFor] = useActiveSection(SECTIONS.map((s) => s.id), Boolean(form))
+  const [active, refFor] = useActiveSection(SECTION_IDS, Boolean(form))
 
   const usernameLocked = Boolean(profile?.username_next_change_at && new Date(profile.username_next_change_at) > new Date())
   const usernameChanged = Boolean(form && initial && form.username !== initial.username)
@@ -206,7 +224,7 @@ export default function ProfileEditView() {
     setSaving(true)
     setSaveError(null)
     try {
-      const body = Object.fromEntries(dirtyKeys.map((k) => [k, toPatch(k, form[k])]))
+      const body = Object.fromEntries(dirtyKeys.map((k) => [k, toPatch(k, form[k], form)]))
       const updated = await api.auth.updateMe(body)
       setProfile(updated)
       setInitial(fromProfile(updated))
@@ -325,7 +343,7 @@ export default function ProfileEditView() {
             <Link to={profileHref} onClick={onBack} className="inline-flex items-center gap-1.5 text-[13px] text-secondary hover:text-white no-underline">
               <ChevronLeft size={15} aria-hidden="true" />Volver al perfil
             </Link>
-            <h1 className="m-0 mt-3 font-condensed font-bold text-[24px] lg:text-[22px] leading-[1.15] text-white">Editar perfil</h1>
+            <h1 className="m-0 mt-3 font-condensed font-bold text-[24px] leading-[1.15] text-white">Editar perfil</h1>
             <nav aria-label="Secciones" className="mt-4 -mx-4 px-4 lg:mx-0 lg:px-0 flex lg:flex-col gap-1 overflow-x-auto pb-2 lg:pb-0">
               {SECTIONS.map((s) => (
                 <a key={s.id} href={`#${s.id}`} aria-current={active === s.id ? 'true' : undefined}
@@ -343,7 +361,7 @@ export default function ProfileEditView() {
                 <div className="w-[120px] h-[144px] shrink-0 rounded-xl overflow-hidden border border-border-mid bg-surface-alt flex items-center justify-center">
                   {profile.avatar_url
                     ? <img src={profile.avatar_url} alt="Tu foto" width={120} height={144} className="w-full h-full object-cover" />
-                    : <span className="font-condensed font-bold text-[34px] text-secondary">{(initial.first_name[0] ?? '') + (initial.last_name[0] ?? '')}</span>}
+                    : <span className="font-condensed font-bold text-[38px] text-secondary">{(initial.first_name[0] ?? '') + (initial.last_name[0] ?? '')}</span>}
                 </div>
                 <div className="min-w-0">
                   <p className="m-0 text-[13px] text-secondary">JPG, PNG o WEBP de hasta 5 MB.</p>
@@ -364,18 +382,18 @@ export default function ProfileEditView() {
                 <Info size={15} aria-hidden="true" className="shrink-0 mt-0.5 text-secondary" />
                 <span>Los datos marcados <VisTag kind="organizadores" className="mx-0.5 align-[1px]" /> les sirven a los organizadores de torneos cuando te inscribas. Nadie más los ve.</span>
               </p>
-              <Row htmlFor="pe-first" label="Nombre y apellido" tag="publico">
-                <div className="grid gap-2.5 sm:grid-cols-2">
-                  <input id="pe-first" className={INPUT} value={form.first_name} maxLength={40} autoComplete="given-name"
-                    placeholder="Nombre/s" onChange={setFromEvent('first_name')} />
-                  <input aria-label="Apellido/s" className={INPUT} value={form.last_name} maxLength={40} autoComplete="family-name"
-                    placeholder="Apellido/s" onChange={setFromEvent('last_name')} />
-                </div>
-                {!initial.last_name && <p className="m-0 mt-1.5 text-xs text-secondary">Completá tu apellido: ahora va aparte del nombre.</p>}
+              <Row htmlFor="pe-first" label="Nombre/s" tag="publico">
+                <input id="pe-first" className={INPUT} value={form.first_name} maxLength={40} autoComplete="given-name"
+                  placeholder="Tu nombre" onChange={setFromEvent('first_name')} />
+              </Row>
+              <Row htmlFor="pe-last" label="Apellido/s" tag="publico"
+                hint={!initial.last_name ? 'Completá tu apellido: ahora va aparte del nombre.' : null}>
+                <input id="pe-last" className={INPUT} value={form.last_name} maxLength={40} autoComplete="family-name"
+                  placeholder="Tu apellido" onChange={setFromEvent('last_name')} />
               </Row>
               <Row htmlFor="pe-user" label="Usuario" tag="publico"
                 hint={usernameLocked ? `Podés volver a cambiarlo el ${fmtDay(profile.username_next_change_at)}.` : 'Podés cambiarlo una vez cada 90 días.'}>
-                <PrefixInput id="pe-user" prefix="@" value={form.username} disabled={usernameLocked} maxLength={20}
+                <AffixInput id="pe-user" prefix="@" value={form.username} disabled={usernameLocked} maxLength={20}
                   autoCapitalize="none" autoCorrect="off" spellCheck={false}
                   onChange={(e) => set('username')(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))} />
                 {unameStatus === 'checking' && <p className="m-0 mt-1.5 text-xs text-muted">Verificando…</p>}
@@ -383,13 +401,9 @@ export default function ProfileEditView() {
                 <FieldError>{unameStatus === 'taken' ? 'Ese usuario ya está en uso' : unameStatus === 'invalid' ? 'Usá 3 a 20 letras, números o guiones bajos' : null}</FieldError>
               </Row>
               <Row htmlFor="pe-nat" label="Nacionalidad" tag="publico">
-                <div className="flex items-center gap-2.5">
-                  {form.nationality && <CountryFlag code={form.nationality} width={24} />}
-                  <Select id="pe-nat" className="flex-1" value={form.nationality} onChange={setFromEvent('nationality')}>
-                    <option value="">Elegí tu nacionalidad</option>
-                    {COUNTRY_OPTIONS.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
-                  </Select>
-                </div>
+                <Select id="pe-nat" label="Nacionalidad" value={form.nationality} onChange={set('nationality')} searchable
+                  placeholder="Elegí tu nacionalidad" options={COUNTRY_SELECT}
+                  renderIcon={(o) => <CountryFlag code={o.value} width={20} />} />
               </Row>
               <Row htmlFor="pe-birth" label="Fecha de nacimiento" tag="organizadores" hint="En tu perfil se ve solo la edad.">
                 <input id="pe-birth" type="date" className={`${INPUT} [color-scheme:dark] [.light_&]:[color-scheme:light]`} value={form.birth_date}
@@ -398,10 +412,10 @@ export default function ProfileEditView() {
               <Row htmlFor="pe-gender" label="Género" tag="organizadores"
                 hint={genderLocked ? null : 'Una vez guardado no se puede cambiar.'}>
                 <div className="flex items-center gap-2">
-                  <Select id="pe-gender" className="flex-1" value={form.gender} disabled={genderLocked} onChange={setFromEvent('gender')}>
-                    <option value="">Elegí una opción</option>
-                    {GENDER_OPTIONS.map((g) => <option key={g.id} value={g.id}>{g.label}</option>)}
-                  </Select>
+                  <div className="flex-1 min-w-0">
+                    <Select id="pe-gender" label="Género" value={form.gender} disabled={genderLocked} onChange={set('gender')}
+                      placeholder="Elegí una opción" options={GENDER_OPTIONS} />
+                  </div>
                   {genderLocked && (
                     <span className="group relative">
                       <button type="button" aria-describedby="pe-gender-tip" className="w-11 h-11 rounded-lg border border-border-mid bg-transparent text-secondary flex items-center justify-center cursor-help focus:outline-none focus:border-brand">
@@ -417,10 +431,8 @@ export default function ProfileEditView() {
               </Row>
               <Row htmlFor="pe-doc" label="Documento" tag="organizadores">
                 <div className="grid gap-2.5 grid-cols-[120px_minmax(0,1fr)]">
-                  <Select id="pe-doc" value={form.doc_type} onChange={setFromEvent('doc_type')}>
-                    <option value="">Tipo</option>
-                    {DOC_OPTIONS.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
-                  </Select>
+                  <Select id="pe-doc" label="Tipo de documento" value={form.doc_type} onChange={set('doc_type')}
+                    placeholder="Tipo" options={DOC_OPTIONS} />
                   <input aria-label="Número de documento" className={INPUT} value={form.doc_number} maxLength={20}
                     inputMode={form.doc_type === 'dni' ? 'numeric' : 'text'} placeholder="Número" onChange={setFromEvent('doc_number')} />
                 </div>
@@ -441,9 +453,17 @@ export default function ProfileEditView() {
             </Section>
 
             <Section id="whatsapp" title="WhatsApp" sectionRef={refFor('whatsapp')}>
-              <Row htmlFor="pe-wa" label="Número" hint="Con código de país y de área.">
-                <input id="pe-wa" type="tel" className={INPUT} value={form.whatsapp} maxLength={24} autoComplete="tel"
-                  placeholder="+54 9 11 5555-0192" onChange={setFromEvent('whatsapp')} />
+              <Row htmlFor="pe-wa" label="Número" hint="Escribilo como lo marcás en tu país, con el código de área.">
+                <AffixInput id="pe-wa" type="tel" inputMode="tel" autoComplete="tel-national" maxLength={24}
+                  leading={<CountryFlag code={waCountry(form)} width={20} className="mr-2.5" />}
+                  prefix={form.whatsapp.trim().startsWith('+') ? '' : `+${dialCode(waCountry(form)) ?? ''}`} prefixGap
+                  value={form.whatsapp} placeholder="11 3344 5555" onChange={setFromEvent('whatsapp')} />
+                {form.whatsapp.trim() && (
+                  <p className="m-0 mt-1.5 text-xs text-secondary">
+                    Quedaría así: <span className="text-white font-semibold">{buildWhatsapp(waCountry(form), form.whatsapp)}</span>
+                  </p>
+                )}
+                <p className="m-0 mt-1.5 text-xs text-muted">El código de país sale de tu nacionalidad. Si es de otro país, empezalo con +.</p>
               </Row>
               <Row label="Quién lo ve" last>
                 <SegButtons label="Quién ve tu WhatsApp" options={VISIBILITY_OPTIONS}
@@ -458,20 +478,20 @@ export default function ProfileEditView() {
 
             <Section id="redes" title="Redes sociales" tag="publico" sectionRef={refFor('redes')}>
               <Row htmlFor="pe-ig" label="Instagram">
-                <PrefixInput id="pe-ig" prefix="@" value={form.instagram} maxLength={60} placeholder="usuario" autoCapitalize="none"
+                <AffixInput id="pe-ig" icon={InstagramIcon} prefix="@" value={form.instagram} maxLength={60} placeholder="usuario" autoCapitalize="none"
                   onChange={(e) => set('instagram')(stripHandle(e.target.value))} />
               </Row>
               <Row htmlFor="pe-x" label="X">
-                <PrefixInput id="pe-x" prefix="@" value={form.twitter} maxLength={60} placeholder="usuario" autoCapitalize="none"
+                <AffixInput id="pe-x" icon={XIcon} prefix="@" value={form.twitter} maxLength={60} placeholder="usuario" autoCapitalize="none"
                   onChange={(e) => set('twitter')(stripHandle(e.target.value))} />
               </Row>
               <Row htmlFor="pe-fb" label="Facebook">
-                <PrefixInput id="pe-fb" prefix="@" value={form.facebook} maxLength={60} placeholder="usuario" autoCapitalize="none"
+                <AffixInput id="pe-fb" icon={FacebookIcon} prefix="@" value={form.facebook} maxLength={60} placeholder="usuario" autoCapitalize="none"
                   onChange={(e) => set('facebook')(stripHandle(e.target.value))} />
               </Row>
               <Row htmlFor="pe-web" label="Sitio web" last>
-                <input id="pe-web" type="url" inputMode="url" className={INPUT} value={form.website} maxLength={200}
-                  placeholder="tusitio.com" autoCapitalize="none" onChange={setFromEvent('website')} />
+                <AffixInput id="pe-web" icon={WebIcon} prefix="https://" inputMode="url" value={form.website} maxLength={190}
+                  placeholder="tusitio.com" autoCapitalize="none" onChange={(e) => set('website')(e.target.value.trim().replace(/^https?:\/\//i, ''))} />
               </Row>
             </Section>
 

@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, useState } from 'react'
-import { X, Plus, Globe, Link2, ChevronDown } from 'lucide-react'
+import { useEffect, useId } from 'react'
+import { X, Plus, Globe, Link2 } from 'lucide-react'
 import PlayerAvatar from '../shared/PlayerAvatar'
+import DropdownSelect from '../shared/DropdownSelect'
 import { STATUS_LABEL, dayBlock, playerName, playerDetail, isFilled } from '../../utils/friendlies'
 
 export const LABEL = 'block text-[10px] tracking-[2px] text-muted font-mono mb-2'
@@ -205,70 +206,13 @@ export function VisibilityPicker({ value, onChange }) {
   )
 }
 
-// Desplegable propio: el select nativo no deja limitar su alto y el input de hora arma la lista desde la hora actual.
+// El input de hora nativo arma la lista desde la hora actual: se usa el desplegable propio.
 const HALF_HOURS = Array.from({ length: 48 }, (_, i) => `${String(Math.floor(i / 2)).padStart(2, '0')}:${i % 2 ? '30' : '00'}`)
 
 export function TimePicker({ id, value, onChange }) {
-  const [open, setOpen] = useState(false)
-  const [active, setActive] = useState(0)
-  const rootRef = useRef(null)
-  const listRef = useRef(null)
-  const options = value && !HALF_HOURS.includes(value) ? [...HALF_HOURS, value].sort() : HALF_HOURS
-
-  function openList() {
-    const i = options.indexOf(value)
-    setActive(i >= 0 ? i : 0)
-    setOpen(true)
-  }
-
-  function pick(t) {
-    onChange(t)
-    setOpen(false)
-    rootRef.current?.querySelector('button')?.focus()
-  }
-
-  useEffect(() => {
-    if (!open) return
-    listRef.current?.focus()
-    const onDown = (e) => { if (!rootRef.current?.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', onDown)
-    return () => document.removeEventListener('mousedown', onDown)
-  }, [open])
-
-  useEffect(() => {
-    if (!open) return
-    listRef.current?.children[active]?.scrollIntoView({ block: 'nearest' })
-  }, [open, active])
-
-  function onListKey(e) {
-    if (e.key === 'ArrowDown') { e.preventDefault(); setActive((i) => Math.min(options.length - 1, i + 1)) }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive((i) => Math.max(0, i - 1)) }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(options[active]) }
-    else if (e.key === 'Escape' || e.key === 'Tab') setOpen(false)
-  }
-
+  const times = value && !HALF_HOURS.includes(value) ? [...HALF_HOURS, value].sort() : HALF_HOURS
   return (
-    <div ref={rootRef} className="relative">
-      <button id={id} type="button" aria-haspopup="listbox" aria-expanded={open}
-        onClick={() => (open ? setOpen(false) : openList())}
-        onKeyDown={(e) => { if (e.key === 'ArrowDown' && !open) { e.preventDefault(); openList() } }}
-        className={`${INPUT} flex items-center justify-between gap-2 cursor-pointer text-left`}>
-        <span className={value ? '' : 'text-muted'}>{value || 'Elegí la hora'}</span>
-        <ChevronDown size={16} className={`text-secondary shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-      {open && (
-        <ul ref={listRef} role="listbox" tabIndex={-1} aria-label="Hora" aria-activedescendant={`${id}-opt-${active}`}
-          onKeyDown={onListKey}
-          className="absolute z-30 left-0 right-0 mt-1 max-h-56 overflow-y-auto overscroll-contain m-0 p-1 list-none rounded-sm border border-border-strong bg-surface-alt shadow-2xl outline-none">
-          {options.map((t, i) => (
-            <li key={t} id={`${id}-opt-${i}`} role="option" aria-selected={t === value}
-              onClick={() => pick(t)} onMouseEnter={() => setActive(i)}
-              className={`px-3 py-2 rounded-sm font-sans text-[14px] cursor-pointer ${t === value ? 'text-brand font-bold' : 'text-content'} ${i === active ? 'bg-border-mid' : ''}`}>
-              {t}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <DropdownSelect id={id} value={value} onChange={onChange} label="Hora" placeholder="Elegí la hora"
+      options={times.map((t) => ({ value: t, label: t }))} buttonClass={INPUT} />
   )
 }

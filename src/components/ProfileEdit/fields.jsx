@@ -1,4 +1,14 @@
-import { ChevronDown } from 'lucide-react'
+import { Globe } from 'lucide-react'
+import { siInstagram, siX, siFacebook } from 'simple-icons'
+import DropdownSelect from '../shared/DropdownSelect'
+
+function BrandSvg({ path, className = '' }) {
+  return <svg viewBox="0 0 24 24" width={16} height={16} fill="currentColor" aria-hidden="true" className={className}><path d={path} /></svg>
+}
+export function InstagramIcon({ className }) { return <BrandSvg path={siInstagram.path} className={className} /> }
+export function XIcon({ className }) { return <BrandSvg path={siX.path} className={className} /> }
+export function FacebookIcon({ className }) { return <BrandSvg path={siFacebook.path} className={className} /> }
+export function WebIcon({ className = '' }) { return <Globe size={16} aria-hidden="true" className={className} /> }
 
 export const INPUT = 'w-full h-11 bg-base border border-border-mid text-content px-3.5 rounded-lg text-sm font-sans outline-none transition-colors placeholder:text-dim focus:border-brand focus:ring-1 focus:ring-brand/30 disabled:bg-surface disabled:text-secondary disabled:cursor-not-allowed'
 
@@ -46,21 +56,21 @@ export function Row({ htmlFor, label, hint, tag, children, last = false }) {
   )
 }
 
-export function PrefixInput({ prefix, className = '', ...props }) {
+// Campo con ícono y prefijo fijos (@, https://) que el usuario no puede borrar.
+export function AffixInput({ icon: Icon, leading, prefix, prefixGap = false, className = '', ...props }) {
   return (
-    <div className="relative">
-      <span aria-hidden="true" className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm text-muted pointer-events-none select-none">{prefix}</span>
-      <input {...props} className={`${INPUT} ${className}`} style={{ paddingLeft: `${0.875 + prefix.length * 0.55 + 0.25}rem` }} />
+    <div className={`flex items-center h-11 bg-base border border-border-mid rounded-lg px-3.5 transition-colors focus-within:border-brand focus-within:ring-1 focus-within:ring-brand/30 ${props.disabled ? 'bg-surface' : ''} ${className}`}>
+      {Icon && <Icon aria-hidden="true" className="shrink-0 mr-2.5 text-secondary" />}
+      {leading}
+      {prefix && <span aria-hidden="true" className={`shrink-0 text-sm text-muted select-none ${prefixGap ? 'mr-1.5' : ''}`}>{prefix}</span>}
+      <input {...props} className="flex-1 min-w-0 h-full bg-transparent border-0 p-0 text-sm text-content font-sans outline-none placeholder:text-dim disabled:text-secondary disabled:cursor-not-allowed" />
     </div>
   )
 }
 
-export function Select({ children, className = '', ...props }) {
+export function Select({ value, onChange, options, ...props }) {
   return (
-    <div className={`relative ${className}`}>
-      <select {...props} className={`${INPUT} appearance-none pr-9 cursor-pointer`}>{children}</select>
-      <ChevronDown size={15} aria-hidden="true" className="absolute right-3 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-    </div>
+    <DropdownSelect value={value} onChange={onChange} options={options} buttonClass={`${INPUT} pr-3`} {...props} />
   )
 }
 

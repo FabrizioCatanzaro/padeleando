@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { CATEGORY_BRANCHES, CATEGORY_NUMBERS, splitCategory } from '../../utils/category';
+import DropdownSelect from './DropdownSelect';
 
 // Categoría de un JUGADOR: rama (C/D) + número (1 a 10). `value` es 'C7' o null.
 // `emptyLabel` se muestra sin elegir. `defaultBranch` es la rama marcada
@@ -29,18 +30,20 @@ export default function CategoryPicker({ value, onChange, emptyLabel = 'Sin cate
           </button>
         ))}
       </div>
-      <select
-        id={id}
-        value={current?.number ?? ''}
-        onChange={(e) => setNumber(e.target.value)}
-        aria-label="Categoría"
-        className="flex-1 min-w-0 bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none cursor-pointer"
-      >
-        <option value="">{emptyLabel}</option>
-        {CATEGORY_NUMBERS.map((n) => (
-          <option key={n} value={n}>{branch}{n} {n === 1 ? '(profesional)' : n === 10 ? '(principiante)' : ''}</option>
-        ))}
-      </select>
+      <div className="flex-1 min-w-0">
+        <DropdownSelect
+          id={id ?? 'category-number'}
+          value={current ? String(current.number) : ''}
+          onChange={setNumber}
+          label="Categoría"
+          placeholder={emptyLabel}
+          options={[{ value: '', label: emptyLabel }, ...CATEGORY_NUMBERS.map((n) => ({
+            value: String(n),
+            label: `${branch}${n}${n === 1 ? ' (profesional)' : n === 10 ? ' (principiante)' : ''}`,
+          }))]}
+          buttonClass="w-full bg-surface border border-border-mid text-white px-2.5 py-[7px] font-sans text-[13px] rounded-sm outline-none focus:border-border-strong"
+        />
+      </div>
     </div>
   );
 }
