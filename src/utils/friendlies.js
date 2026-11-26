@@ -1,7 +1,7 @@
 // Amistosos: rótulos y cálculos puros. La API decide estados y permisos; esto solo los muestra.
 
 export const SIDE_LABEL  = { drive: 'Drive', reves: 'Revés', cualquiera: 'Cualquiera' }
-export const HAND_LABEL  = { diestro: 'Diestro', zurdo: 'Zurdo' }
+export const HAND_LABEL  = { diestro: 'Diestro', zurdo: 'Zurdo', ambidiestro: 'Ambidiestro' }
 export const STYLE_LABEL = { caballeros: 'Caballeros', damas: 'Damas', mixto: 'Mixto' }
 
 export const SIDE_OPTIONS  = Object.entries(SIDE_LABEL).map(([id, label]) => ({ id, label }))

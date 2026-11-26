@@ -2,12 +2,13 @@
 
 ## Project Overview
 
-PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports three tournament formats (Liga/Americano/Copa), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries, avatar uploads). An admin dashboard is available to users with `role = 'admin'`.
+PADELEANDO is a full-stack web app for managing padel tennis tournaments. It supports three tournament formats (Liga/Americano/Copa), two modes (Free players/Fixed pairs), live match tracking, standings, stats, invitations, and public sharing of tournaments. Users have public profiles with personal stats (win %, streaks, recent matches, frequent partners, americano championships). Premium accounts unlock extra features (photo galleries). Profile photos are free for everyone. An admin dashboard is available to users with `role = 'admin'`.
 
 ---
 
-## Current Status (updated 2026-11-23)
+## Current Status (updated 2026-11-26)
 
+- **In progress: Perfil** — branch `feat/perfil`. Stage 2 of 5 done: the API carries the new profile (see the API's CLAUDE.md › Perfil) and the client already reads `owner_profile` and `user.whatsapp`/`hand`/`side` for signup contacts and prefills. Next: `/perfil/editar`, then the profile header. `ProfileView` still shows the old form until then. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
 - **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
 - **Previous sprint: Amistosos** — merged to `main` (front PR #45, API PR #38). Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
 - **The friendly schema is in production since that deploy**: `db:init` creates `friendly_matches`, `friendly_match_players` and `friendly_match_proposals`, widens `notifications_type_check` and adds `uq_friendly_reminder`. It was tested on a Neon branch that has been deleted.

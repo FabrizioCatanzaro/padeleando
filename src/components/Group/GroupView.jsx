@@ -640,7 +640,7 @@ export default function GroupView() {
                 <SignupEditor
                   value={editSignup}
                   onChange={setEditSignup}
-                  profile={profileContacts(group.owner_social_links)}
+                  profile={profileContacts(group.owner_profile)}
                 />
                 <p className="text-[10px] text-dim font-mono mt-2">Cada torneo lo hereda y puede cambiarlo.</p>
               </div>

@@ -11,21 +11,13 @@ export const CONTACT_META = {
 
 export const CONTACT_TYPES = Object.keys(CONTACT_META);
 
-// El perfil guarda la url en formatos irregulares; no se inventa el país que falte.
-export function profileContacts(socialLinks) {
-  if (!Array.isArray(socialLinks)) return [];
+// Contactos que salen del perfil del organizador: WhatsApp público e Instagram.
+export function profileContacts(owner) {
   const out = [];
-  for (const link of socialLinks) {
-    const url = String(link?.url ?? '').trim();
-    if (!url) continue;
-    if (link.network === 'whatsapp') {
-      const digits = (url.match(/wa\.me\/(\d+)/)?.[1] ?? url).replace(/\D/g, '');
-      if (digits) out.push({ type: 'whatsapp', value: `+${digits}`, from_profile: true });
-    } else if (link.network === 'instagram') {
-      const handle = url.replace(/^https?:\/\/(www\.)?instagram\.com\//i, '').replace(/[/?#].*$/, '').replace(/^@/, '');
-      if (handle) out.push({ type: 'instagram', value: `@${handle}`, from_profile: true });
-    }
-  }
+  const wa = owner?.whatsapp ? String(owner.whatsapp).replace(/\D/g, '') : '';
+  if (wa && owner.whatsapp_public !== false) out.push({ type: 'whatsapp', value: `+${wa}`, from_profile: true });
+  const ig = owner?.instagram ? String(owner.instagram).trim().replace(/^@/, '') : '';
+  if (ig) out.push({ type: 'instagram', value: `@${ig}`, from_profile: true });
   return out;
 }
 
@@ -35,13 +27,13 @@ export function mergeContacts(profile, own) {
   return [...(profile ?? []).filter((c) => !ownTypes.has(c.type)), ...(own ?? [])];
 }
 
-export function resolveSignup(tournament, group, ownerSocialLinks = null) {
+export function resolveSignup(tournament, group, ownerProfile = null) {
   const pick = (k) => (tournament?.[k] ?? group?.[k] ?? null);
   return {
     open:     pick('signup_open') ?? false,
     price:    pick('signup_price'),
     unit:     pick('signup_price_unit') ?? 'player',
-    contacts: mergeContacts(profileContacts(ownerSocialLinks), pick('signup_contacts') ?? []),
+    contacts: mergeContacts(profileContacts(ownerProfile), pick('signup_contacts') ?? []),
   };
 }
 

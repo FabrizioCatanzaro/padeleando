@@ -1042,7 +1042,7 @@ export default function HomeView() {
                 <SignupEditor
                   value={signup}
                   onChange={setSignup}
-                  profile={profileContacts(user?.social_links)}
+                  profile={profileContacts(user)}
                 />
                 <p className="text-[11px] text-dim font-mono mt-2">
                   Se muestra en la vista pública para que se anoten. Cada torneo lo hereda y puede cambiarlo.

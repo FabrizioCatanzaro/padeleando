@@ -85,7 +85,7 @@ function InscripcionDelTorneo({ tournament, onSave }) {
         value={signup}
         onChange={setSignup}
         inherited={inherited}
-        profile={profileContacts(tournament.owner_social_links)}
+        profile={profileContacts(tournament.owner_profile)}
         conReglamento={false}
       />
       <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />

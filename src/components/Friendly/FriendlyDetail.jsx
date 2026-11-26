@@ -242,7 +242,7 @@ export default function FriendlyDetail() {
         </Sheet>
       )}
       {sheet?.kind === 'join' && (
-        <GameDataSheet title={`SUMARTE AL EQUIPO ${sheet.team}`} initial={{ whatsapp: whatsappDePerfil(user?.social_links) }}
+        <GameDataSheet title={`SUMARTE AL EQUIPO ${sheet.team}`} initial={{ whatsapp: whatsappDePerfil(user), side: user?.side ?? null, hand: user?.hand ?? null }}
           subtitle={`${longDate(m.date)} · ${m.start_time} · ${m.club.name}${m.price_per_person != null ? ` · ${formatMoney(m.price_per_person)} por persona` : ''}`}
           submitLabel="CONFIRMAR LUGAR" busy={busy} onClose={() => setSheet(null)}
           onSubmit={(data) => run(() => api.friendlies.join(m.id, { team: sheet.team, position: sheet.position, t: token ?? undefined, ...data }), 'Ya estás en el partido')} />
