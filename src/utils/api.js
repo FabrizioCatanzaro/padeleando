@@ -101,6 +101,7 @@ export const api = {
   // Portada del visitante: actividad, próximas jornadas, inscripciones y totales en una sola petición.
   home: {
     get: () => req('GET', '/home'),
+    calendar: (from, to) => req('GET', `/home/calendar?from=${from}&to=${to}`),
   },
   groups: {
     list:          ()         => req('GET',    '/groups'),

@@ -5,16 +5,18 @@ import { useSummary } from '../../hooks/useSummary'
 import { useAuth } from '../../context/useAuth'
 
 const Explorar   = lazy(() => import('./Explorar'))
+const Calendario = lazy(() => import('./Calendario'))
 const MisTorneos = lazy(() => import('./MisTorneos'))
 const Organizar  = lazy(() => import('./Organizar'))
 
-const VIEWS = { explorar: Explorar, mios: MisTorneos, organizar: Organizar }
+const VIEWS = { explorar: Explorar, calendario: Calendario, mios: MisTorneos, organizar: Organizar }
 
 export default function TorneosView({ tab = 'explorar' }) {
   const { isLoggedIn } = useAuth()
   const summary = useSummary()
   const tabs = [
     { label: 'Explorar', to: '/torneos', end: true },
+    { label: 'Calendario', to: '/torneos/calendario' },
     ...(isLoggedIn ? [
       { label: 'Mis torneos', to: '/torneos/mios' },
       { label: 'Organizar', to: '/torneos/organizar', badge: summary?.pending?.registrations ?? 0 },

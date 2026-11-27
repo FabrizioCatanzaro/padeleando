@@ -144,6 +144,7 @@ export default function App() {
         <Route path="/partidos/mios"                             element={<PrivateRoute><FriendliesView tab="mios" /></PrivateRoute>} />
         <Route path="/amistosos"                                 element={<RedirectAmistosos />} />
         <Route path="/torneos"                                   element={<Titled title="Torneos"><TorneosView tab="explorar" /></Titled>} />
+        <Route path="/torneos/calendario"                        element={<Titled title="Calendario de torneos"><TorneosView tab="calendario" /></Titled>} />
         <Route path="/torneos/mios"                              element={<PrivateRoute><Titled title="Mis torneos"><TorneosView tab="mios" /></Titled></PrivateRoute>} />
         <Route path="/torneos/organizar"                         element={<PrivateRoute><Titled title="Organizar"><TorneosView tab="organizar" /></Titled></PrivateRoute>} />
         <Route path="/padeleros"                                 element={<Navigate to="/padeleros/jugadores" replace />} />

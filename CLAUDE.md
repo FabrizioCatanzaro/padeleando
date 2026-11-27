@@ -8,6 +8,7 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ## Current Status (updated 2026-11-27)
 
+- **In progress: Cards de torneo** — branch `feat/cards-torneo` (both repos). One card system for every tournament list plus a Calendario tab (see [Cards de torneo](#cards-de-torneo)). Mockup: https://claude.ai/artifact/BtVLoLqXkyWLei3ogEyLYT
 - **In progress: Home público** — branch `feat/home-publico` (both repos). New landing for visitors at `/` (see [Portada del visitante](#portada-del-visitante)). Mockup: https://claude.ai/artifact/NQ7phGaJwe1fwSHBSA4FTY
 - **In progress: Planes por rol** — branch `feat/planes` (both repos). Stages 1 and 2 of 5 done: plans by role (Jugador+, Organizador, Combo, Club disabled) and online signup payment with commission (see [Cobro online](#cobro-online)). Next: launch period, boost, referrals. Business model: Project doc `claude/modelo-de-negocio.md`. Pending before release: the six Mercado Pago preapproval plans (`MP_PLAN_ID_<PLAN>_<PERIOD>`).
 - **Previous: Perfil** — branch `feat/perfil`, the five stages done and merged into `staging`. The API carries the new profile (see the API's CLAUDE.md › Perfil), `/perfil/editar` is live, the register form asks for Nombre/s and Apellido/s, `/u/:username` has the new header (vertical photo, name on two lines, attribute strip) and an old username redirects through `moved_to`. Organizers open the player sheet from Jugadores, Gestión and Inscripciones; Seguridad connects or disconnects Google; the admin corrects the gender and lifts the username wait. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
@@ -222,11 +223,20 @@ Rules that keep the three from drifting:
 - No ads on full-screen forms (`HIDE_BOTTOM_NAV`), Setup, `/nivel`, login and register, admin, subscription or TV mode.
 - Put `AdInline` inside the view, after its data arrived: content loading above it would push it down and count as CLS. Wide content inside `AdRail` must scroll inside its column (the bracket uses `xl:overflow-x-auto`): at 1280 px with a session the central column is about 630 px.
 - Counters come from one request: `useSummary()` is a shared store over `GET /me/summary`, refreshed on route change and on tab focus (15 s apart at most). Call `refreshSummary()` after an action that changes a pending count. No module asks for its counters separately.
-- Routes: `/partidos`, `/partidos/mios`, `/torneos`, `/torneos/mios`, `/torneos/organizar`, `/padeleros/jugadores`, `/padeleros/organizadores`, `/padeleros/clubes`. `/amistosos` redirects to `/partidos` and `/#categorias` to `/torneos/organizar`; `/amistoso/:id` didn't change.
+- Routes: `/partidos`, `/partidos/mios`, `/torneos`, `/torneos/calendario`, `/torneos/mios`, `/torneos/organizar`, `/padeleros/jugadores`, `/padeleros/organizadores`, `/padeleros/clubes`. `/amistosos` redirects to `/partidos` and `/#categorias` to `/torneos/organizar`; `/amistoso/:id` didn't change.
 - **Inicio**: `StatRail`, `LiveBand`, `Pendientes` and `Agenda` (`GET /me/agenda`, shared rows in `shared/AgendaList.jsx`), then `ParaSumarte`: open friendlies (within 15 km when location is granted) and tournaments with open signup. Right column: `ResumenCard`, `ClubesCerca`, ad. The category list of the old "Panel" home is gone.
 - **Torneos**: Explorar (the `/api/home` showcase plus "Tus categorías": favorites and categories where you play, minus your own), Mis torneos (`GET /me/tournaments`, flat list, phases in `utils/tournamentList.js`) and Organizar (`GET /me/organize`). Organizar links into `GroupView` with `?tab=jugadores|estadisticas` and `?accion=editar|coorg` (owner only). Its quota bar uses the category owner's plan, like every plan gate.
 - **Padeleros**: Jugadores (`GET /padeleros/players`), Organizadores (`GET /padeleros/organizers`, "Cerca de mí" sends lat/lon) and Clubes (`api.clubs.browse` / `nearbyStats`, i.e. `?stats=1`). Location goes through `hooks/useGeolocation.js`: it asks on tap, or on mount when the permission is already granted. The club page opens on the booking tab with `?tab=reservar`.
 - The avatar menu hides "Tus clubes" and "Mis categorías" on desktop (the sidebar has them); the mobile sheet keeps them.
+
+### Cards de torneo
+
+- One system in `src/components/shared/tournament/`: `TournamentRow` (lists: category, Mis torneos) and `TournamentTile` (grids with photo: Explorar, Inicio › Para sumarte, Calendario). `cardModel(t, { group })` in `utils/tournamentCard.js` normalizes any endpoint's tournament; components never read raw rows.
+- Every card shows the level tag (`LevelTag`, white: C7, Mixto 6, Suma 11 via `levelShort`, the tournament's `level` or the category's), the format pill and the status text. The status comes from `tournamentDisplayStatus`, plus `live`; a close upcoming date reads "Hoy", "Mañana" or "En N días".
+- The tile's photo: flyer, then the gallery cover (`cover_url`), then `/formatos/<format>-600.webp`. Cloudinary crops it to 3:4 (`ownImage`). The row shows a photo only when there is a flyer or cover; otherwise the `DateStub`, because a category would repeat the same format photo on every row.
+- The tile is an `<article>` whose title link stretches over it (`after:absolute`); links inside it (contacts) carry `relative z-10`. Never nest an `<a>` in the card link.
+- The tile shows the organizer (avatar, name, category) and the club (logo, name, address).
+- `/torneos/calendario` (`Torneos/Calendario.jsx`, public): one `GET /api/home/calendar` per month, cached per month. From 1024 px a month grid; below, a strip of the month's days and "Ver mes". Dots use the format colors.
 
 ### Portada del visitante
 
@@ -269,7 +279,7 @@ Rules that keep the three from drifting:
 - Protected routes use the `<PrivateRoute>` component wrapper in `App.jsx`.
 - Admin-only routes use `<AdminRoute>` (checks `user.role === 'admin'`).
 - Group/tournament URLs use the `/cat/` prefix (e.g. `/cat/:groupId/torneo/:tournamentId`).
-- Public routes include: `/`, `/partidos`, `/torneos`, `/padeleros/*`, `/login`, `/register`, `/u/:username`, `/view/:id` (old `/readonly/:id` redirects here), `/tutorial`, `/cat/:groupId`, `/verify-email/:token`, `/reset-password/:token`, `/invitacion/:token`.
+- Public routes include: `/`, `/partidos`, `/torneos`, `/torneos/calendario`, `/padeleros/*`, `/login`, `/register`, `/u/:username`, `/view/:id` (old `/readonly/:id` redirects here), `/tutorial`, `/cat/:groupId`, `/verify-email/:token`, `/reset-password/:token`, `/invitacion/:token`.
 
 ### Permissions & Co-organizers
 - A category (`groups`) has one **owner** (`groups.user_id`) plus zero or more **co-organizers** (`group_collaborators`). A tournament/jornada has no owner of its own — it inherits from its category.
