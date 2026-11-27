@@ -236,6 +236,7 @@ Rules that keep the three from drifting:
 - The tile's photo: flyer, then the gallery cover (`cover_url`), then `/formatos/<format>-600.webp`. Cloudinary crops it to 3:4 (`ownImage`). The row shows a photo only when there is a flyer or cover; otherwise the `DateStub`, because a category would repeat the same format photo on every row.
 - The tile is an `<article>` whose title link stretches over it (`after:absolute`); links inside it (contacts) carry `relative z-10`. Never nest an `<a>` in the card link.
 - The tile shows the organizer (avatar, name, category) and the club (logo, name, address).
+- Categories follow the same language: `shared/category/CategoryTile` (Explorar › Categorías activas and the Home search; replaced `GroupCard`) and `shared/CategoryRow` (Tus categorías and the profile). Both show the category's `level` with `LevelTag` and the organizer by name; the role pill (`ROLE_META`) is in sentence case.
 - `/torneos/calendario` (`Torneos/Calendario.jsx`, public): one `GET /api/home/calendar` per month, cached per month. From 1024 px a month grid; below, a strip of the month's days and "Ver mes". Dots use the format colors.
 
 ### Portada del visitante

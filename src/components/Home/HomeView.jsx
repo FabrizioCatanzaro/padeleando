@@ -5,7 +5,7 @@ import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-do
 import { useAuth }     from '../../context/useAuth'
 import { Globe, Lock, X, Search, MapPin, Smile, Check, Building2, ChevronLeft } from 'lucide-react';
 import FadeInCard from '../shared/FadeInCard'
-import GroupCard from '../shared/GroupCard'
+import CategoryTile from '../shared/category/CategoryTile'
 import { Skeleton } from '../shared/Skeleton';
 import ClubSelector from '../shared/ClubSelector';
 import PlayerAvatar from '../shared/PlayerAvatar';
@@ -425,10 +425,8 @@ export default function HomeView() {
             {!search.committing && committedGroups.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">CATEGORÍAS</div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
-                  {committedGroups.map((g) => (
-                    <GroupCard key={g.id} g={g} onClick={() => navigate(`/cat/${g.id}`)} />
-                  ))}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,340px),1fr))] gap-3 mb-8">
+                  {committedGroups.map((g) => <CategoryTile key={g.id} g={g} to={`/cat/${g.id}`} />)}
                 </div>
               </>
             )}

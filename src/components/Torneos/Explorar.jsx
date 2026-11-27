@@ -5,7 +5,7 @@ import { api } from '../../utils/api'
 import TournamentTile from '../shared/tournament/TournamentTile'
 import { SignupFooter, TextFooter } from '../shared/tournament/TileFooters'
 import { cardModel, countLabel } from '../../utils/tournamentCard'
-import GroupCard from '../shared/GroupCard'
+import CategoryTile from '../shared/category/CategoryTile'
 import CategoryRow from '../shared/CategoryRow'
 import { useAuth } from '../../context/useAuth'
 import { mergeGroups, nextByGroup } from '../../utils/homePanel'
@@ -99,10 +99,10 @@ export default function Explorar() {
         <Grid title="SE ESTÁN JUGANDO" rows={live} kind="live" />
         <Grid title="PRÓXIMOS" rows={upcoming} kind="upcoming" />
         {featured.length > 0 && (
-          <section aria-label="Categorías activas">
+          <section aria-label="Categorías activas" className="@container">
             <h2 className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">CATEGORÍAS ACTIVAS</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map((g) => <GroupCard key={g.id} g={g} className="h-full w-full" onClick={() => navigate(`/cat/${g.id}`)} />)}
+            <div className="grid gap-3 @2xl:grid-cols-2">
+              {featured.map((g) => <CategoryTile key={g.id} g={g} to={`/cat/${g.id}`} />)}
             </div>
           </section>
         )}

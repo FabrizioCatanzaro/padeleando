@@ -7,14 +7,12 @@ export const ROLES = ['own', 'co', 'play', 'fav'];
 // mira, así que va en primera persona; en el perfil de otra persona, no. `tag3`
 // y `chip3` son esa segunda voz.
 //
-// Para 'own' el tercero es ORGANIZA y no DUEÑO a propósito: el sustantivo lleva
-// género y en el perfil de una jugadora saldría en masculino. El verbo no, y
-// además queda en paralelo con JUEGA.
+// Para 'own' el tercero es Organiza y no Dueño: el sustantivo lleva género.
 export const ROLE_META = {
-  own:  { tag: 'MÍA',    tag3: 'ORGANIZA', chip: 'Mías',        chip3: 'Organiza',     cls: 'bg-brand text-base' },
-  co:   { tag: 'CO-ORG', tag3: 'CO-ORG',   chip: 'Co-organizo', chip3: 'Co-organiza',  cls: 'text-cyan border border-cyan/40' },
-  play: { tag: 'JUEGO',  tag3: 'JUEGA',    chip: 'Juego',       chip3: 'Juega',        cls: 'text-green border border-green/40' },
-  fav:  { tag: 'FAV',    tag3: 'FAV',      chip: 'Favoritas',   chip3: 'Favoritas',    cls: 'text-muted border border-border-strong' },
+  own:  { tag: 'Mía',         tag3: 'Organiza',    chip: 'Mías',        chip3: 'Organiza',     cls: 'bg-brand border-brand text-(color:--color-base)' },
+  co:   { tag: 'Co-organizo', tag3: 'Co-organiza', chip: 'Co-organizo', chip3: 'Co-organiza',  cls: 'text-cyan border-cyan/40' },
+  play: { tag: 'Juego',       tag3: 'Juega',       chip: 'Juego',       chip3: 'Juega',        cls: 'text-green border-green/40' },
+  fav:  { tag: 'Favorita',    tag3: 'Favorita',    chip: 'Favoritas',   chip3: 'Favoritas',    cls: 'text-content border-border-strong' },
 };
 
 /** Etiqueta y chip de un rol. `third` cambia a la voz de tercera persona. */
