@@ -302,6 +302,8 @@ export const api = {
     mp:         () => req('GET',    '/payments/mp'),
     connect:    () => req('GET',    '/payments/mp/connect'),
     disconnect: () => req('DELETE', '/payments/mp/connect'),
+    settlements: () => req('GET',   '/payments/settlements'),
+    settlementCheckout: (id) => req('POST', `/payments/settlements/${id}/checkout`),
   },
   registrations: {
     create: (body)          => req('POST',  '/registrations', body),

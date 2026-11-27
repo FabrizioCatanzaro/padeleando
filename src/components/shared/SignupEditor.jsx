@@ -110,11 +110,11 @@ function CobroOnline({ value, set, cobro, price, unit }) {
             <div className="flex flex-col gap-1.5 rounded-lg bg-surface-alt border border-border px-3 py-3">
               <span className="text-[11px] font-mono tracking-widest text-dim uppercase mb-1">Por jugador</span>
               <Linea label="Precio" valor={pesos(q.base)} />
-              <Linea label={`Cargo de servicio (${rateLabel(cobro.organizerPlan)})`} valor={pesos(q.fee)} />
-              <Linea label="El jugador paga" valor={pesos(q.total)} fuerte />
-              <Linea label="Vos recibís" valor={q.net > 0 ? pesos(q.net) : 'Nada: subí el precio'} fuerte />
+              <Linea label={`Comisión de Padeleando (${rateLabel(cobro.organizerPlan)})`} valor={pesos(q.fee)} />
+              <Linea label="El jugador paga y entra a tu Mercado Pago" valor={pesos(q.total)} fuerte />
+              <Linea label="Te queda después de pagar la comisión" valor={q.net > 0 ? pesos(q.net) : 'Nada: subí el precio'} fuerte />
               <p className="m-0 mt-1 text-[11.5px] text-dim leading-snug">
-                Mercado Pago descuenta además su propia comisión de lo que recibís, según el medio de pago y el plazo de acreditación de tu cuenta.
+                La comisión se paga después: al cerrar la inscripción te llega una liquidación con el total del torneo y tenés 7 días para pagarla desde Torneos › Organizar. Mercado Pago descuenta además su propia comisión, según el medio de pago y el plazo de acreditación de tu cuenta.
               </p>
             </div>
           ) : (

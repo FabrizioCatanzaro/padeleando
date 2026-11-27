@@ -461,6 +461,17 @@ function NotifText({ n, navigate }) {
       </div>
     );
   }
+  if (n.type === 'commission_due') {
+    return (
+      <div className="text-[13px] text-secondary">
+        {notifSummary(n)}{' '}
+        <button onClick={() => navigate('/torneos/organizar')}
+          className="text-brand hover:underline bg-transparent border-none cursor-pointer p-0 font-mono text-[12px]">
+          Pagar comisiones →
+        </button>
+      </div>
+    );
+  }
   // Un tipo sin rama propia se leía como una notificación en blanco.
   return <div className="text-[13px] text-secondary">{notifSummary(n)}</div>;
 }

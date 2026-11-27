@@ -553,7 +553,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n)) || isFriendlyNotif(n)) ? 'cursor-pointer hover:bg-white/5' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n)) || isFriendlyNotif(n) || n.type === 'commission_due') ? 'cursor-pointer hover:bg-white/5' : ''}`}
       onClick={
         n.type === 'admin_message' ? () => onNavigate('/notifications')
           : n.type === 'club_request' && isAdminViewer ? () => onNavigate('/admin/clubs/requests')
@@ -563,6 +563,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
           : n.type === 'premium_claim' ? () => onNavigate('/admin/users')
           : isRegistrationNotif(n) && registrationHref(n) ? () => onNavigate(registrationHref(n))
           : isFriendlyNotif(n) ? () => onNavigate(friendlyHref(n))
+          : n.type === 'commission_due' ? () => onNavigate('/torneos/organizar')
           : undefined
       }
     >

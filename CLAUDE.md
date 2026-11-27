@@ -243,6 +243,8 @@ Rules that keep the three from drifting:
 - The owner links Mercado Pago from Torneos › Organizar (`CobrosCard`, `api.payments`). The tournament turns it on in Gestión › Inscripción: `SignupEditor` takes `cobro` (`connected`, `organizerPlan`, `isOwner`, `onConnect`) only in a tournament, with the calculator from `utils/commission.js` (mirror of the API's `lib/commission.js`, plus `priceForNet`). Setup shows the block but sends the owner to Organizar to link, so the wizard isn't lost.
 - `signup.online_quote` (`solo`/`pair`: `total`, `fee`) is what the player pays; the API only sends it when the owner's MP is linked. `RegistrationFlow` redirects to `checkout_url`; `RegistrationCard` shows `awaiting_payment` with a Pagar button and the deadline, reads `?pago=` on the way back and shows the payment or refund. `RegistrationsPanel` shows the payment state, warns that rejecting refunds, and has "reintegrar todo".
 - Refunds are always total. Say so wherever the player pays or cancels.
+- **No split:** the whole payment goes to the owner and Padeleando's commission is paid later, one settlement per tournament once its signup closes (see the API's CLAUDE.md). `ComisionesCard` in Organizar lists them (`api.payments.settlements`), pays with `settlementCheckout` and reads `?liquidacion=` on the way back. An overdue settlement blocks creating tournaments (403 `settlement_due`) and turning online payment on; running tournaments keep working. The calculator says the commission is paid afterwards.
+- Navigate with `window.location.assign(url)`: the React Compiler lint rejects assigning `window.location.href` inside a component.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.

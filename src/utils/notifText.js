@@ -80,6 +80,7 @@ const BY_TYPE = {
   registration_partner:  registrationText,
   registration_decided:  registrationText,
   registration_refund_failed: registrationText,
+  commission_due:     (n) => `Tenés comisiones por pagar de ${n.body ?? 'un torneo'}. Pagalas en Torneos › Organizar.`,
   follow:             (n) => `${actor(n)} te empezó a seguir`,
   invitation:         (n) => `${actor(n)} te invitó a unirte a ${grupo(n)}${n.player_name ? ` como ${n.player_name}` : ''}`,
   join_request:       (n) => `${actor(n)} solicitó unirse a ${torneoConCategoria(n)}`,
@@ -107,6 +108,7 @@ export function notifTitle(n) {
   if (n?.type === 'registration_partner')  return 'Te inscribieron';
   if (n?.type === 'registration_decided')  return 'Tu inscripción';
   if (n?.type === 'registration_refund_failed') return 'Reintegro pendiente';
+  if (n?.type === 'commission_due') return 'Comisiones por pagar';
   if (isFriendlyNotif(n)) return 'Amistoso';
   return 'Notificación nueva';
 }

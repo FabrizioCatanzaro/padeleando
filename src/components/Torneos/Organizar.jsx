@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { ClipboardList, ChevronRight, Plus, Loader2, Pencil, UserPlus, Users, BarChart3, ExternalLink, Radio, Wallet, Link2, Link2Off } from 'lucide-react'
+import { ClipboardList, ChevronRight, Plus, Loader2, Pencil, UserPlus, Users, BarChart3, ExternalLink, Radio, Wallet, Link2, Link2Off, Receipt, AlertTriangle } from 'lucide-react'
 import { api } from '../../utils/api'
 import ActionMenu from '../shared/ActionMenu'
 import ClubLogo from '../shared/ClubLogo'
@@ -94,7 +94,7 @@ function CobrosCard() {
 
   async function connect() {
     setBusy(true); setError(null)
-    try { window.location.href = (await api.payments.connect()).authorize_url }
+    try { window.location.assign((await api.payments.connect()).authorize_url) }
     catch (e) { setError(e.message); setBusy(false) }
   }
   async function disconnect() {
@@ -140,6 +140,88 @@ function CobrosCard() {
   )
 }
 
+const pesos = (n) => `$${Math.round(Number(n)).toLocaleString('es-AR')}`
+const fecha = (iso) => new Date(iso).toLocaleDateString('es-AR', { day: 'numeric', month: 'short' })
+
+// Comisiones de Padeleando por los torneos que cobraron por la app: una liquidación por torneo.
+function ComisionesCard() {
+  const [params, setParams] = useSearchParams()
+  const [data, setData] = useState(null)
+  const [busy, setBusy] = useState(null)
+  const [error, setError] = useState(null)
+  const result = params.get('liquidacion')
+
+  useEffect(() => {
+    let cancelled = false
+    api.payments.settlements().then((d) => { if (!cancelled) setData(d) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [result])
+
+  async function pagar(s) {
+    setBusy(s.id); setError(null)
+    try { window.location.assign((await api.payments.settlementCheckout(s.id)).checkout_url) }
+    catch (e) { setError(e.message); setBusy(null) }
+  }
+
+  if (!data || (data.settlements.length === 0 && !data.credit)) return null
+  const pendientes = data.settlements.filter((s) => s.status === 'pending' && s.amount_due > 0)
+  const pagadas = data.settlements.filter((s) => s.status === 'paid').slice(0, 3)
+  const vencida = pendientes.some((s) => s.overdue)
+  const total = pendientes.reduce((acc, s) => acc + s.amount_due, 0)
+
+  return (
+    <section aria-labelledby="org-comisiones" className={`p-4 rounded-2xl bg-surface border flex flex-col gap-3 ${vencida ? 'border-danger/50' : 'border-border-mid'}`}>
+      <div className="flex items-center gap-3">
+        <span className={`w-9 h-9 shrink-0 rounded-[10px] flex items-center justify-center ${vencida ? 'bg-danger/10 text-danger' : 'bg-cyan/10 text-cyan'}`}><Receipt size={18} /></span>
+        <div className="flex-1 min-w-0">
+          <h2 id="org-comisiones" className="m-0 font-sans font-bold text-[14px] text-white">Comisiones de Padeleando</h2>
+          <p className="m-0 font-sans text-[12px] text-secondary leading-snug">
+            {pendientes.length ? `Total por pagar: ${pesos(total)}` : 'No tenés comisiones por pagar.'}
+          </p>
+        </div>
+      </div>
+      {vencida && (
+        <p className="m-0 flex items-start gap-2 font-sans text-[12.5px] text-danger leading-snug">
+          <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+          Tenés comisiones vencidas. Hasta que las pagues no podés crear torneos ni activar el cobro por la app. Los torneos en curso siguen funcionando.
+        </p>
+      )}
+      {pendientes.map((s) => (
+        <div key={s.id} className="flex items-center gap-3 rounded-xl bg-surface-alt px-3 py-2.5">
+          <div className="flex-1 min-w-0">
+            <span className="block font-sans font-bold text-[13.5px] text-white truncate">{s.tournament_name}</span>
+            <span className={`block font-sans text-[12px] ${s.overdue ? 'text-danger' : 'text-secondary'}`}>
+              {s.registrations_count} {s.registrations_count === 1 ? 'inscripción' : 'inscripciones'} · {s.overdue ? 'venció' : 'vence'} el {fecha(s.due_at)}
+              {Number(s.credit_applied) > 0 ? ` · descuenta ${pesos(s.credit_applied)} a favor` : ''}
+            </span>
+          </div>
+          <button type="button" onClick={() => pagar(s)} disabled={busy === s.id}
+            className="shrink-0 h-9 px-3 rounded-lg border-0 bg-brand text-black font-sans font-extrabold text-[12.5px] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+            {busy === s.id ? <Loader2 size={14} className="animate-spin" /> : null}Pagar {pesos(s.amount_due)}
+          </button>
+        </div>
+      ))}
+      {pagadas.map((s) => (
+        <div key={s.id} className="flex items-center justify-between gap-3 px-1 font-sans text-[12px] text-secondary">
+          <span className="truncate">{s.tournament_name}</span>
+          <span className="shrink-0 text-green">Pagada · {pesos(s.amount_due)}</span>
+        </div>
+      ))}
+      {data.credit > 0 && (
+        <p className="m-0 font-sans text-[12px] text-secondary">Saldo a favor por reintegros: {pesos(data.credit)}. Se descuenta de la próxima liquidación.</p>
+      )}
+      {result && (
+        <p className={`m-0 font-sans text-[12.5px] ${result === 'error' ? 'text-danger' : 'text-green'}`}>
+          {result === 'error' ? 'El pago no se completó. Probá de nuevo.' : 'Pago recibido. Puede tardar unos segundos en aparecer como pagado.'}
+          <button type="button" onClick={() => { params.delete('liquidacion'); setParams(params, { replace: true }) }}
+            className="ml-2 bg-transparent border-0 p-0 text-muted underline cursor-pointer font-sans text-[12px]">Cerrar</button>
+        </p>
+      )}
+      {error && <p className="m-0 font-sans text-[12.5px] text-danger">{error}</p>}
+    </section>
+  )
+}
+
 export default function Organizar() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -165,6 +247,7 @@ export default function Organizar() {
     <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10 xl:items-start">
       <div className="min-w-0 flex flex-col gap-7">
         {own.length > 0 && <CobrosCard />}
+        {own.length > 0 && <ComisionesCard />}
         {registrations.length > 0 && (
           <section aria-labelledby="org-insc">
             <h2 id="org-insc" className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">INSCRIPCIONES POR APROBAR</h2>
