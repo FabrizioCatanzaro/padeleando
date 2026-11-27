@@ -105,7 +105,7 @@ export default function OpenNow({ data, loading }) {
               <span className="font-sans font-bold text-[17px]">Amistosos abiertos</span>
               <Link to="/partidos" className="font-sans text-[14px] text-land-soft no-underline hover:text-land-lime">Ver partidos</Link>
             </div>
-            <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible snap-x snap-mandatory -mx-5 px-5 lg:mx-0 lg:px-0 pb-2.5 lg:pb-0">
+            <div className="flex lg:flex-col gap-3 overflow-x-auto lg:overflow-visible snap-x snap-mandatory scroll-px-5 -mx-5 px-5 lg:mx-0 lg:px-0 pb-2.5 lg:pb-0">
               {loading && [0, 1].map((i) => <div key={i} className="h-[190px] min-w-[84%] lg:min-w-0 rounded-[18px] bg-land-night border border-land-night-line animate-pulse" />)}
               {!loading && friendlies.map((m) => <FriendlyCard key={m.id} m={m} />)}
               {!loading && friendlies.length === 0 && (

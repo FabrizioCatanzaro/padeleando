@@ -25,7 +25,7 @@ export default function RolesSection() {
       <div className="mx-auto max-w-[1200px] px-5 md:px-12">
         <h2 className="land-reveal m-0 max-w-[760px] font-condensed font-bold text-[30px] md:text-[46px] leading-[1.06] tracking-[-0.02em]">Una cuenta, tres formas de usarla</h2>
         <p className="land-reveal land-reveal-2 mt-[18px] mb-14 max-w-[560px] font-sans text-[17px] md:text-[19px] leading-[1.55] text-land-night-soft">Sos jugador, organizador y dueño de club con el mismo usuario. Activás solo lo que usás.</p>
-        <div className="flex md:grid md:grid-cols-3 gap-3.5 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
+        <div className="flex md:grid md:grid-cols-3 gap-3.5 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory scroll-px-5 -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
           {ROLES.map(({ id, icon, title, desc, cta, to, items }) => {
             const Icon = icon
             return (

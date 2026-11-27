@@ -18,7 +18,7 @@ function Totals({ totals }) {
     [totals?.clubs, 'clubes en el mapa'],
   ]
   return (
-    <section aria-label="Padeleando en números" className="bg-land-graphite border-y border-land-line text-land-text">
+    <section id="numeros" aria-label="Padeleando en números" className="bg-land-graphite border-y border-land-line text-land-text">
       <div className="mx-auto max-w-[1200px] px-5 md:px-12 py-11 grid grid-cols-2 md:grid-cols-4 gap-x-3.5 gap-y-7 md:gap-5">
         {items.map(([n, label], i) => (
           <div key={label} className={`land-reveal ${i ? 'land-reveal-2' : ''}`}>

@@ -13,7 +13,7 @@ export default function FormatsSection() {
       <div className="mx-auto max-w-[1200px] px-5 md:px-12">
         <h2 className="land-reveal m-0 max-w-[760px] font-condensed font-bold text-[30px] md:text-[46px] leading-[1.06] tracking-[-0.02em]">Tres formatos para armar tu torneo</h2>
         <p className="land-reveal land-reveal-2 mt-[18px] mb-[52px] max-w-[560px] font-sans text-[17px] md:text-[19px] leading-[1.55] text-land-soft">Elegís el formato, cargás las parejas y la app arma el fixture, la tabla y el cuadro.</p>
-        <div className="flex md:grid md:grid-cols-3 gap-3.5 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
+        <div className="flex md:grid md:grid-cols-3 gap-3.5 md:gap-6 overflow-x-auto md:overflow-visible snap-x snap-mandatory scroll-px-5 -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
           {FORMATS.map((f) => (
             <article key={f.id} className="land-reveal min-w-[84%] md:min-w-0 snap-start rounded-[22px] overflow-hidden bg-land-graphite border border-land-line flex flex-col">
               <img src={`/formatos/${f.id}-600.webp`} srcSet={`/formatos/${f.id}-600.webp 600w, /formatos/${f.id}-1200.webp 1200w`}

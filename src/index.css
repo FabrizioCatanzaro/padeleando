@@ -274,11 +274,13 @@ html.light .stat-slab { background: var(--color-surface); }
 }
 @keyframes landPoint { from { transform: translateY(40%); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes landMarquee { to { transform: translateX(-50%); } }
+@keyframes landCue { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
 
 .land-rise  { animation: landRise 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .land-zoom  { animation: landZoom 2.8s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
 .land-ping  { animation: landPing 1.6s infinite; }
 .land-point { animation: landPoint 0.45s cubic-bezier(0.2, 0.7, 0.2, 1); }
+.land-cue   { animation: landCue 2.2s ease-in-out infinite; }
 .land-marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent); }
 .land-track { animation: landMarquee 70s linear infinite; }
 .land-marquee:hover .land-track, .land-marquee:focus-within .land-track { animation-play-state: paused; }
@@ -290,7 +292,7 @@ html.light .stat-slab { background: var(--color-surface); }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .land-rise, .land-zoom, .land-ping, .land-point, .land-track, .land-reveal { animation: none !important; }
+  .land-rise, .land-zoom, .land-ping, .land-point, .land-track, .land-reveal, .land-cue { animation: none !important; }
   .land-marquee { overflow-x: auto; mask-image: none; }
   .land-dup { display: none; }
 }

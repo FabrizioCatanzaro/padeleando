@@ -236,6 +236,7 @@ Rules that keep the three from drifting:
 - Champions are bracket finals (americano, copa, liga with playoffs). The card shows the pair's photos (initials without an account), the category, the organizer and the tournament's `is_cover` photo as background; without a cover it stays plain.
 - The signup quota is a label (`DISPONIBILIDAD`), never numbers, same as the tournament page.
 - The live match in the hero and the profile in "Cada partido suma" are samples and say so ("ejemplo").
+- The hero fills the screen (`min-h-svh`). From 1024 px it ends with a "Conocé más" cue that scrolls to the numbers; on short screens (≤ 820 px tall) the title and spacing shrink so the cue stays visible. On mobile the hero is taller than the screen and the live card peeking at the bottom invites the scroll.
 - Motion: the hero enters once (`land-rise` with delays); headings reveal on scroll with `land-reveal`, a CSS `animation-timeline: view()` that leaves the text static where unsupported. `prefers-reduced-motion` turns everything off and the champions carousel becomes a plain scroll.
 - Below 1024 px a "Crear cuenta gratis" bar appears once the hero leaves the screen; the Layout adds bottom padding and `InstallPrompt` sits above it.
 

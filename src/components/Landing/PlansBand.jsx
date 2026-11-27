@@ -35,7 +35,7 @@ function PaidCard({ plan }) {
           {list != null && list !== promo && <span className="font-sans text-[15px] line-through opacity-60">{formatMoney(list)}</span>}
         </div>
       ) : (
-        <div className="font-condensed font-extrabold text-[26px] leading-tight">{soon ? 'Próximamente' : info.priceLabel}</div>
+        <div className="font-condensed font-extrabold text-[20px] leading-tight break-words">{soon ? 'Próximamente' : info.priceLabel}</div>
       )}
       <div className="font-sans text-[14px] opacity-75">{promo != null ? 'por mes' : info.priceLabel}</div>
       <FeatureList items={features(plan)} iconClass={soon ? 'text-land-ink' : 'text-land-lime'} />
@@ -55,7 +55,7 @@ export default function PlansBand() {
           </div>
           <span className="land-reveal land-reveal-3 font-sans font-bold text-[15px] px-4 py-2.5 rounded-full bg-land-ink text-land-lime">Precio de lanzamiento</span>
         </div>
-        <div className="flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-3.5 md:gap-5 overflow-x-auto md:overflow-visible snap-x snap-mandatory -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
+        <div className="flex md:grid md:grid-cols-2 xl:grid-cols-4 gap-3.5 md:gap-5 overflow-x-auto md:overflow-visible snap-x snap-mandatory scroll-px-5 -mx-5 px-5 md:mx-0 md:px-0 pb-2.5 md:pb-0">
           <article className="land-reveal min-w-[84%] md:min-w-0 snap-start p-[26px] rounded-[22px] border-[1.5px] border-land-ink flex flex-col gap-3.5">
             <h3 className="m-0 font-condensed font-bold text-[20px]">{PLAN_INFO.free.name}</h3>
             <div className="font-condensed font-extrabold text-[36px] md:text-[40px] leading-none">$0</div>
