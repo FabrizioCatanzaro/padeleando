@@ -76,6 +76,7 @@ function Layout() {
 
   // El degradado de la portada va en la fila entera para llegar de borde a borde.
   const isHome = pathname === '/'
+  const isAuth = pathname === '/login' || pathname === '/register'
 
   return (
     <div className={`min-h-screen flex flex-col ${withNav ? 'pb-[calc(104px+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
@@ -84,7 +85,7 @@ function Layout() {
       <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
         {isLoggedIn && <Sidebar />}
 
-        <main className={`flex-1 w-full max-w-7xl min-w-0 min-h-screen ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
+        <main className={`flex-1 w-full min-w-0 min-h-screen ${isAuth ? '' : 'max-w-7xl'} ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
           {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra el chunk. */}
           <Suspense fallback={<Loader />}>
             <Outlet />
