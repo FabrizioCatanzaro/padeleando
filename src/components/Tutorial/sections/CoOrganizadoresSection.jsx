@@ -33,7 +33,7 @@ export default function CoOrganizadoresSection() {
           'Crear, editar y borrar torneos de esa categoría.',
           'Agregar, editar y eliminar jugadores y parejas.',
           'Cargar, corregir y borrar resultados, y armar el cuadro eliminatorio del americano.',
-          'Configurar la inscripción de cada torneo y subir fotos. (Las fotos se podrán subir solo si el dueño es Premium)',
+          'Configurar la inscripción de cada torneo y subir fotos. (Las fotos se podrán subir solo si el dueño tiene plan Organizador)',
         ]}
       />
 
@@ -52,7 +52,7 @@ export default function CoOrganizadoresSection() {
 
       <Note>
         Los límites del plan se miden siempre contra el dueño de la categoría, nunca contra quien
-        está intentando hacer una acción Premium. Por ejemplo: Si el dueño tiene plan Básico, un co-organizador Premium tampoco
+        está intentando hacer la acción. Por ejemplo: si el dueño tiene plan Gratis, un co-organizador con plan Organizador tampoco
         va a poder crear un tercer torneo en el mes o cargar fotos.
       </Note>
 
