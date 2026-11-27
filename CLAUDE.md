@@ -8,6 +8,7 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ## Current Status (updated 2026-11-27)
 
+- **In progress: Home público** — branch `feat/home-publico` (both repos). New landing for visitors at `/` (see [Portada del visitante](#portada-del-visitante)). Mockup: https://claude.ai/artifact/NQ7phGaJwe1fwSHBSA4FTY
 - **In progress: Planes por rol** — branch `feat/planes` (both repos). Stages 1 and 2 of 5 done: plans by role (Jugador+, Organizador, Combo, Club disabled) and online signup payment with commission (see [Cobro online](#cobro-online)). Next: launch period, boost, referrals. Business model: Project doc `claude/modelo-de-negocio.md`. Pending before release: the six Mercado Pago preapproval plans (`MP_PLAN_ID_<PLAN>_<PERIOD>`).
 - **Previous: Perfil** — branch `feat/perfil`, the five stages done and merged into `staging`. The API carries the new profile (see the API's CLAUDE.md › Perfil), `/perfil/editar` is live, the register form asks for Nombre/s and Apellido/s, `/u/:username` has the new header (vertical photo, name on two lines, attribute strip) and an old username redirects through `moved_to`. Organizers open the player sheet from Jugadores, Gestión and Inscripciones; Seguridad connects or disconnects Google; the admin corrects the gender and lifts the username wait. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
 - **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
@@ -226,6 +227,17 @@ Rules that keep the three from drifting:
 - **Torneos**: Explorar (the `/api/home` showcase plus "Tus categorías": favorites and categories where you play, minus your own), Mis torneos (`GET /me/tournaments`, flat list, phases in `utils/tournamentList.js`) and Organizar (`GET /me/organize`). Organizar links into `GroupView` with `?tab=jugadores|estadisticas` and `?accion=editar|coorg` (owner only). Its quota bar uses the category owner's plan, like every plan gate.
 - **Padeleros**: Jugadores (`GET /padeleros/players`), Organizadores (`GET /padeleros/organizers`, "Cerca de mí" sends lat/lon) and Clubes (`api.clubs.browse` / `nearbyStats`, i.e. `?stats=1`). Location goes through `hooks/useGeolocation.js`: it asks on tap, or on mount when the permission is already granted. The club page opens on the booking tab with `?tab=reservar`.
 - The avatar menu hides "Tus clubes" and "Mis categorías" on desktop (the sidebar has them); the mobile sheet keeps them.
+
+### Portada del visitante
+
+- `/` without a session renders `LandingView` (`src/components/Landing/`); `HomeView` only renders with one. On that route the Layout drops the `Header` and the `max-w-7xl` cap: the hero carries its own navigation.
+- Own palette, the same in both themes: the `--color-land-*` tokens in `index.css`. Don't use `white`, `brand` or `surface` there; they change with the theme.
+- One request: `GET /api/home` brings totals, tournaments with open signup (or the upcoming ones when there are none), open friendlies and the latest champions.
+- Champions are bracket finals (americano, copa, liga with playoffs). The card shows the pair's photos (initials without an account), the category, the organizer and the tournament's `is_cover` photo as background; without a cover it stays plain.
+- The signup quota is a label (`DISPONIBILIDAD`), never numbers, same as the tournament page.
+- The live match in the hero and the profile in "Cada partido suma" are samples and say so ("ejemplo").
+- Motion: the hero enters once (`land-rise` with delays); headings reveal on scroll with `land-reveal`, a CSS `animation-timeline: view()` that leaves the text static where unsupported. `prefers-reduced-motion` turns everything off and the champions carousel becomes a plain scroll.
+- Below 1024 px a "Crear cuenta gratis" bar appears once the hero leaves the screen; the Layout adds bottom padding and `InstallPrompt` sits above it.
 
 ### Perfil
 
