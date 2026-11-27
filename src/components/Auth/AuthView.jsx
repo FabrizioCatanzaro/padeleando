@@ -65,7 +65,7 @@ function PasswordInput({ id, value, onChange, autoComplete, placeholder = 'Tu co
 
 function Cover() {
   return (
-    <div className="relative overflow-hidden bg-photo-shade h-[200px] sm:h-[280px] lg:h-auto">
+    <div className="relative overflow-hidden bg-photo-shade h-[200px] sm:h-[280px] lg:h-[calc(100dvh-61px)] lg:min-h-[560px] lg:self-start">
       <picture>
         <source
           media="(min-width: 1280px)"
@@ -580,7 +580,7 @@ export default function AuthView({ mode: initialMode }) {
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_480px] xl:grid-cols-[minmax(0,1fr)_520px] lg:min-h-[calc(100dvh-61px)]">
       <Cover />
-      <div className="flex justify-center px-6 pt-6 pb-10 sm:pt-10 lg:items-center lg:px-10 lg:py-14 lg:border-l lg:border-border">
+      <div className="flex justify-center px-6 pt-6 pb-10 sm:pt-10 lg:px-10 lg:pt-[max(3.5rem,calc((100dvh-61px-600px)/2))] lg:pb-14 lg:border-l lg:border-border">
         <div className="w-full max-w-[384px]">{panel}</div>
       </div>
     </div>
