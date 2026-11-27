@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
+import { User, CircleHelp, Bell, Search, Download, Volume2, VolumeX, UserPlus, Check, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -15,6 +15,7 @@ import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
 import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
+import HeaderSearch from './HeaderSearch'
 import { useSummary } from '../../hooks/useSummary'
 import { userHasRole } from '../../utils/plan'
 
@@ -134,6 +135,7 @@ function NotifItemText({ n, onNavigate }) {
 
 export default function Header() {
   const [menuOpen,      setMenuOpen]      = useState(false)
+  const [searchOpen,    setSearchOpen]    = useState(false)
   const [notifOpen,     setNotifOpen]     = useState(false)
   const [notifCount,    setNotifCount]    = useState(0)
   const [notifs,        setNotifs]        = useState([])
@@ -165,6 +167,19 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Atajo del buscador en cualquier página.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isLoggedIn])
 
   // Cada 45 s y sólo con la pestaña visible.
   useEffect(() => {
@@ -410,7 +425,24 @@ export default function Header() {
         <img className="h-9" src={logoTxtUrl} width="174" height="36" alt="Padeleando" />
       </div>
 
+      {isLoggedIn && (
+        <div className="hidden lg:flex flex-1 justify-center px-6">
+          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar"
+            className="w-full max-w-[440px] h-10 px-3 flex items-center gap-2.5 rounded-lg border border-border-mid bg-surface text-muted font-sans text-[13px] cursor-pointer hover:border-border-strong hover:text-content transition-colors">
+            <Search size={16} className="shrink-0" />
+            <span className="flex-1 text-left truncate">Buscar jugadores, torneos, clubes…</span>
+            <kbd className="font-mono text-[10px] border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
+        {isLoggedIn && (
+          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar"
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-transparent border-0 text-content cursor-pointer hover:text-white">
+            <Search size={19} />
+          </button>
+        )}
         {/* Bell — notificaciones */}
         {isLoggedIn && (
           <div className="relative" ref={notifRef}>
@@ -518,6 +550,7 @@ export default function Header() {
       </div>
 
       {shareAppOpen && <ShareAppModal onClose={() => setShareAppOpen(false)} />}
+      {searchOpen && <HeaderSearch onClose={() => setSearchOpen(false)} />}
     </div>
   )
 }

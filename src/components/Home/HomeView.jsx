@@ -20,13 +20,13 @@ import Btn from '../shared/Btn';
 import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
 import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, isLevelDismissed, dismissLevel } from '../../utils/onboarding';
-import SearchPalette from './SearchPalette';
 import ParaSumarte from './Inicio/ParaSumarte';
 import { StatRail, LiveBand } from './PanelBands';
 import Pendientes from './Inicio/Pendientes';
 import Agenda from './Inicio/Agenda';
 import ResumenCard from './Inicio/ResumenCard';
 import ClubesCerca from './Inicio/ClubesCerca';
+import ParaSeguir from './Inicio/ParaSeguir';
 import AdBanner from '../shared/AdBanner';
 import AdInline from '../shared/AdInline';
 import { useSummary } from '../../hooks/useSummary';
@@ -106,7 +106,6 @@ export default function HomeView() {
   const [homeData, setHomeData] = useState(null);
 
   // Listado unificado y vitrina de descubrimiento (sólo con sesión).
-  const [paletteOpen,  setPaletteOpen]  = useState(false);
   const [agenda,       setAgenda]       = useState(null);
   const summary = useSummary();
 
@@ -184,18 +183,16 @@ export default function HomeView() {
       .catch(() => setHomeData(null));
   }, []);
 
-  // Atajo del buscador. Sin sesión la barra ya está en pantalla y no hace falta.
+  // "Ver todos" del buscador del header llega como ?q=.
+  const qParam = searchParams.get('q');
   useEffect(() => {
-    if (!isLoggedIn) return;
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isLoggedIn]);
+    if (qParam) search.commit(qParam);
+  }, [qParam]);
+
+  function clearSearch() {
+    search.clear();
+    if (qParam) setSearchParams({}, { replace: true });
+  }
 
   function toggleEmoji(e) {
     setSelectedEmojis(prev =>
@@ -395,7 +392,7 @@ export default function HomeView() {
               <div className="font-condensed font-bold text-sm tracking-widest text-muted">
                 RESULTADOS PARA &quot;{committedQ}&quot;
               </div>
-              <button onClick={search.clear} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
+              <button onClick={clearSearch} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
                 <X size={16} />
               </button>
             </div>
@@ -510,14 +507,6 @@ export default function HomeView() {
                   </h1>
                   <p className="font-sans text-[12.5px] text-muted mt-1.5 m-0">{inicioSubtitle}</p>
                 </div>
-                <button
-                  onClick={() => setPaletteOpen(true)}
-                  aria-label="Buscar"
-                  className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer shrink-0"
-                >
-                  <Search size={16} />
-                  <kbd className="hidden sm:inline font-mono text-[9.5px] tracking-wider border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
-                </button>
               </div>
 
               <StatRail stats={inicioRail} />
@@ -561,6 +550,7 @@ export default function HomeView() {
                 onFetch={fetchNearbyClubs}
                 onOpen={(id) => navigate(`/club/${id}`)}
               />
+              <ParaSeguir />
               <AdBanner />
             </aside>
             <AdInline />
@@ -569,14 +559,6 @@ export default function HomeView() {
 
       </div>
 
-      {isLoggedIn && (
-        <SearchPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          search={search}
-          onNavigate={(to) => { navigate(to); search.clear(); }}
-        />
-      )}
 
       {/* ── Modal nueva categoría ── */}
       {showNew && (

@@ -34,13 +34,13 @@ export default function useHomeSearch() {
     return () => clearTimeout(t);
   }, [q, fetchAll]);
 
-  const commit = useCallback(async () => {
-    const term = q.trim();
+  const commit = useCallback(async (value) => {
+    const term = (typeof value === 'string' ? value : q).trim();
     if (term.length < 2) return;
     setCommitting(true);
     try {
       const r = await fetchAll(term);
-      setCommittedQ(term); setCommitted(r); setLive(EMPTY);
+      setQ(term); setCommittedQ(term); setCommitted(r); setLive(EMPTY);
     } catch {
       setCommittedQ(term); setCommitted(EMPTY);
     } finally { setCommitting(false); }
