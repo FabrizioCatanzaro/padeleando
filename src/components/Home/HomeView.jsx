@@ -552,7 +552,7 @@ export default function HomeView() {
               <Pendientes friendlies={agenda?.pending?.friendlies} registrations={agenda?.pending?.registrations} />
               <Agenda items={agenda?.items ?? null} />
 
-                <ParaSumarte signup={discoverSignup} onOpenTournament={(id) => navigate(`/view/${id}`)} />
+                <ParaSumarte signup={discoverSignup} />
             </div>
 
             <aside className="hidden xl:flex flex-col gap-7 sticky top-24" aria-label="Tu resumen">

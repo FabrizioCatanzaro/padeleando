@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ChevronRight, Search, Loader2 } from 'lucide-react'
+import { Search, Loader2, Trophy } from 'lucide-react'
 import { api } from '../../utils/api'
-import { FORMAT_LABEL, FORMAT_CLS, ROLE_LABEL, roleOf, phaseOf, statusLine, detailLine } from '../../utils/tournamentList'
+import { ROLE_LABEL, roleOf, phaseOf, detailLine } from '../../utils/tournamentList'
+import { cardModel } from '../../utils/tournamentCard'
+import TournamentRow from '../shared/tournament/TournamentRow'
 import AdInline from '../shared/AdInline'
 import AdRail from '../shared/AdRail'
 
@@ -15,34 +16,25 @@ const FINISHED_STEP = 5
 const SELECT = 'h-10 px-3 rounded-lg border border-border-mid bg-surface text-content font-sans text-[13px] cursor-pointer outline-none focus:border-border-strong'
 const ROLE_PILL = { jugas: 'text-content border-border-strong', organizas: 'text-cyan border-cyan/40', ambos: 'text-brand border-brand/40' }
 
-function Row({ t, phase, first }) {
+function Row({ t, first }) {
   const role = roleOf(t)
-  const status = statusLine(t, phase)
+  const m = cardModel(t)
   return (
-    <Link to={`/cat/${t.group_id}/torneo/${t.id}`}
-      className={`flex items-center gap-3 sm:gap-4 px-3.5 sm:px-4 py-3.5 no-underline hover:bg-surface-alt transition-colors ${first ? '' : 'border-t border-border'}`}>
-      <span className={`hidden sm:block w-22 shrink-0 font-sans text-[10px] font-extrabold tracking-wider ${FORMAT_CLS[t.format]}`}>{FORMAT_LABEL[t.format]}</span>
-      <span className="flex-1 min-w-0">
-        <span className={`sm:hidden block font-sans text-[9.5px] font-extrabold tracking-wider ${FORMAT_CLS[t.format]}`}>{FORMAT_LABEL[t.format]}</span>
-        <span className="block font-sans font-bold text-[15px] text-white truncate">{t.name}</span>
-        <span className="flex items-center gap-2 mt-1 min-w-0">
-          <span className="shrink-0 max-w-[60%] truncate font-sans text-[11px] font-semibold text-content bg-surface-alt border border-border-mid rounded-md px-2 py-0.5">{t.group_name}</span>
-          {t.club_name && <span className="font-sans text-[12px] text-secondary truncate">{t.club_name}</span>}
-        </span>
-        <span className="md:hidden flex items-center gap-1.5 mt-1 font-sans text-[12px]">
-          <span className={`font-bold ${status.cls}`}>{status.text}</span>
-          <span className="text-secondary truncate">· {detailLine(t)}</span>
-        </span>
-      </span>
-      <span className="hidden md:block w-48 shrink-0">
-        <span className={`block font-sans text-[12px] font-bold ${status.cls}`}>{status.text}</span>
-        <span className="block font-sans text-[12px] text-secondary mt-0.5 truncate">{detailLine(t)}</span>
-      </span>
-      <span className="hidden sm:block w-34 shrink-0 text-right">
-        <span className={`font-sans text-[11px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${ROLE_PILL[role]}`}>{ROLE_LABEL[role]}</span>
-      </span>
-      <ChevronRight size={16} className="text-dim shrink-0" />
-    </Link>
+    <TournamentRow
+      m={m}
+      to={`/cat/${t.group_id}/torneo/${t.id}`}
+      first={first}
+      meta={(
+        <>
+          <span className="shrink-0 max-w-[55%] truncate font-sans text-[11.5px] font-semibold text-content bg-surface-alt border border-border-mid rounded-md px-[7px] py-0.5">{t.group_name}</span>
+          {t.club_name && <span className="truncate">{t.club_name}</span>}
+        </>
+      )}
+      slot={t.won_final
+        ? <span className="inline-flex items-center gap-1.5 font-bold text-brand"><Trophy size={14} aria-hidden="true" />Campeón</span>
+        : <span className={t.my_registration && !t.plays ? 'text-content font-semibold' : 'text-secondary'}>{detailLine(t)}</span>}
+      trailing={<span className={`font-sans text-[11.5px] font-bold px-2.5 py-1 rounded-full border whitespace-nowrap ${ROLE_PILL[role]}`}>{ROLE_LABEL[role]}</span>}
+    />
   )
 }
 
@@ -142,7 +134,7 @@ export default function MisTorneos() {
                 <span className="font-sans text-[11px] text-muted">{list.length}</span>
               </div>
               <div className="rounded-xl bg-surface border border-border overflow-hidden">
-                {shown.map((t, i) => <Row key={t.id} t={t} phase={s.id} first={i === 0} />)}
+                {shown.map((t, i) => <Row key={t.id} t={t} first={i === 0} />)}
               </div>
               {shown.length < list.length && (
                 <button type="button" onClick={() => setFinishedShown((n) => n + FINISHED_STEP * 4)}
