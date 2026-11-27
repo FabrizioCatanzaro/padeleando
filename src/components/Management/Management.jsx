@@ -16,6 +16,7 @@ import PremiosEditor from "../Copa/PremiosEditor";
 import { copaConfigBody, copaConfigError, premioTitulo, gruposArmados } from "../../utils/copa";
 import { clubCourts, entityClub, fmtHora, isSaneEventDate, canchasConNombre } from "../../utils/helpers";
 import { Play, RotateCcw, TicketCheck, Trash2, Check, ChevronDown } from "lucide-react";
+import { api } from "../../utils/api";
 
 const fechaDe = (t) => (t.event_date ? String(t.event_date).slice(0, 10) : '');
 
@@ -29,7 +30,15 @@ function signupDe(t) {
     capacity: t.signup_capacity ?? null,
     capacity_unit: t.signup_capacity_unit ?? null,
     closes_at: t.signup_closes_at ?? null,
+    online:   t.signup_online ?? false,
+    fee_payer: t.signup_fee_payer ?? 'player',
+    payment_note: t.signup_payment_note ?? '',
   };
+}
+
+async function vincularMercadoPago() {
+  const { authorize_url } = await api.payments.connect();
+  window.location.href = authorize_url;
 }
 
 // Barra de guardado: queda pegada abajo mientras haya cambios sin guardar.
@@ -87,6 +96,12 @@ function InscripcionDelTorneo({ tournament, onSave }) {
         inherited={inherited}
         profile={profileContacts(tournament.owner_profile)}
         conReglamento={false}
+        cobro={{
+          connected: !!tournament.owner_mp_connected,
+          organizerPlan: !!tournament.group_owner_is_premium,
+          isOwner: !!tournament.is_owner,
+          onConnect: vincularMercadoPago,
+        }}
       />
       <BarraGuardar dirty={dirty} saving={saving} error={error} onSave={save} />
     </>

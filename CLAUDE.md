@@ -8,7 +8,7 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ## Current Status (updated 2026-11-27)
 
-- **In progress: Planes por rol** — branch `feat/planes` (both repos). Stage 1 of 5 done: plans by role (Jugador+, Organizador, Combo, Club disabled), role gates, promo/list prices, the plan picker and ad-free paid plans. Next: online signup payment with commission, launch period, boost, referrals. Business model: Project doc `claude/modelo-de-negocio.md`. Pending before release: the six Mercado Pago preapproval plans (`MP_PLAN_ID_<PLAN>_<PERIOD>`).
+- **In progress: Planes por rol** — branch `feat/planes` (both repos). Stages 1 and 2 of 5 done: plans by role (Jugador+, Organizador, Combo, Club disabled) and online signup payment with commission (see [Cobro online](#cobro-online)). Next: launch period, boost, referrals. Business model: Project doc `claude/modelo-de-negocio.md`. Pending before release: the six Mercado Pago preapproval plans (`MP_PLAN_ID_<PLAN>_<PERIOD>`).
 - **Previous: Perfil** — branch `feat/perfil`, the five stages done and merged into `staging`. The API carries the new profile (see the API's CLAUDE.md › Perfil), `/perfil/editar` is live, the register form asks for Nombre/s and Apellido/s, `/u/:username` has the new header (vertical photo, name on two lines, attribute strip) and an old username redirects through `moved_to`. Organizers open the player sheet from Jugadores, Gestión and Inscripciones; Seguridad connects or disconnects Google; the admin corrects the gender and lifts the username wait. Mockups: https://claude.ai/artifact/3EXHdQ9P3uexvEc99tTa8U
 - **Last sprint: Navegación por módulos** — on `staging`, PR `staging` → `main` pending. The same PR carries the americano from 4 to 32 pairs. Logged-in users get a left sidebar (≥1024 px) and a glass bottom bar (mobile) with Inicio · Partidos · Torneos · Padeleros · Perfil, a Crear menu, a new Inicio and one screen per module. No schema change: every new endpoint is read-only. See [Navegación](#navegación). Plan: https://claude.ai/artifact/GC9aYGdjAfUNyqHRokNKKT · mockups: https://claude.ai/artifact/2m1JUEys3vakLZaFwjF23o
 - **Previous sprint: Amistosos** — merged to `main` (front PR #45, API PR #38). Friendly 2 vs 2 matches outside any tournament that count toward the profile once the rival team accepts the result: open matches people join from `/amistosos`, played matches loaded with their result, proposals and counter-proposals, guests who claim their slot by link, reminders generated on read, the profile filter Todos / Torneos / Amistosos, an edit screen and a club-name search. Design doc: https://claude.ai/artifact/2y4oNfCD6oWt2FewGrzHC1
@@ -237,6 +237,12 @@ Rules that keep the three from drifting:
 - **Ficha del jugador** (`shared/PlayerSheet.jsx`, `api.groups.ficha`): the private data a player loaded, for whoever manages the category. It opens from `GroupPlayers`, `PlayerManager` and `RegistrationsPanel` for players with an account. The API decides who may see it.
 - Google Identity loads from `utils/googleIdentity.js` (`renderGoogleButton`), shared by login and Seguridad. Connecting may use another Google email; disconnecting needs a password.
 - Registration prefills the WhatsApp visibility from `user.whatsapp_public`.
+
+### Cobro online
+
+- The owner links Mercado Pago from Torneos › Organizar (`CobrosCard`, `api.payments`). The tournament turns it on in Gestión › Inscripción: `SignupEditor` takes `cobro` (`connected`, `organizerPlan`, `isOwner`, `onConnect`) only in a tournament, with the calculator from `utils/commission.js` (mirror of the API's `lib/commission.js`, plus `priceForNet`). Setup shows the block but sends the owner to Organizar to link, so the wizard isn't lost.
+- `signup.online_quote` (`solo`/`pair`: `total`, `fee`) is what the player pays; the API only sends it when the owner's MP is linked. `RegistrationFlow` redirects to `checkout_url`; `RegistrationCard` shows `awaiting_payment` with a Pagar button and the deadline, reads `?pago=` on the way back and shows the payment or refund. `RegistrationsPanel` shows the payment state, warns that rejecting refunds, and has "reintegrar todo".
+- Refunds are always total. Say so wherever the player pays or cancels.
 
 ### Theming
 - Theme variables live in `src/index.css` as CSS custom properties under `@theme`.

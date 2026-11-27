@@ -11,7 +11,7 @@ import { formatPrice } from '../../utils/signup';
 import { levelLabel, checkRegistrationLevel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Btn from '../shared/Btn';
-import { fmtCierre } from './format';
+import { fmtCierre, montoOnline, pesos } from './format';
 
 const OPTION = 'w-full text-left rounded-xl p-4 flex gap-3.5 items-start cursor-pointer font-sans transition-colors';
 const INPUT  = 'h-12 w-full box-border bg-surface border border-border-strong rounded-lg px-3.5 text-white font-sans text-[15px] outline-none focus:border-brand';
@@ -64,6 +64,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
   const categorias = kind === 'pair' ? [user?.category ?? null, hasAccount ? (partner?.category ?? null) : null] : [user?.category ?? null];
   const check = signup.level ? checkRegistrationLevel(categorias, signup.level, { solo: kind === 'solo' }) : { issues: [] };
   const precio = formatPrice(signup.price, signup.price_unit ?? signup.unit);
+  const online = montoOnline(signup, kind);
   const cierre = fmtCierre(signup.closes_at);
 
   function siguiente() {
@@ -89,6 +90,10 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
         partner: kind === 'solo' ? undefined
           : hasAccount ? { username: partner.username } : { name: guest.name, phone: guest.phone },
       });
+      if (reg?.checkout_url) {
+        window.location.href = reg.checkout_url;
+        return;
+      }
       onDone?.(reg);
     } catch (e) {
       setError(e.message);
@@ -281,7 +286,9 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
                   ...(temporada ? [['WhatsApp', `${whatsapp.trim()}${mostrarWa ? ' · visible' : ' · solo organizadores'}`]] : []),
                   ...(temporada ? [['Tus horarios', resumenDisponibilidad(disp) || 'Sin cargar']] : []),
                   ...(temporada && kind === 'pair' ? [[`Horarios de ${nombreCompa}`, resumenDisponibilidad(dispCompa) || 'Sin cargar']] : []),
-                  ...(precio ? [['A pagar', `${precio}`]] : []),
+                  ...(online
+                    ? [['Pagás ahora', `${pesos(online.total)}${online.fee ? ` (incluye ${pesos(online.fee)} de cargo de servicio)` : ''}`]]
+                    : precio ? [['A pagar', `${precio}`]] : []),
                 ].map(([k, v], i, arr) => (
                   <div key={k} className={`flex justify-between gap-3 py-3 ${i < arr.length - 1 ? 'border-b border-border' : ''}`}>
                     <dt className="text-[13px] text-secondary">{k}</dt>
@@ -297,9 +304,12 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
               )}
               <div className="bg-surface-alt rounded-xl p-3.5 flex flex-col gap-2.5">
                 <p className="m-0 text-[13px] text-content leading-relaxed">
-                  El organizador aprueba cada inscripción. Te avisamos cuando decida.
-                  {precio ? ' El pago se coordina con el organizador.' : ''}
+                  {online
+                    ? 'Pagás con Mercado Pago al enviar. El organizador aprueba cada inscripción; si la rechaza, o si cancelás antes del cierre, te devolvemos todo.'
+                    : 'El organizador aprueba cada inscripción. Te avisamos cuando decida.'}
+                  {!online && precio ? ' El pago se coordina con el organizador.' : ''}
                   {cierre ? ` Podés cancelar hasta el ${cierre}.` : ''}
+                  {signup.payment_note ? ` Otros medios de pago: ${signup.payment_note}` : ''}
                 </p>
                 {contactos.length > 0 && <div className="flex gap-2 flex-wrap">{contactos}</div>}
               </div>
@@ -330,7 +340,7 @@ export default function RegistrationFlow({ tournament, groupName = null, signup,
               {paso === 'disp' && sinDisponibilidad(disp) && sinDisponibilidad(dispCompa) ? 'SEGUIR SIN CARGAR' : 'SIGUIENTE'}
             </Btn>
           ) : (
-            <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria || (!!signup.rules && !acepto)}>ENVIAR INSCRIPCIÓN</Btn>
+            <Btn variant="primary" size="lg" full onClick={enviar} loading={sending} disabled={sinCategoria || (!!signup.rules && !acepto)}>{online ? 'PAGAR CON MERCADO PAGO' : 'ENVIAR INSCRIPCIÓN'}</Btn>
           )}
         </footer>
       </div>

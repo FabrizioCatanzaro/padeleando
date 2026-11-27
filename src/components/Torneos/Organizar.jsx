@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { ClipboardList, ChevronRight, Plus, Loader2, Pencil, UserPlus, Users, BarChart3, ExternalLink, Radio } from 'lucide-react'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { ClipboardList, ChevronRight, Plus, Loader2, Pencil, UserPlus, Users, BarChart3, ExternalLink, Radio, Wallet, Link2, Link2Off } from 'lucide-react'
 import { api } from '../../utils/api'
 import ActionMenu from '../shared/ActionMenu'
 import ClubLogo from '../shared/ClubLogo'
@@ -9,7 +9,7 @@ import AdInline from '../shared/AdInline'
 import { dayKey, shortDay } from '../../utils/agenda'
 
 function quotaOf(c, plan) {
-  if (c.owner_is_premium) return { full: false, text: c.is_owner ? 'Sin límite · Premium' : `Sin límite · Premium de ${c.owner_name}`, pct: 100, cls: 'bg-cyan', txt: 'text-cyan' }
+  if (c.owner_is_premium) return { full: false, text: c.is_owner ? 'Sin límite · Organizador' : `Sin límite · plan de ${c.owner_name}`, pct: 100, cls: 'bg-cyan', txt: 'text-cyan' }
   const max = plan.tournaments_per_month
   const full = c.month_count >= max
   return { full, text: full ? `${c.month_count} de ${max} · límite del mes` : `${c.month_count} de ${max}`, pct: Math.min(100, (c.month_count / max) * 100), cls: full ? 'bg-danger' : 'bg-brand', txt: full ? 'text-danger' : 'text-brand' }
@@ -78,6 +78,68 @@ function CategoryCard({ c, plan, today }) {
   )
 }
 
+// Cuenta de Mercado Pago donde entra el cobro online de los torneos de tus categorías.
+function CobrosCard() {
+  const [params, setParams] = useSearchParams()
+  const [mp, setMp] = useState(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState(null)
+  const result = params.get('mp')
+
+  useEffect(() => {
+    let cancelled = false
+    api.payments.mp().then((d) => { if (!cancelled) setMp(d) }).catch(() => { if (!cancelled) setMp({ connected: false }) })
+    return () => { cancelled = true }
+  }, [])
+
+  async function connect() {
+    setBusy(true); setError(null)
+    try { window.location.href = (await api.payments.connect()).authorize_url }
+    catch (e) { setError(e.message); setBusy(false) }
+  }
+  async function disconnect() {
+    if (!window.confirm('Se desvincula tu Mercado Pago y se apaga el cobro por la app en tus torneos sin terminar. ¿Seguimos?')) return
+    setBusy(true); setError(null)
+    try { await api.payments.disconnect(); setMp({ connected: false }) }
+    catch (e) { setError(e.message) }
+    finally { setBusy(false) }
+  }
+
+  return (
+    <section aria-labelledby="org-cobros" className="p-4 rounded-2xl bg-surface border border-border-mid flex flex-col gap-3">
+      <div className="flex items-center gap-3">
+        <span className="w-9 h-9 shrink-0 rounded-[10px] bg-brand/10 text-brand flex items-center justify-center"><Wallet size={18} /></span>
+        <div className="flex-1 min-w-0">
+          <h2 id="org-cobros" className="m-0 font-sans font-bold text-[14px] text-white">Cobro de inscripciones</h2>
+          <p className="m-0 font-sans text-[12px] text-secondary leading-snug">
+            {mp?.connected ? 'Tu Mercado Pago está vinculado. Activá el cobro en cada torneo desde Gestión › Inscripción.'
+              : 'Vinculá tu Mercado Pago: el jugador paga al anotarse y la plata entra directo a tu cuenta.'}
+          </p>
+        </div>
+        {mp && (mp.connected ? (
+          <button type="button" onClick={disconnect} disabled={busy}
+            className="shrink-0 inline-flex items-center gap-1.5 bg-transparent border-0 p-0 font-sans text-[12px] text-muted hover:text-danger cursor-pointer disabled:opacity-50">
+            <Link2Off size={13} /> Desvincular
+          </button>
+        ) : (
+          <button type="button" onClick={connect} disabled={busy}
+            className="shrink-0 h-9 px-3 rounded-lg border-0 bg-brand text-black font-sans font-extrabold text-[12.5px] inline-flex items-center gap-1.5 cursor-pointer disabled:opacity-60">
+            <Link2 size={14} /> Vincular
+          </button>
+        ))}
+      </div>
+      {result && (
+        <p className={`m-0 font-sans text-[12.5px] ${result === 'connected' ? 'text-green' : 'text-danger'}`}>
+          {result === 'connected' ? 'Listo: tu Mercado Pago quedó vinculado.' : 'No se pudo vincular Mercado Pago. Probá de nuevo.'}
+          <button type="button" onClick={() => { params.delete('mp'); setParams(params, { replace: true }) }}
+            className="ml-2 bg-transparent border-0 p-0 text-muted underline cursor-pointer font-sans text-[12px]">Cerrar</button>
+        </p>
+      )}
+      {error && <p className="m-0 font-sans text-[12.5px] text-danger">{error}</p>}
+    </section>
+  )
+}
+
 export default function Organizar() {
   const navigate = useNavigate()
   const [data, setData] = useState(null)
@@ -102,6 +164,7 @@ export default function Organizar() {
   return (
     <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_300px] xl:gap-10 xl:items-start">
       <div className="min-w-0 flex flex-col gap-7">
+        {own.length > 0 && <CobrosCard />}
         {registrations.length > 0 && (
           <section aria-labelledby="org-insc">
             <h2 id="org-insc" className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">INSCRIPCIONES POR APROBAR</h2>
@@ -133,7 +196,7 @@ export default function Organizar() {
               className="min-h-40 flex flex-col items-center justify-center gap-2.5 p-4 rounded-2xl border border-dashed border-border-strong bg-transparent text-content cursor-pointer hover:border-brand/50 transition-colors">
               <span className="w-11 h-11 rounded-full bg-surface-alt border border-border-strong flex items-center justify-center text-brand"><Plus size={20} strokeWidth={2.4} /></span>
               <span className="font-sans font-bold text-[14px] text-white">Nueva categoría</span>
-              {groupsFull && <span className="font-sans text-[12px] text-secondary text-center max-w-60">Usaste {plan.groups_owned} de {plan.max_groups} en el plan Básico. Con Premium no hay límite.</span>}
+              {groupsFull && <span className="font-sans text-[12px] text-secondary text-center max-w-60">Usaste {plan.groups_owned} de {plan.max_groups} en el plan Gratis. Con el plan Organizador no hay límite.</span>}
             </button>
           </div>
         </section>
@@ -143,7 +206,7 @@ export default function Organizar() {
         <section className="p-4 rounded-2xl bg-surface border border-border-mid">
           <div className="flex justify-between items-center">
             <h2 className="m-0 font-sans text-[11px] font-bold tracking-[2px] text-muted">TU PLAN</h2>
-            <span className="font-sans text-[12px] font-bold text-white">{plan.premium ? 'Premium' : 'Básico'}</span>
+            <span className="font-sans text-[12px] font-bold text-white">{plan.premium ? 'Organizador' : 'Gratis'}</span>
           </div>
           {plan.premium ? (
             <p className="m-0 mt-3 font-sans text-[12.5px] text-soft leading-relaxed">Categorías y torneos sin límite.</p>

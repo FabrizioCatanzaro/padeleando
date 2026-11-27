@@ -94,6 +94,9 @@ export function useTournament(groupId, tournamentId) {
       signup_capacity_unit: extra.signup_capacity_unit ?? null,
       signup_closes_at:     extra.signup_closes_at ?? null,
       rules:                extra.rules ?? null,
+      signup_online:        extra.signup_online ?? false,
+      signup_fee_payer:     extra.signup_fee_payer ?? 'player',
+      signup_payment_note:  extra.signup_payment_note ?? null,
       ...(format === 'liga' && extra.liga ? extra.liga : {}),
       ...(format === 'copa' && extra.copa ? extra.copa : {}),
     });
@@ -391,6 +394,11 @@ export function useTournament(groupId, tournamentId) {
         signup_capacity:      signup.capacity ?? null,
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
+        ...('online' in signup ? {
+          signup_online: signup.open && signup.online === true,
+          signup_fee_payer: signup.fee_payer ?? 'player',
+          signup_payment_note: signup.payment_note?.trim() || null,
+        } : {}),
         ...('rules' in signup ? { rules: signup.rules ?? null } : {}),
       });
     }

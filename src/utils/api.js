@@ -298,6 +298,11 @@ export const api = {
       req('GET', `/admin/broadcasts?page=${page}&limit=${limit}`),
   },
   // Inscripción a torneos (routes/registrations.js del back).
+  payments: {
+    mp:         () => req('GET',    '/payments/mp'),
+    connect:    () => req('GET',    '/payments/mp/connect'),
+    disconnect: () => req('DELETE', '/payments/mp/connect'),
+  },
   registrations: {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
@@ -309,6 +314,7 @@ export const api = {
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),
     decide: (id, action, reason) => req('PATCH', `/registrations/${id}`, { action, reason }),
     paid:   (id, paid)      => req('PATCH', `/registrations/${id}/paid`, { paid }),
+    refundAll: (tournamentId) => req('POST', `/registrations/tournament/${tournamentId}/refund-all`),
   },
   joinRequests: {
     send:     (tournamentId, playerId) => req('POST',  '/join-requests', { tournamentId, playerId }),

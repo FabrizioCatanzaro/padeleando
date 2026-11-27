@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, Settings, FileCheck, Clock, IdCard } from 'lucide-react';
+import { AlertTriangle, Settings, FileCheck, Clock, IdCard, CreditCard, Undo2 } from 'lucide-react';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
 import { whatsappHref } from '../../utils/copa';
 import { api } from '../../utils/api';
@@ -8,7 +8,22 @@ import { levelLabel } from '../../utils/category';
 import PlayerAvatar from '../shared/PlayerAvatar';
 import Btn from '../shared/Btn';
 import PlayerSheet from '../shared/PlayerSheet';
-import { fmtCierre, cupoTexto, ESTADO_META } from './format';
+import { fmtCierre, cupoTexto, ESTADO_META, pesos } from './format';
+
+// Estado del cobro por la app de una inscripción.
+function PagoLinea({ r, corto = false }) {
+  const meta = {
+    approved:      { texto: corto ? 'Pagó por la app' : `Pagó ${pesos(r.total_amount)} por la app`, cls: 'text-green' },
+    refunded:      { texto: corto ? 'Reintegrada' : `Se le devolvieron ${pesos(r.total_amount)}`, cls: 'text-secondary' },
+    refund_failed: { texto: corto ? 'Reintegro fallido' : 'El reintegro falló: devolvé el pago desde tu Mercado Pago', cls: 'text-danger' },
+  }[r.payment_status];
+  if (!meta) return null;
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[13px] ${meta.cls}`} title={r.refund_error ?? undefined}>
+      <CreditCard size={13} aria-hidden="true" /> {meta.texto}
+    </span>
+  );
+}
 
 const FILTROS = [
   { id: 'pending',  label: 'Pendientes' },
@@ -65,6 +80,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
   const [rechazo, setRechazo] = useState(null);       // inscripción a rechazar
   const [motivo, setMotivo]   = useState('');
   const [elegidos, setElegidos] = useState([]);       // ids de jugadores para armar pareja
+  const [aviso, setAviso]     = useState(null);
 
   const load = useCallback(() => {
     api.registrations.list(tournament.id)
@@ -101,6 +117,18 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
     setData((d) => ({ ...d, registrations: d.registrations.map((x) => (x.id === r.id ? { ...x, paid } : x)) }));
     try { await api.registrations.paid(r.id, paid); load(); }
     catch (e) { setError(e.message); load(); }
+  }
+
+  async function reintegrarTodo() {
+    if (!window.confirm('Se cierra la inscripción, se cancelan todas las inscripciones activas y se devuelve todo lo cobrado por la app desde tu Mercado Pago. Necesitás saldo en la cuenta. ¿Seguimos?')) return;
+    setBusy('todo');
+    try {
+      const r = await api.registrations.refundAll(tournament.id);
+      setAviso(`${r.cancelled} inscripciones canceladas · ${r.refunded} reintegradas${r.failed ? ` · ${r.failed} sin reintegrar: revisá el saldo de tu Mercado Pago` : ''}.`);
+      load();
+      onTournamentChanged?.();
+    } catch (e) { setError(e.message); }
+    finally { setBusy(null); }
   }
 
   async function armarPareja() {
@@ -176,6 +204,7 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
             <FileCheck size={13} className="text-green" aria-hidden="true" /> Aceptó el reglamento
           </span>
         )}
+        {r.payment_status && <PagoLinea r={r} />}
         {r.status === 'rejected' && r.reject_reason && (
           <p className="m-0 text-[13px] text-secondary">Motivo: “{r.reject_reason}”</p>
         )}
@@ -206,6 +235,13 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
         <button type="button" onClick={onConfigure} className="self-start inline-flex items-center gap-1.5 bg-transparent border-0 p-0 text-brand text-[13px] cursor-pointer font-sans">
           <Settings size={13} /> Configurar inscripción
         </button>
+        {regs.some((r) => r.payment_status === 'approved') && (
+          <button type="button" onClick={reintegrarTodo} disabled={busy === 'todo'}
+            className="self-start inline-flex items-center gap-1.5 bg-transparent border-0 p-0 text-danger text-[13px] cursor-pointer font-sans disabled:opacity-50">
+            <Undo2 size={13} /> El torneo no se juega: reintegrar todo
+          </button>
+        )}
+        {aviso && <p className="m-0 text-[13px] text-soft">{aviso}</p>}
       </div>
 
       <div role="group" aria-label="Filtro" className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible">
@@ -251,10 +287,12 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
                 <span className="flex-1 text-[14px] text-white">
                   {r.p1_name}{r.kind === 'pair' ? ` & ${r.p2_user_name ?? r.p2_name}` : ' · solo'}
                 </span>
-                <label className={`flex items-center gap-1.5 text-[13px] cursor-pointer ${r.paid ? 'text-green' : 'text-secondary'}`}>
-                  <input type="checkbox" checked={!!r.paid} onChange={(e) => marcarPago(r, e.target.checked)} className="w-4.5 h-4.5 accent-green" />
-                  Pagada
-                </label>
+                {r.payment_status ? <PagoLinea r={r} corto /> : (
+                  <label className={`flex items-center gap-1.5 text-[13px] cursor-pointer ${r.paid ? 'text-green' : 'text-secondary'}`}>
+                    <input type="checkbox" checked={!!r.paid} onChange={(e) => marcarPago(r, e.target.checked)} className="w-4.5 h-4.5 accent-green" />
+                    Pagada
+                  </label>
+                )}
               </div>
             ))}
           </div>
@@ -271,7 +309,10 @@ export default function RegistrationsPanel({ tournament, onTournamentChanged, on
             <h2 id="rechazo-titulo" className="m-0 font-condensed font-bold text-[18px] text-white">
               Rechazar a {rechazo.p1_name}{rechazo.kind === 'pair' ? ` y ${rechazo.p2_user_name ?? rechazo.p2_name}` : ''}
             </h2>
-            <p className="m-0 text-[13px] text-soft">Les avisamos que no entraron. El motivo es opcional y lo ven ellos.</p>
+            <p className="m-0 text-[13px] text-soft">
+              Les avisamos que no entraron. El motivo es opcional y lo ven ellos.
+              {rechazo.payment_status === 'approved' ? ` Pagaron ${pesos(rechazo.total_amount)} por la app: se les devuelve completo desde tu Mercado Pago.` : ''}
+            </p>
             <div role="group" aria-label="Motivos rápidos" className="flex gap-2 flex-wrap">
               {MOTIVOS.map((m) => (
                 <button key={m} type="button" aria-pressed={motivo === m} onClick={() => setMotivo(m)}
