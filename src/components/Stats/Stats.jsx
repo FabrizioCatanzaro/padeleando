@@ -1172,7 +1172,7 @@ export function HistoricalStats({ tournaments, showTorneos = true, showClubs = t
         </div>
       )}
 
-      {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} />}
+      {showPremiumModal && <PremiumModal focus="organizador" onClose={() => setShowPremiumModal(false)} />}
 
       {showRankStory && (
         <SnapshotModal

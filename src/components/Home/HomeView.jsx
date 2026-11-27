@@ -18,7 +18,7 @@ import SignupEditor from '../shared/SignupEditor';
 import StepBar from '../shared/StepBar';
 import { profileContacts } from '../../utils/signup';
 import PremiumModal from '../shared/PremiumModal';
-import { FREE_MAX_GROUPS, isPlanLimit } from '../../utils/plan';
+import { FREE_MAX_GROUPS, isPlanLimit, userHasRole } from '../../utils/plan';
 import { useToast } from '../../context/useToast';
 import Btn from '../shared/Btn';
 import RolePicker from './RolePicker';
@@ -312,7 +312,7 @@ export default function HomeView() {
   }
 
   function openNewModal() {
-    if (user?.subscription?.plan !== 'premium' && groups.length >= FREE_MAX_GROUPS) {
+    if (!userHasRole(user, 'organizador') && groups.length >= FREE_MAX_GROUPS) {
       setPremiumReason(quotaReason());
       setShowPremiumModal(true);
       return;
@@ -1126,7 +1126,7 @@ export default function HomeView() {
       )}
 
       {showPremiumModal && (
-        <PremiumModal reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
+        <PremiumModal focus="organizador" reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
       )}
     </div>
   );

@@ -157,7 +157,7 @@ export default function InstagramPosts({ tournamentId, isOwner = false, isPremiu
           onCancel={() => setConfirmDel(null)}
         />
       )}
-      {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
+      {showPremium && <PremiumModal focus="organizador" onClose={() => setShowPremium(false)} />}
     </section>
   );
 }

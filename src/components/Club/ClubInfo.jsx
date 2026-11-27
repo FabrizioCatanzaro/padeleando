@@ -166,7 +166,7 @@ export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManag
                 <Link2Off size={12} /> DESVINCULAR
               </button>
             </div>
-          ) : club.owner_is_premium ? (
+          ) : club.can_collect_online ? (
             <div className="px-4 pt-2">
               <p className="text-[11.5px] text-dim mb-2 leading-relaxed">
                 Vinculá tu cuenta de Mercado Pago para cobrar las reservas online: se confirman solas cuando el jugador paga.
@@ -182,14 +182,14 @@ export default function ClubInfo({ club, mapsUrl, desde, admin = false, canManag
           ) : (
             <div className="px-4 pt-2">
               <p className="text-[11.5px] text-dim mb-2 leading-relaxed">
-                Con Premium podés vincular tu Mercado Pago y cobrar las reservas online, sin aprobarlas a mano.
+                Con el plan Club podés vincular tu Mercado Pago y cobrar las reservas online, sin aprobarlas a mano.
               </p>
               <button
                 type="button"
                 onClick={onPedirPremiumMp}
                 className="inline-flex items-center gap-2 bg-transparent border border-border-strong text-muted hover:text-white hover:border-soft px-3 py-1.5 rounded-lg font-condensed font-bold text-[11px] tracking-widest cursor-pointer transition-colors"
               >
-                <Gem size={12} /> ACTUALIZAR A PREMIUM
+                <Gem size={12} /> VER PLAN CLUB
               </button>
             </div>
           )}

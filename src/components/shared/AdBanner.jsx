@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useAdFree } from '../../hooks/useAdFree'
 
 const CONTACT_HREF = 'mailto:publicidad@padeleando.ar?subject=Publicidad%20en%20Padeleando&body=Hola%20Padeleando!'
 
@@ -24,7 +25,12 @@ const ROTATION_MS = 7_000
 
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
 
-export default function AdBanner({ className = '' }) {
+export default function AdBanner(props) {
+  const adFree = useAdFree()
+  return adFree ? null : <AdSlot {...props} />
+}
+
+function AdSlot({ className = '' }) {
   const ref = useRef(null)
   const [start] = useState(() => Math.floor(Math.random() * ADS.length))
   const [step, setStep] = useState(0)

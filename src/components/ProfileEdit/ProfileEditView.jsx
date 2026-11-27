@@ -15,6 +15,7 @@ import { buildWhatsapp, localWhatsapp, dialCode } from '../../utils/phone'
 import AddressFields from './AddressFields'
 import ClaimPremiumRequest from '../shared/ClaimPremiumRequest'
 import { renderGoogleButton } from '../../utils/googleIdentity'
+import { userHasRole } from '../../utils/plan'
 
 const AvatarCropper = lazy(() => import('../shared/AvatarCropper'))
 const PremiumModal = lazy(() => import('../shared/PremiumModal'))
@@ -366,7 +367,7 @@ export default function ProfileEditView() {
   }
   if (!form) return <Loader minHeight="100vh" />
 
-  const isPremium = user?.subscription?.plan === 'premium'
+  const isPremium = userHasRole(user, 'jugador')
   const genderLocked = Boolean(initial.gender)
   const profileHref = `/u/${initial.username}`
   const contacts = form.emergency_contacts
@@ -581,7 +582,7 @@ export default function ProfileEditView() {
 
             <Section id="privacidad" title="Privacidad" sectionRef={refFor('privacidad')}>
               <Row label="Estadísticas avanzadas públicas" last
-                hint={isPremium ? 'Apagado: solo vos las ves.' : 'Publicarlas es una función Premium.'}>
+                hint={isPremium ? 'Apagado: solo vos las ves.' : 'Publicarlas requiere el plan Jugador+.'}>
                 {isPremium
                   ? <Switch label="Estadísticas avanzadas públicas" checked={form.advanced_stats_public} onChange={set('advanced_stats_public')} />
                   : <Btn size="sm" onClick={() => setShowPremium(true)}>Ver planes</Btn>}
@@ -589,7 +590,7 @@ export default function ProfileEditView() {
                   <div className="mt-3">
                     <button type="button" aria-expanded={showClaim} onClick={() => setShowClaim((v) => !v)}
                       className="bg-transparent border-0 p-0 text-xs text-secondary hover:text-white underline underline-offset-2 cursor-pointer">
-                      ¿Pagaste y no se activó tu Premium?
+                      ¿Pagaste y no se activó tu plan?
                     </button>
                     {showClaim && (
                       <div className="mt-3 flex flex-col gap-3 text-[13px] leading-relaxed text-secondary">
@@ -671,7 +672,7 @@ export default function ProfileEditView() {
       )}
       <Suspense fallback={null}>
         {cropFile && <AvatarCropper file={cropFile} onCancel={() => { if (!avatarBusy) setCropFile(null) }} onSave={onCropSave} />}
-        {showPremium && <PremiumModal onClose={() => setShowPremium(false)} />}
+        {showPremium && <PremiumModal focus="jugador" onClose={() => setShowPremium(false)} />}
       </Suspense>
     </div>
   )

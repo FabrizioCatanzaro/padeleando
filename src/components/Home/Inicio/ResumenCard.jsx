@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import PlayerAvatar from '../../shared/PlayerAvatar'
+import { userHasRole } from '../../../utils/plan'
 
 function Stat({ value, label, brand }) {
   return (
@@ -14,7 +15,7 @@ export default function ResumenCard({ user, stats }) {
   return (
     <div className="p-4.5 rounded-2xl bg-surface border border-border-mid">
       <div className="flex items-center gap-3">
-        <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={44} premium={user?.subscription?.plan === 'premium'} />
+        <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={44} premium={userHasRole(user, 'jugador')} />
         <div className="min-w-0">
           <div className="font-sans font-bold text-[14px] text-white truncate">{user?.name}</div>
           <div className="font-sans text-[12px] text-secondary truncate">@{user?.username}{user?.category && ` · ${user.category}`}</div>

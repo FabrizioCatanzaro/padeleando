@@ -21,8 +21,8 @@ const faqs = [
     a: 'Desde la vista del torneo podés compartir un link de invitación. Los jugadores que tengan cuenta en Padeleando pueden vincularse a su slot dentro del torneo; a partir de ahí sus resultados quedan asociados a su perfil.',
   },
   {
-    q: '¿Qué es una cuenta Premium?',
-    a: 'La cuenta Premium desbloquea funciones adicionales como agregar álbum de fotos en torneos, avatar personalizado, acceso a estadísticas avanzadas de partidos, estadísticas avanzadas personales y creación ilimitada de torneos.',
+    q: '¿Qué planes pagos hay?',
+    a: 'Hay un plan para cada rol. Jugador+ suma estadísticas avanzadas en tu perfil, insignia y navegación sin publicidad. Organizador suma categorías y torneos ilimitados, estadísticas avanzadas de tus categorías y álbum de fotos. El Combo junta los dos por menos. Jugar, inscribirte y ver resultados es gratis en todos los planes.',
   },
   {
     q: '¿Cómo se calculan las estadísticas?',

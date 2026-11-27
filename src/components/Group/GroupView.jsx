@@ -1036,7 +1036,7 @@ export default function GroupView() {
       )}
 
       {showPremiumModal && (
-        <PremiumModal reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
+        <PremiumModal focus="organizador" reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
       )}
 
       {deleteModal && (

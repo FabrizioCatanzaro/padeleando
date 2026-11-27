@@ -4,6 +4,7 @@ import { Zap, Check, Loader2, AlertCircle, RefreshCw } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import ClaimPremiumRequest from '../shared/ClaimPremiumRequest'
+import { isPaidPlan } from '../../utils/plan'
 
 const PREMIUM_FEATURES = [
   'Categorías ilimitadas',
@@ -37,7 +38,7 @@ export default function SubscriptionSuccess() {
         // Activar consultando MP con el preapproval_id del redirect.
         await api.subscriptions.sync(preapprovalId)
         const sub = await api.subscriptions.me()
-        if (sub?.status === 'active' && sub?.plan === 'premium') {
+        if (sub?.status === 'active' && isPaidPlan(sub?.plan)) {
           await refreshUser()
           setStatus('active')
           return

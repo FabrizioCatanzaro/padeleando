@@ -275,7 +275,7 @@ export const api = {
   },
   subscriptions: {
     me:       ()                => req('GET',  '/subscriptions/me'),
-    checkout: (billing_period)  => req('POST', '/subscriptions/checkout', { billing_period }),
+    checkout: (plan, billing_period) => req('POST', '/subscriptions/checkout', { plan, billing_period }),
     sync:     (preapprovalId)   => req('GET',  `/subscriptions/sync${preapprovalId ? `?preapproval_id=${encodeURIComponent(preapprovalId)}` : ''}`),
     claimStart:  (mp_email)     => req('POST', '/subscriptions/claim/start', { mp_email }),
     claimVerify: (code)         => req('POST', '/subscriptions/claim/verify', { code }),
@@ -288,7 +288,7 @@ export const api = {
       req('GET', `/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`),
     tournaments:   ({ q = '', status = 'all', page = 1, limit = 25 } = {}) =>
       req('GET', `/admin/tournaments?q=${encodeURIComponent(q)}&status=${status}&page=${page}&limit=${limit}`),
-    grantPremium:  (userId, duration_days, preapproval_id)  => req('POST', `/admin/users/${userId}/grant-premium`, { duration_days, preapproval_id }),
+    grantPremium:  (userId, duration_days, preapproval_id, plan) => req('POST', `/admin/users/${userId}/grant-premium`, { duration_days, preapproval_id, plan }),
     revokePremium: (userId)                 => req('POST', `/admin/users/${userId}/revoke-premium`),
     deleteUser:    (userId)                 => req('DELETE', `/admin/users/${userId}`),
     setGender:     (userId, gender)         => req('PATCH', `/admin/users/${userId}/gender`, { gender }),

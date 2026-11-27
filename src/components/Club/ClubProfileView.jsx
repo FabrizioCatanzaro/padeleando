@@ -440,7 +440,7 @@ export default function ClubProfileView() {
       )}
 
       {showMpPremium && (
-        <PremiumModal reason="Vincular Mercado Pago" onClose={() => setShowMpPremium(false)} />
+        <PremiumModal focus="club" reason="Vincular Mercado Pago" onClose={() => setShowMpPremium(false)} />
       )}
     </div>
   )

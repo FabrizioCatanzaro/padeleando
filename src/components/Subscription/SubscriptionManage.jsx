@@ -11,8 +11,8 @@ import ClaimPremiumRequest from '../shared/ClaimPremiumRequest'
 import SectionRule from '../shared/SectionRule'
 import StatSlab from '../shared/StatSlab'
 import {
-  FREE_MAX_GROUPS, FREE_TOURNAMENTS_PER_MONTH, PRICE_BY_BILLING,
-  PRO_FEATURES, PLAN_COMPARISON,
+  FREE_MAX_GROUPS, FREE_TOURNAMENTS_PER_MONTH, PLAN_INFO, PLAN_COMPARISON, COMPARISON_PLANS,
+  planName, planPrice, isPaidPlan, hasRole,
 } from '../../utils/plan'
 
 const BILLING_LABEL = {
@@ -124,29 +124,27 @@ function Faq({ q, children }) {
 function ComparisonTable() {
   return (
     <div className="border border-border-strong rounded-xl overflow-hidden">
-      <div className="grid grid-cols-[1.3fr_1fr_1fr] bg-surface-alt px-4 py-2.5 border-b border-border-strong">
+      <div className="grid grid-cols-[1.4fr_repeat(4,1fr)] bg-surface-alt px-4 py-2.5 border-b border-border-strong">
         <span className="text-xs text-secondary font-semibold">Característica</span>
-        <span className="text-xs text-secondary font-semibold text-center">Básico</span>
-        <span className="text-xs text-brand font-semibold text-center">Premium</span>
+        {COMPARISON_PLANS.map((p) => (
+          <span key={p} className={`text-[11px] font-semibold text-center ${p === 'free' ? 'text-secondary' : 'text-brand'}`}>{PLAN_INFO[p].name}</span>
+        ))}
       </div>
       {PLAN_COMPARISON.map((row, i) => (
         <div
           key={row.feature}
-          className={`grid grid-cols-[1.3fr_1fr_1fr] px-4 py-3 items-center ${
+          className={`grid grid-cols-[1.4fr_repeat(4,1fr)] px-4 py-3 items-center ${
             i < PLAN_COMPARISON.length - 1 ? 'border-b border-border-strong/40' : ''
           }`}
         >
           <span className="text-xs text-secondary">{row.feature}</span>
-          <div className="flex justify-center">
-            {row.free === false
-              ? <X size={14} className="text-muted" />
-              : <span className="text-xs text-soft text-center">{row.free}</span>}
-          </div>
-          <div className="flex justify-center">
-            {row.pro === true
-              ? <Check size={14} className="text-brand" />
-              : <span className="text-xs text-brand font-semibold text-center">{row.pro}</span>}
-          </div>
+          {COMPARISON_PLANS.map((p) => (
+            <div key={p} className="flex justify-center">
+              {row[p] === true ? <Check size={14} className="text-brand" />
+                : row[p] === false ? <X size={14} className="text-muted" />
+                  : <span className="text-[11px] text-soft text-center">{row[p]}</span>}
+            </div>
+          ))}
         </div>
       ))}
     </div>
@@ -162,6 +160,7 @@ const DOWNGRADE_ROWS = [
   { label: 'Torneos nuevos',          value: `${FREE_TOURNAMENTS_PER_MONTH} por mes en cada una` },
   { label: 'Subir fotos al álbum',    value: 'Se cierra' },
   { label: 'Estadísticas avanzadas',  value: 'Se ocultan' },
+  { label: 'Publicidad',              value: 'Vuelve a aparecer' },
 ]
 
 export default function SubscriptionManage() {
@@ -223,10 +222,11 @@ export default function SubscriptionManage() {
     )
   }
 
-  const isPremium   = sub?.plan === 'premium' && sub?.status === 'active'
+  const isPremium   = isPaidPlan(sub?.plan) && sub?.status === 'active'
+  const isOrganizer = isPremium && hasRole(sub?.plan, 'organizador')
   const isCancelled = isPremium && sub?.cancel_at_period_end
-  // El plan Básico también viaja como status 'active': la chapa de estado es
-  // sólo para una suscripción de verdad.
+  const planInfo    = PLAN_INFO[sub?.plan] ?? PLAN_INFO.free
+  // El plan Gratis también viaja como status 'active': la chapa es sólo para una suscripción.
   const statusInfo  = !isPremium ? null
     : isCancelled ? STATUS_LABEL.cancelled
       : STATUS_LABEL[sub?.status] ?? null
@@ -237,7 +237,8 @@ export default function SubscriptionManage() {
   const monthPeak  = usage.tournaments_peak ?? 0
   const groupsLeft = Math.max(0, FREE_MAX_GROUPS - groups)
 
-  const price     = PRICE_BY_BILLING[sub?.billing_period] ?? null
+  const price     = sub?.billing_period === 'trial' ? null : (sub?.amount ?? planPrice(sub?.plan, sub?.billing_period))
+  const perLabel  = sub?.billing_period === 'annual' ? '/año' : '/mes'
   const priceText = price ? price.toLocaleString('es-AR') : null
   const left      = daysUntil(sub?.plan_ends_at)
   const senior    = seniority(sub?.starts_at)
@@ -310,7 +311,7 @@ export default function SubscriptionManage() {
                     ? <Zap size={18} className={`text-premium fill-premium ${isCancelled ? 'opacity-50' : ''}`} />
                     : <div className="w-[18px] h-[18px] rounded-full border border-border-strong" />}
                   <span className="font-condensed font-bold text-lg text-white">
-                    {isPremium ? 'Cuenta Premium' : 'Plan Básico'}
+                    {`Plan ${planName(isPremium ? sub?.plan : 'free')}`}
                   </span>
                 </div>
                 {statusInfo && (
@@ -331,7 +332,7 @@ export default function SubscriptionManage() {
                     <span className="text-secondary text-xs">AR$</span>
                     <span className="font-condensed font-black text-[30px] text-white leading-none">{priceText}</span>
                     <span className="text-secondary text-sm">
-                      /mes · facturación {(BILLING_LABEL[sub?.billing_period] ?? '').toLowerCase()}
+                      {perLabel} · facturación {(BILLING_LABEL[sub?.billing_period] ?? '').toLowerCase()}
                     </span>
                   </>
                 ) : (
@@ -365,7 +366,7 @@ export default function SubscriptionManage() {
                     />
                   </div>
                   <p className="text-sm text-secondary leading-relaxed mt-2.5">
-                    No se te vuelve a cobrar. Tenés acceso premium por <span className="text-soft">{left} día{left === 1 ? '' : 's'}</span> más,
+                    No se te vuelve a cobrar. Tenés el plan por <span className="text-soft">{left} día{left === 1 ? '' : 's'}</span> más,
                     hasta el <span className="text-soft">{fmtLong(sub.plan_ends_at)}</span>.
                   </p>
                 </div>
@@ -373,8 +374,8 @@ export default function SubscriptionManage() {
 
               {!isPremium && (
                 <p className="text-sm text-secondary leading-relaxed">
-                  Con el plan Básico tenés hasta {FREE_MAX_GROUPS} categorías y {FREE_TOURNAMENTS_PER_MONTH} torneos
-                  por mes en cada una. Todo lo demás —partidos, resultados, tabla, perfil— es igual que en Premium.
+                  Con el plan Gratis tenés hasta {FREE_MAX_GROUPS} categorías y {FREE_TOURNAMENTS_PER_MONTH} torneos
+                  por mes en cada una. Jugar, inscribirte, ver resultados y tu perfil es igual en todos los planes.
                 </p>
               )}
             </div>
@@ -387,7 +388,7 @@ export default function SubscriptionManage() {
               className="w-full flex items-center justify-center gap-2 bg-brand text-black font-condensed font-bold tracking-wide py-3.5 rounded-xl hover:brightness-110 active:brightness-90 transition cursor-pointer"
             >
               <Zap size={16} />
-              Reactivar Premium
+              Reactivar mi plan
             </button>
           )}
 
@@ -397,24 +398,24 @@ export default function SubscriptionManage() {
             <div className="grid grid-cols-2 gap-3">
               <StatSlab
                 label="Categorías"
-                value={isPremium ? String(groups) : `${groups} / ${FREE_MAX_GROUPS}`}
-                sub={isPremium
-                  ? `En Básico serían ${FREE_MAX_GROUPS}`
+                value={isOrganizer ? String(groups) : `${groups} / ${FREE_MAX_GROUPS}`}
+                sub={isOrganizer
+                  ? `En Gratis serían ${FREE_MAX_GROUPS}`
                   : groupsLeft === 0 ? 'Llegaste al límite' : `Podés crear ${groupsLeft} más`}
-                tone={isPremium ? 'gold' : groupsLeft === 0 ? 'danger' : 'brand'}
+                tone={isOrganizer ? 'gold' : groupsLeft === 0 ? 'danger' : 'brand'}
                 icon={Layers}
-                meter={isPremium ? null : (groups / FREE_MAX_GROUPS) * 100}
+                meter={isOrganizer ? null : (groups / FREE_MAX_GROUPS) * 100}
               />
               <StatSlab
                 label={`Torneos · ${thisMonth()}`}
-                value={isPremium ? String(monthTotal) : `${monthPeak} / ${FREE_TOURNAMENTS_PER_MONTH}`}
-                sub={isPremium ? `En Básico, ${FREE_TOURNAMENTS_PER_MONTH} por mes` : 'Máx. por categoría'}
-                tone={isPremium ? 'gold' : monthPeak >= FREE_TOURNAMENTS_PER_MONTH ? 'danger' : 'brand'}
+                value={isOrganizer ? String(monthTotal) : `${monthPeak} / ${FREE_TOURNAMENTS_PER_MONTH}`}
+                sub={isOrganizer ? `En Gratis, ${FREE_TOURNAMENTS_PER_MONTH} por mes` : 'Máx. por categoría'}
+                tone={isOrganizer ? 'gold' : monthPeak >= FREE_TOURNAMENTS_PER_MONTH ? 'danger' : 'brand'}
                 icon={Trophy}
-                meter={isPremium ? null : (monthPeak / FREE_TOURNAMENTS_PER_MONTH) * 100}
+                meter={isOrganizer ? null : (monthPeak / FREE_TOURNAMENTS_PER_MONTH) * 100}
               />
             </div>
-            {!isPremium && (
+            {!isOrganizer && (
               <p className="text-[11.5px] text-dim leading-relaxed mt-3">
                 El cupo de torneos se cuenta por categoría y por mes calendario: se reinicia el {firstOfNextMonth()}.
                 Lo que ya creaste no se toca nunca.
@@ -429,7 +430,7 @@ export default function SubscriptionManage() {
                 Incluido en tu plan
               </p>
               <ul className="grid grid-cols-1 lg:grid-cols-2 gap-y-2.5 gap-x-6">
-                {PRO_FEATURES.map((f) => (
+                {planInfo.features.map((f) => (
                   <li key={f} className="flex items-center gap-3 text-sm text-soft">
                     <div className="w-5 h-5 rounded-full bg-brand/15 border border-brand/40 flex items-center justify-center flex-shrink-0">
                       <Check size={11} className="text-brand" />
@@ -464,20 +465,20 @@ export default function SubscriptionManage() {
             </div>
           )}
 
-          {/* Pasate a Premium */}
+          {/* Planes */}
           {!isPremium && (
             <div className="border border-brand/45 bg-brand/5 rounded-2xl p-5">
               <div className="flex items-center gap-2">
                 <Zap size={17} className="text-brand fill-brand" />
-                <span className="font-condensed font-bold text-lg text-white">Cuenta Premium</span>
+                <span className="font-condensed font-bold text-lg text-white">Un plan para cada rol</span>
               </div>
-              <p className="text-secondary text-xs mt-1 mb-4">Sin cupos, con el historial completo a mano.</p>
+              <p className="text-secondary text-xs mt-1 mb-4">Pagás sólo lo que usás.</p>
 
               <ul className="flex flex-col gap-2 mb-5">
-                {PRO_FEATURES.map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-soft">
+                {['jugador_plus', 'organizador', 'combo'].map((p) => (
+                  <li key={p} className="flex items-center gap-2 text-sm text-soft">
                     <Check size={14} className="text-brand shrink-0" />
-                    {f}
+                    <span><span className="text-white font-semibold">{PLAN_INFO[p].name}</span> · {PLAN_INFO[p].tagline} · AR$ {planPrice(p).toLocaleString('es-AR')}/mes</span>
                   </li>
                 ))}
               </ul>
@@ -488,13 +489,8 @@ export default function SubscriptionManage() {
                 className="w-full flex items-center justify-center gap-2 bg-brand text-black font-condensed font-bold tracking-wide py-3.5 rounded-xl hover:brightness-110 active:brightness-90 transition cursor-pointer"
               >
                 <Zap size={16} />
-                Activar Premium
+                Ver planes
               </button>
-              <p className="text-center text-[11px] text-muted mt-2.5">
-                ¿Primera vez? Escribinos a{' '}
-                <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">soporte@padeleando.ar</a>
-                {' '}y te regalamos 7 días.
-              </p>
             </div>
           )}
         </div>
@@ -523,7 +519,7 @@ export default function SubscriptionManage() {
           {/* Comparación de planes */}
           {!isPremium && (
             <div>
-              <SectionRule>BÁSICO CONTRA PREMIUM</SectionRule>
+              <SectionRule>COMPARACIÓN DE PLANES</SectionRule>
               <ComparisonTable />
             </div>
           )}
@@ -549,9 +545,9 @@ export default function SubscriptionManage() {
                       <div>
                         <p className="text-sm text-white font-semibold mb-1">¿Cancelar tu suscripción?</p>
                         <p className="text-xs text-secondary leading-relaxed">
-                          Seguís con acceso premium hasta el{' '}
+                          Seguís con tu plan hasta el{' '}
                           <span className="text-soft">{fmtLong(sub?.plan_ends_at)}</span>.
-                          Después de esa fecha tu cuenta vuelve al plan Básico.
+                          Después de esa fecha tu cuenta vuelve al plan Gratis.
                         </p>
                       </div>
                     </div>
@@ -559,7 +555,7 @@ export default function SubscriptionManage() {
                       <p className="text-[10px] font-mono tracking-widest text-dim uppercase mb-2">Qué perdés</p>
                       <p className="text-xs text-secondary leading-relaxed">
                         Tus {groups} categoría{groups === 1 ? '' : 's'} y tus estadísticas quedan intactas: sólo se cierra
-                        la creación por encima del cupo Básico y el álbum de fotos deja de aceptar cargas.
+                        la creación por encima del cupo Gratis y el álbum de fotos deja de aceptar cargas.
                       </p>
                     </div>
                     {cancelError && <p className="text-xs text-danger">{cancelError}</p>}
@@ -596,10 +592,20 @@ export default function SubscriptionManage() {
                 <p className="text-sm text-white font-semibold mb-1">Suscripción cancelada</p>
                 <p className="text-xs text-secondary leading-relaxed">
                   {cancelledEndsAt
-                    ? <>Tu acceso premium continúa hasta el {fmtLong(cancelledEndsAt)}.</>
-                    : 'Tu acceso premium continuará hasta el final del período actual.'}
+                    ? <>Tu plan sigue activo hasta el {fmtLong(cancelledEndsAt)}.</>
+                    : 'Tu plan sigue activo hasta el final del período actual.'}
                 </p>
               </div>
+            )}
+
+            {isPremium && !isCancelled && (
+              <button
+                type="button"
+                onClick={() => setShowPremiumModal(true)}
+                className="w-full py-3 rounded-xl border border-brand/40 text-brand hover:bg-brand/5 transition text-sm font-semibold cursor-pointer"
+              >
+                Cambiar de plan
+              </button>
             )}
 
             {isPremium && (
@@ -615,7 +621,7 @@ export default function SubscriptionManage() {
             <p className="text-[10px] font-mono tracking-widest text-dim uppercase mb-1">Preguntas frecuentes</p>
             <Faq q="¿Qué pasa con mis datos si cancelo?">
               Se mantienen enteros. Tus categorías, torneos, partidos y estadísticas siguen ahí y siguen funcionando;
-              sólo perdés las funciones premium hasta que te vuelvas a suscribir.
+              sólo perdés las funciones del plan hasta que te vuelvas a suscribir.
             </Faq>
             {isPremium ? (
               <Faq q="¿Puedo pasar de mensual a anual?">
@@ -623,9 +629,9 @@ export default function SubscriptionManage() {
                 y lo cambiamos sin que pierdas los días que ya pagaste.
               </Faq>
             ) : (
-              <Faq q="¿Cómo funciona la prueba de 7 días?">
-                La primera vez que quieras ser parte de Premium te regalamos 7 días de prueba. Pedilos por mail a{' '}
-                <a href="mailto:soporte@padeleando.ar" className="text-brand hover:underline">soporte@padeleando.ar</a>.
+              <Faq q="¿Por qué hay un plan para cada rol?">
+                Si jugás, Jugador+ te da tus estadísticas a fondo. Si organizás, Organizador te saca los límites.
+                Si hacés las dos cosas, el Combo sale más barato que los dos por separado.
               </Faq>
             )}
           </div>

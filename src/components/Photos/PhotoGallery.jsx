@@ -530,7 +530,7 @@ export default function PhotoGallery({ tournamentId, isOwner = false, isPremium 
         />
       )}
 
-      {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} />}
+      {showPremiumModal && <PremiumModal focus="organizador" onClose={() => setShowPremiumModal(false)} />}
     </div>
   );
 }

@@ -16,6 +16,7 @@ import { playTone, TONES } from '../../utils/sound'
 import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
 import { useSummary } from '../../hooks/useSummary'
+import { userHasRole } from '../../utils/plan'
 
 // Preferencia de sonido de la campana, apagada por defecto.
 const SOUND_KEY = 'notif_sound'
@@ -302,7 +303,7 @@ export default function Header() {
             className="flex items-center gap-3 px-4 py-3 border-b border-border-mid cursor-pointer hover:bg-border-mid transition-colors"
             onClick={() => go(`/u/${user?.username}`)}
           >
-            <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={user?.subscription?.plan === 'premium'} />
+            <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={userHasRole(user, 'jugador')} />
             <div className="min-w-0">
               <div className="text-sm text-white font-sans font-semibold truncate">{user?.name}</div>
               <div className="text-[11px] font-mono text-dim truncate">
@@ -494,7 +495,7 @@ export default function Header() {
             className={`relative flex items-center bg-transparent rounded-full cursor-pointer transition-opacity hover:opacity-80 ${isLoggedIn ? 'p-0 border-0' : 'p-2 border border-border-strong text-muted hover:text-soft rounded-lg'}`}
           >
             {isLoggedIn
-              ? <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={46} premium={user?.subscription?.plan === 'premium'} />
+              ? <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={46} premium={userHasRole(user, 'jugador')} />
               : <User size={18} />}
           </button>
 

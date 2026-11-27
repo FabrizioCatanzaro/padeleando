@@ -7,6 +7,7 @@ import Loader from '../Loader/Loader'
 import PlayerAvatar from '../shared/PlayerAvatar'
 import Modal from '../shared/Modal'
 import DropdownSelect from '../shared/DropdownSelect'
+import { isPaidPlan, planName, PLAN_ORDER } from '../../utils/plan'
 
 const PAGE_SIZE = 25
 const DURATION_OPTIONS = [
@@ -30,9 +31,9 @@ function fmtDate(s) {
 }
 
 function PlanBadge({ plan, billingPeriod, endsAt }) {
-  if (plan === 'premium') {
+  if (isPaidPlan(plan)) {
     const isComp = billingPeriod === 'trial'
-    const label  = isComp ? 'TEST' : 'PREMIUM'
+    const label  = `${planName(plan).toUpperCase()}${isComp ? ' · TEST' : ''}`
     return (
       <span className="inline-flex items-center gap-1 text-[10px] font-mono bg-brand/15 text-brand border border-brand/40 px-1.5 py-0.5 rounded">
         <Crown size={10} /> {label}
@@ -55,6 +56,7 @@ export default function AdminUsers() {
   const [grantUser,    setGrantUser]    = useState(null)
   const [grantDays,    setGrantDays]    = useState(30)
   const [grantPreapproval, setGrantPreapproval] = useState('')
+  const [grantPlan,    setGrantPlan]    = useState('combo')
   const [revokeUser,   setRevokeUser]   = useState(null)
   const [deleteUser,   setDeleteUser]   = useState(null)
   const [deleteConfirm, setDeleteConfirm] = useState('')
@@ -93,6 +95,7 @@ export default function AdminUsers() {
     setModalError(null)
     setGrantDays(30)
     setGrantPreapproval('')
+    setGrantPlan('combo')
     setGrantUser(user)
   }
 
@@ -106,7 +109,7 @@ export default function AdminUsers() {
     setBusyId(grantUser.id)
     setModalError(null)
     try {
-      await api.admin.grantPremium(grantUser.id, grantDays, grantPreapproval.trim() || undefined)
+      await api.admin.grantPremium(grantUser.id, grantDays, grantPreapproval.trim() || undefined, grantPlan)
       setGrantUser(null)
       await fetchUsers({ q, page, limit: PAGE_SIZE })
     } catch (e) { setModalError(e.message) }
@@ -220,7 +223,7 @@ export default function AdminUsers() {
                   <tr><td colSpan={7} className="py-8 text-center text-muted text-xs font-mono">Sin resultados</td></tr>
                 )}
                 {users.map(u => {
-                  const isPremium = u.plan === 'premium'
+                  const isPremium = isPaidPlan(u.plan)
                   return (
                     <tr key={u.id} className="border-t border-border hover:bg-border-mid/20">
                       <td className="py-2 px-3">
@@ -327,16 +330,25 @@ export default function AdminUsers() {
 
       {grantUser && (
         <Modal
-          title={`Otorgar premium`}
+          title="Otorgar plan"
           confirmText={busyId === grantUser.id ? 'Otorgando...' : 'Otorgar'}
           confirmDisabled={busyId === grantUser.id}
           onConfirm={confirmGrantPremium}
           onCancel={() => setGrantUser(null)}
         >
           <p className="mb-4">
-            Otorgar <span className="text-brand font-semibold">premium</span> a{' '}
+            Otorgar un plan a{' '}
             <span className="text-white font-semibold">{grantUser.name}</span>.
           </p>
+
+          <label className="block text-[11px] tracking-widest text-muted font-mono mb-1.5">PLAN</label>
+          <select
+            value={grantPlan}
+            onChange={e => setGrantPlan(e.target.value)}
+            className="w-full mb-4 bg-base border border-border-strong rounded text-white text-sm font-mono px-3 py-2 outline-none focus:border-brand"
+          >
+            {PLAN_ORDER.map(p => <option key={p} value={p}>{planName(p)}</option>)}
+          </select>
 
           <label className="block text-[11px] tracking-widest text-muted font-mono mb-1.5">
             ID DE SUSCRIPCIÓN DE MP <span className="text-dim">(opcional)</span>
@@ -372,7 +384,7 @@ export default function AdminUsers() {
 
       {revokeUser && (
         <Modal
-          title="Revocar premium"
+          title="Revocar plan"
           confirmText={busyId === revokeUser.id ? 'Revocando...' : 'Revocar'}
           confirmDisabled={busyId === revokeUser.id}
           confirmDanger
@@ -380,7 +392,7 @@ export default function AdminUsers() {
           onCancel={() => setRevokeUser(null)}
         >
           <p>
-            Se cancelará el plan premium de{' '}
+            Se cancelará el plan pago de{' '}
             <span className="text-white font-semibold">{revokeUser.name}</span> y volverá a free de inmediato.
           </p>
           {modalError && <p className="text-danger text-xs font-mono mt-3">{modalError}</p>}
