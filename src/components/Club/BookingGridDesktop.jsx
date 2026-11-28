@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { isSlotTaken, pendingGroupIdsFor } from './bookingAvailability'
+import { shortDayLabel } from './scheduleGrid'
 import SlotSelectionPanel from './SlotSelectionPanel'
 
 const CELL_MIN_WIDTH = 26 // px por columna de MEDIO turno (30 min) -- dos por hora
@@ -10,16 +11,16 @@ const POPOVER_HEIGHT_ESTIMATE = 150
 
 // Escritorio: canchas en filas, una columna por medio turno y encabezado agrupado por hora
 export default function BookingGridDesktop({
-  club, courts, slots, selectedDate, bookings,
+  club, courts, slots, bookings,
   selection, onSelect, onChangeCount, onCancelSelection, onConfirm,
   canManage, maxSlotsPerBooking,
 }) {
   const hasHighDemand = useMemo(
     () => slots.some((s) => courts.some((c) => (
-      !isSlotTaken(bookings, selectedDate, c.id, s) &&
-      pendingGroupIdsFor(bookings, selectedDate, c.id, [s]).size > 0
+      !isSlotTaken(bookings, c.id, s) &&
+      pendingGroupIdsFor(bookings, c.id, [s]).size > 0
     ))),
-    [slots, courts, selectedDate, bookings],
+    [slots, courts, bookings],
   )
 
   const headerGroups = useMemo(() => buildHeaderGroups(slots), [slots])
@@ -41,9 +42,12 @@ export default function BookingGridDesktop({
             <div
               key={`h-${g.startIndex}`}
               style={{ gridColumn: `span ${g.count}` }}
-              className="border-b border-border-mid px-1 py-2 text-center text-[10px] font-mono text-dim whitespace-nowrap"
+              className={`border-b border-border-mid px-1 py-2 text-center text-[10px] font-mono whitespace-nowrap ${
+                g.midnight ? 'border-l-2 border-l-brand text-brand' : 'text-dim'
+              }`}
             >
               {g.hour}
+              {g.midnight && <span className="block text-[9px] mt-0.5">{shortDayLabel(g.date)}</span>}
             </div>
           ))}
 
@@ -52,7 +56,6 @@ export default function BookingGridDesktop({
               key={court.id ?? 'default'}
               court={court}
               slots={slots}
-              selectedDate={selectedDate}
               bookings={bookings}
               selection={selection}
               onSelect={onSelect}
@@ -84,7 +87,6 @@ export default function BookingGridDesktop({
               court={selectedCourt}
               club={club}
               slots={slots}
-              selectedDate={selectedDate}
               bookings={bookings}
               selection={selection}
               onChangeCount={onChangeCount}
@@ -100,15 +102,17 @@ export default function BookingGridDesktop({
   )
 }
 
-// Agrupa los slots de 30 min por prefijo de hora real (un club puede abrir a las 09:30)
+// Agrupa los slots de 30 min por hora real (un club puede abrir a las 09:30); marca la medianoche
 function buildHeaderGroups(slots) {
   const groups = []
   let i = 0
   while (i < slots.length) {
-    const hour = slots[i].slice(0, 2)
+    const hour = slots[i].time.slice(0, 2)
+    const date = slots[i].date
     let j = i
-    while (j + 1 < slots.length && slots[j + 1].slice(0, 2) === hour) j++
-    groups.push({ hour, startIndex: i, count: j - i + 1 })
+    while (j + 1 < slots.length && slots[j + 1].time.slice(0, 2) === hour && slots[j + 1].date === date) j++
+    const midnight = i > 0 && slots[i].nextDay && !slots[i - 1].nextDay
+    groups.push({ hour, date, midnight, startIndex: i, count: j - i + 1 })
     i = j + 1
   }
   return groups
@@ -131,13 +135,13 @@ function computePopoverStyle(rect) {
 }
 
 // Agrupa turnos ocupados seguidos en un bloque; los libres quedan de a uno
-function buildSegments(court, slots, selectedDate, bookings) {
+function buildSegments(court, slots, bookings) {
   const segments = []
   let i = 0
   while (i < slots.length) {
-    if (isSlotTaken(bookings, selectedDate, court.id, slots[i])) {
+    if (isSlotTaken(bookings, court.id, slots[i])) {
       let j = i
-      while (j + 1 < slots.length && isSlotTaken(bookings, selectedDate, court.id, slots[j + 1])) j++
+      while (j + 1 < slots.length && isSlotTaken(bookings, court.id, slots[j + 1])) j++
       segments.push({ type: 'taken', startIndex: i, count: j - i + 1 })
       i = j + 1
     } else {
@@ -148,10 +152,10 @@ function buildSegments(court, slots, selectedDate, bookings) {
   return segments
 }
 
-function CourtRow({ court, slots, selectedDate, bookings, selection, onSelect }) {
+function CourtRow({ court, slots, bookings, selection, onSelect }) {
   const segments = useMemo(
-    () => buildSegments(court, slots, selectedDate, bookings),
-    [court, slots, selectedDate, bookings],
+    () => buildSegments(court, slots, bookings),
+    [court, slots, bookings],
   )
   const isThisCourtSelected = selection?.courtId === court.id
 
@@ -165,22 +169,24 @@ function CourtRow({ court, slots, selectedDate, bookings, selection, onSelect })
 
       {segments.map((seg) => {
         if (seg.type === 'taken') {
+          const startsAtMidnight = seg.startIndex > 0 && slots[seg.startIndex].nextDay && !slots[seg.startIndex - 1].nextDay
           return (
             <div
               key={`taken-${seg.startIndex}`}
               style={{ gridColumn: `span ${seg.count}` }}
-              className="border-b border-border-mid bg-border-strong/70"
+              className={`border-b border-border-mid bg-border-strong/70 ${startsAtMidnight ? 'border-l-2 border-l-brand' : ''}`}
             />
           )
         }
-        const time = slots[seg.startIndex]
+        const slot = slots[seg.startIndex]
+        const midnight = seg.startIndex > 0 && slot.nextDay && !slots[seg.startIndex - 1].nextDay
         // Segmento libre de un turno: se resalta si su índice cae en el rango seleccionado
         const inSelection = isThisCourtSelected
           && seg.startIndex >= selection.startIndex
           && seg.startIndex < selection.startIndex + selection.count
-        const demand = pendingGroupIdsFor(bookings, selectedDate, court.id, [time]).size
+        const demand = pendingGroupIdsFor(bookings, court.id, [slot]).size
         return (
-          <div key={`free-${seg.startIndex}`} className="relative border-b border-border-mid">
+          <div key={`free-${seg.startIndex}`} className={`relative border-b border-border-mid ${midnight ? 'border-l-2 border-l-brand' : ''}`}>
             <button
               type="button"
               onClick={(e) => onSelect(court.id, seg.startIndex, e.currentTarget.getBoundingClientRect())}
@@ -191,7 +197,7 @@ function CourtRow({ court, slots, selectedDate, bookings, selection, onSelect })
                     ? 'bg-transparent hover:bg-premium/10'
                     : 'bg-transparent hover:bg-brand/10'
               }`}
-              aria-label={`Reservar desde las ${time}`}
+              aria-label={`Reservar desde las ${slot.time}${slot.nextDay ? ` del ${shortDayLabel(slot.date)}` : ''}`}
             >
               {demand > 0 && !inSelection && (
                 <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-premium" aria-hidden="true" />

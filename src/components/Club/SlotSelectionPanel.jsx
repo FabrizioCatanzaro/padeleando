@@ -1,25 +1,25 @@
 import { Minus, Plus, X } from 'lucide-react'
-import { addMinutes } from './scheduleGrid'
+import { slotRange, shortDayLabel } from './scheduleGrid'
 import { maxConsecutiveFree } from './bookingAvailability'
 import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 
 // Panel de cantidad de turnos seguidos, compartido por la grilla y el flujo mobile
 export default function SlotSelectionPanel({
-  court, club, slots, selectedDate, bookings, selection,
+  court, club, slots, bookings, selection,
   onChangeCount, onCancel, onConfirm, canManage, maxSlotsPerBooking,
 }) {
   const selectedSlots = slots.slice(selection.startIndex, selection.startIndex + selection.count)
-  const rangeEnd = addMinutes(selectedSlots[selectedSlots.length - 1], club.slot_minutes)
+  const range = slotRange(selectedSlots, club.slot_minutes)
   const totalPrice = computeTotalPrice(court, selection.count)
-  const maxFree = maxConsecutiveFree(bookings, selectedDate, court.id, slots, selection.startIndex, maxSlotsPerBooking)
+  const maxFree = maxConsecutiveFree(bookings, court.id, slots, selection.startIndex, maxSlotsPerBooking)
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[13px] text-white font-sans">
-            {selectedSlots[0]} – {rangeEnd} hs
+            {range.start} – {range.end} hs{range.crossesTo ? ` (${shortDayLabel(range.crossesTo)})` : ''}
           </div>
           <div className="text-[11px] font-mono text-muted mt-0.5">
             {selection.count} {selection.count === 1 ? 'turno' : 'turnos'} · {selection.count * club.slot_minutes} min

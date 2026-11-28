@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { isSlotTaken, pendingGroupIdsFor } from './bookingAvailability'
+import { shortDayLabel } from './scheduleGrid'
 import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 import SlotSelectionPanel from './SlotSelectionPanel'
@@ -11,48 +12,61 @@ export default function BookingFlowMobile({
   canManage, maxSlotsPerBooking,
 }) {
   const availableHours = useMemo(
-    () => slots.filter((s) => courts.some((c) => !isSlotTaken(bookings, selectedDate, c.id, s))),
-    [slots, courts, selectedDate, bookings],
+    () => slots.filter((s) => courts.some((c) => !isSlotTaken(bookings, c.id, s))),
+    [slots, courts, bookings],
   )
+  const keyOf = (s) => `${s.date} ${s.time}`
 
   // Arranca en la hora de la selección en curso, si la hay
-  const [selectedHour, setSelectedHour] = useState(() => (
-    (selection ? slots[selection.startIndex] : null) ?? availableHours[0] ?? null
-  ))
+  const [selectedKey, setSelectedKey] = useState(() => {
+    const s = (selection ? slots[selection.startIndex] : null) ?? availableHours[0]
+    return s ? keyOf(s) : null
+  })
+  const availableKeys = availableHours.map(keyOf).join(',')
 
   // Si cambia el día o la hora ya no está libre, elige la primera disponible
   useEffect(() => {
-    if (!availableHours.includes(selectedHour)) setSelectedHour(availableHours[0] ?? null)
+    if (!availableHours.some((s) => keyOf(s) === selectedKey)) setSelectedKey(availableHours[0] ? keyOf(availableHours[0]) : null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedDate, availableHours.join(',')])
+  }, [selectedDate, availableKeys])
 
   const hasHighDemand = availableHours.some((h) => courts.some((c) => (
-    !isSlotTaken(bookings, selectedDate, c.id, h) &&
-    pendingGroupIdsFor(bookings, selectedDate, c.id, [h]).size > 0
+    !isSlotTaken(bookings, c.id, h) &&
+    pendingGroupIdsFor(bookings, c.id, [h]).size > 0
   )))
 
   if (availableHours.length === 0) {
     return <p className="text-[12.5px] text-dim">No quedan turnos libres este día.</p>
   }
 
-  const hourIndex = slots.indexOf(selectedHour)
-  const courtsAtHour = selectedHour != null
-    ? courts.filter((c) => !isSlotTaken(bookings, selectedDate, c.id, selectedHour))
+  const hourIndex = slots.findIndex((s) => keyOf(s) === selectedKey)
+  const selectedHour = hourIndex >= 0 ? slots[hourIndex] : null
+  const courtsAtHour = selectedHour
+    ? courts.filter((c) => !isSlotTaken(bookings, c.id, selectedHour))
     : []
+  const dayHours = availableHours.filter((s) => !s.nextDay)
+  const lateHours = availableHours.filter((s) => s.nextDay)
+  const hourButton = (h) => (
+    <button key={keyOf(h)} type="button" onClick={() => setSelectedKey(keyOf(h))}
+      className={`shrink-0 px-3.5 py-2 rounded-lg text-[12.5px] font-mono border cursor-pointer transition-colors ${
+        selectedKey === keyOf(h) ? 'bg-brand text-base border-brand' : 'bg-transparent text-white border-border-strong hover:border-brand hover:text-brand'
+      }`}>
+      {h.time}
+    </button>
+  )
 
   return (
     <div>
       <p className="text-[11px] font-mono text-dim mb-2">Mostrando los horarios con turnos disponibles:</p>
-      <div className="flex flex-wrap gap-1.5 mb-4">
-        {availableHours.map((h) => (
-          <button key={h} type="button" onClick={() => setSelectedHour(h)}
-            className={`shrink-0 px-3.5 py-2 rounded-lg text-[12.5px] font-mono border cursor-pointer transition-colors ${
-              selectedHour === h ? 'bg-brand text-base border-brand' : 'bg-transparent text-white border-border-strong hover:border-brand hover:text-brand'
-            }`}>
-            {h}
-          </button>
-        ))}
-      </div>
+      <div className="flex flex-wrap gap-1.5 mb-4">{dayHours.map(hourButton)}</div>
+      {lateHours.length > 0 && (
+        <>
+          <div className="flex items-center gap-2 mb-2 text-[11px] font-mono text-brand">
+            <span className="flex-1 h-px bg-brand/50" />Madrugada del {shortDayLabel(lateHours[0].date)}<span className="flex-1 h-px bg-brand/50" />
+          </div>
+          <div className="flex flex-wrap gap-1.5 mb-4">{lateHours.map(hourButton)}</div>
+        </>
+      )}
 
       <p className="font-condensed font-bold text-[13px] tracking-[3px] text-[#555] mb-1">CANCHAS DISPONIBLES</p>
       <p className="text-[11.5px] text-dim mb-3">Para continuar, elegí una duración y precio.</p>
@@ -60,7 +74,7 @@ export default function BookingFlowMobile({
       <div className="flex flex-col gap-3">
         {courtsAtHour.map((court) => {
           const isThisCourtSelected = selection?.courtId === court.id && selection.startIndex === hourIndex
-          const demand = pendingGroupIdsFor(bookings, selectedDate, court.id, [selectedHour]).size
+          const demand = pendingGroupIdsFor(bookings, court.id, [selectedHour]).size
           const startingPrice = computeTotalPrice(court, 1)
           return (
             <div key={court.id ?? 'default'} className="border border-border-mid rounded-lg px-3.5 py-3">
@@ -78,7 +92,7 @@ export default function BookingFlowMobile({
               ) : (
                 <div className="mt-2.5">
                   <SlotSelectionPanel
-                    court={court} club={club} slots={slots} selectedDate={selectedDate} bookings={bookings}
+                    court={court} club={club} slots={slots} bookings={bookings}
                     selection={selection} onChangeCount={onChangeCount} onCancel={onCancelSelection}
                     onConfirm={onConfirm} canManage={canManage} maxSlotsPerBooking={maxSlotsPerBooking}
                   />

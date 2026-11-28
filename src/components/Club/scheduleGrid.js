@@ -114,3 +114,82 @@ export function gridToLines(grid) {
   }
   return lines
 }
+
+const DAY_MIN = 1440
+const hhmmToMin = (hhmm) => { const [h, m] = hhmm.split(':').map(Number); return h * 60 + m }
+const minToHHMM = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`
+
+export function todayLocalStr(now = new Date()) {
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
+export function addDaysStr(dateStr, days) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  const date = new Date(y, m - 1, d)
+  date.setDate(date.getDate() + days)
+  return todayLocalStr(date)
+}
+
+// Índice de DAYS (lun=0) para una fecha YYYY-MM-DD
+export function dayGridIndex(dateStr) {
+  const [y, m, d] = dateStr.split('-').map(Number)
+  return (new Date(y, m - 1, d).getDay() + 6) % 7
+}
+
+// Apertura y cierre en minutos; un cierre menor o igual a la apertura es del día siguiente
+export function dayWindow(day) {
+  if (!day?.open) return null
+  const start = hhmmToMin(day.from)
+  let end = hhmmToMin(day.to)
+  if (end <= start) end += DAY_MIN
+  return { start, end }
+}
+
+// "09:00 a 02:00 (del día siguiente)" / "Abierto las 24 h"
+export function dayHoursLabel(day) {
+  const w = dayWindow(day)
+  if (!w) return 'Cerrado'
+  if (w.end - w.start === DAY_MIN) return 'Abierto las 24 h'
+  return `${day.from} a ${day.to}${w.end > DAY_MIN ? ' (del día siguiente)' : ''}`
+}
+
+// Turnos del día del club; los de la madrugada llevan la fecha real del día siguiente
+export function businessDaySlots(grid, dateStr, slotMinutes) {
+  const idx = dayGridIndex(dateStr)
+  const win = dayWindow(grid[idx])
+  if (!win) return []
+  const prev = dayWindow(grid[(idx + 6) % 7])
+  const start = prev && prev.end > DAY_MIN ? Math.max(win.start, prev.end - DAY_MIN) : win.start
+  const next = addDaysStr(dateStr, 1)
+  const slots = []
+  for (let t = start; t + slotMinutes <= win.end; t += slotMinutes) {
+    const nextDay = t >= DAY_MIN
+    slots.push({ date: nextDay ? next : dateStr, time: minToHHMM(t), nextDay })
+  }
+  return slots
+}
+
+// Hasta que cierra la madrugada, "hoy" sigue siendo el día del club anterior
+export function businessToday(grid, now = new Date()) {
+  const today = todayLocalStr(now)
+  if (!grid) return today
+  const prev = dayWindow(grid[(dayGridIndex(today) + 6) % 7])
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  return prev && prev.end > DAY_MIN && nowMin < prev.end - DAY_MIN ? addDaysStr(today, -1) : today
+}
+
+// "dom 29": la madrugada que se muestra dentro del día del club
+export function shortDayLabel(dateStr) {
+  const [, , d] = dateStr.split('-').map(Number)
+  return `${DAYS[dayGridIndex(dateStr)].abbr.toLowerCase()} ${d}`
+}
+
+// Inicio y fin de turnos seguidos; crossesTo es la fecha del día siguiente si el rango la toca
+export function slotRange(slots, slotMinutes) {
+  const first = slots[0]
+  const last = slots[slots.length - 1]
+  const endMin = hhmmToMin(last.time) + slotMinutes
+  const crosses = last.nextDay || endMin > DAY_MIN
+  const nextDate = last.nextDay ? last.date : addDaysStr(last.date, 1)
+  return { start: first.time, end: minToHHMM(endMin), crossesTo: crosses ? nextDate : null }
+}

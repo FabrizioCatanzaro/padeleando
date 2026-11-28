@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { api } from '../../utils/api'
-import { parseScheduleToGrid, slotsForRange, DAYS } from './scheduleGrid'
+import { parseScheduleToGrid, businessDaySlots, businessToday, addDaysStr, dayGridIndex, DAYS } from './scheduleGrid'
 import { pendingGroupIdsFor } from './bookingAvailability'
 import BookingGridDesktop from './BookingGridDesktop'
 import BookingFlowMobile from './BookingFlowMobile'
@@ -23,21 +23,6 @@ function courtSummary(c) {
   ].filter(Boolean);
 }
 
-function todayLocalStr() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
-function addDaysStr(dateStr, days) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  const date = new Date(y, m - 1, d)
-  date.setDate(date.getDate() + days)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-// Índice de DAYS (lun=0) para una fecha YYYY-MM-DD
-function dayGridIndex(dateStr) {
-  const [y, m, d] = dateStr.split('-').map(Number)
-  return (new Date(y, m - 1, d).getDay() + 6) % 7
-}
 function dayLabel(dateStr, i) {
   if (i === 0) return 'Hoy'
   if (i === 1) return 'Mañana'
@@ -48,10 +33,10 @@ function dayLabel(dateStr, i) {
 // Reserva pública: requiere horario en grilla; escritorio usa grilla y mobile dos pasos
 export default function ClubBooking({ club, canManage = false }) {
   const grid = useMemo(() => parseScheduleToGrid(club.schedule), [club.schedule])
-  const dates = useMemo(
-    () => Array.from({ length: HORIZON_DAYS }, (_, i) => addDaysStr(todayLocalStr(), i)),
-    [],
-  )
+  const dates = useMemo(() => {
+    const first = businessToday(grid)
+    return Array.from({ length: HORIZON_DAYS }, (_, i) => addDaysStr(first, i))
+  }, [grid])
   const courts = useMemo(() => (club.courts_list ?? []).filter((c) => c.active), [club.courts_list])
 
   // Forma común de las dos vistas; sin canchas cargadas hay una fila genérica con name null
@@ -98,7 +83,7 @@ export default function ClubBooking({ club, canManage = false }) {
   useEffect(() => {
     let cancelled = false
     setLoading(true)
-    api.clubs.bookings.list(club.id, dates[0], dates[dates.length - 1])
+    api.clubs.bookings.list(club.id, dates[0], addDaysStr(dates[dates.length - 1], 1))
       .then((rows) => { if (!cancelled) { setBookings(rows); setError(null) } })
       .catch((e) => { if (!cancelled) setError(e.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
@@ -129,7 +114,7 @@ export default function ClubBooking({ club, canManage = false }) {
   }
 
   const dayGrid = grid[dayGridIndex(selectedDate)]
-  const slots = dayGrid.open ? slotsForRange(dayGrid.from, dayGrid.to, club.slot_minutes) : []
+  const slots = businessDaySlots(grid, selectedDate, club.slot_minutes)
 
   function selectDate(dt) { setSelectedDate(dt); setSelection(null) }
 
@@ -152,7 +137,7 @@ export default function ClubBooking({ club, canManage = false }) {
   const selectedCourt = selection ? effectiveCourts.find((c) => c.id === selection.courtId) : null
   const selectedSlots = selection ? slots.slice(selection.startIndex, selection.startIndex + selection.count) : []
   const selectedOverlapGroupIds = selection
-    ? pendingGroupIdsFor(bookings, selectedDate, selection.courtId, selectedSlots)
+    ? pendingGroupIdsFor(bookings, selection.courtId, selectedSlots)
     : new Set()
 
   const sharedViewProps = {

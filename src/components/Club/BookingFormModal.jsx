@@ -3,7 +3,7 @@ import { X, Check, Phone } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useAuth } from '../../context/useAuth'
 import { whatsappLink } from './clubForm'
-import { addMinutes } from './scheduleGrid'
+import { slotRange, shortDayLabel } from './scheduleGrid'
 import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 import Btn from '../shared/Btn'
@@ -26,8 +26,9 @@ export default function BookingFormModal({ club, courtId, courtName, date, slots
   const [error, setError]     = useState(null)
   const [done, setDone]       = useState(false)
 
-  const startTime = slots[0]
-  const endTime   = addMinutes(slots[slots.length - 1], club.slot_minutes)
+  const range     = slotRange(slots, club.slot_minutes)
+  const startTime = range.start
+  const endTime   = `${range.end}${range.crossesTo ? ` (${shortDayLabel(range.crossesTo)})` : ''}`
   const totalMin  = slots.length * club.slot_minutes
   const totalPrice = computeTotalPrice(court, slots.length)
 
@@ -38,7 +39,7 @@ export default function BookingFormModal({ club, courtId, courtName, date, slots
     setSaving(true)
     try {
       const { bookings: created, checkout_url } = await api.clubs.bookings.create(club.id, {
-        court_id: courtId, date, slots,
+        court_id: courtId, date: slots[0].date, slots: slots.map((s) => s.time),
         guest_name: name.trim(), guest_contact: contact.trim(),
       })
       onBooked?.(created)

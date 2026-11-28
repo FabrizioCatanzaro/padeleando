@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { api } from '../../utils/api'
-import { addMinutes } from './scheduleGrid'
+import { slotRange, shortDayLabel } from './scheduleGrid'
 import { computeTotalPrice } from './pricing'
 import { formatMoney } from '../../utils/money'
 import Btn from '../shared/Btn'
@@ -23,8 +23,9 @@ export default function BookingManualBlockModal({ club, courtId, courtName, date
   const [error, setError]     = useState(null)
   const [done, setDone]       = useState(false)
 
-  const startTime = slots[0]
-  const endTime   = addMinutes(slots[slots.length - 1], club.slot_minutes)
+  const range     = slotRange(slots, club.slot_minutes)
+  const startTime = range.start
+  const endTime   = `${range.end}${range.crossesTo ? ` (${shortDayLabel(range.crossesTo)})` : ''}`
   const totalMin  = slots.length * club.slot_minutes
   const totalPrice = computeTotalPrice(court, slots.length)
 
@@ -33,7 +34,7 @@ export default function BookingManualBlockModal({ club, courtId, courtName, date
     setSaving(true)
     try {
       const created = await api.clubs.bookings.createManual(club.id, {
-        court_id: courtId, date, slots,
+        court_id: courtId, date: slots[0].date, slots: slots.map((s) => s.time),
         guest_name: name.trim() || undefined,
         guest_contact: contact.trim() || undefined,
       })

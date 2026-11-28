@@ -42,14 +42,15 @@ export function groupBookings(rows) {
       })
     }
     const g = map.get(r.group_id)
-    g.slots.push({ start_time: r.start_time.slice(0, 5), duration_minutes: r.duration_minutes })
+    g.slots.push({ date: r.date, start_time: r.start_time.slice(0, 5), duration_minutes: r.duration_minutes })
     if (r.price != null) { g.totalPrice += Number(r.price); g.hasPrice = true }
   }
   return Array.from(map.values()).map((g) => {
-    const sorted = [...g.slots].sort((a, b) => a.start_time.localeCompare(b.start_time))
+    const sorted = [...g.slots].sort((a, b) => `${a.date} ${a.start_time}`.localeCompare(`${b.date} ${b.start_time}`))
     const last = sorted[sorted.length - 1]
     return {
       ...g,
+      date: sorted[0].date,
       startTime: sorted[0].start_time,
       endTime: addMinutes(last.start_time, last.duration_minutes),
       slotCount: sorted.length,
