@@ -35,6 +35,7 @@ const AdminClubRequests   = lazy(() => import('./components/Admin/AdminClubReque
 const AdminClubClaims     = lazy(() => import('./components/Admin/AdminClubClaims'))
 const ClubProfileView     = lazy(() => import('./components/Club/ClubProfileView'))
 const ClubEditView        = lazy(() => import('./components/Club/ClubEdit/ClubEditView'))
+const ClubTournamentsView = lazy(() => import('./components/Club/ClubTournamentsView'))
 const Setup        = lazy(() => import('./components/Setup/Setup'))
 const MainView     = lazy(() => import('./components/Main/Main'))
 const ReadonlyView = lazy(() => import('./components/ReadonlyView/ReadonlyView'))
@@ -157,6 +158,7 @@ export default function App() {
         <Route path="/amistoso/invitacion/:token"                element={<FriendlyInvite />} />
         <Route path="/amistoso/:id/editar"                       element={<PrivateRoute><FriendlyEdit /></PrivateRoute>} />
         <Route path="/club/:id"                                  element={<ClubProfileView />} />
+        <Route path="/club/:id/torneos"                          element={<ClubTournamentsView />} />
         <Route path="/club/:id/editar"                           element={<PrivateRoute><ClubEditView /></PrivateRoute>} />
         <Route path="/view/:id"                                  element={<ReadonlyView />} />
         <Route path="/readonly/:id"                              element={<RedirectToView />} />
