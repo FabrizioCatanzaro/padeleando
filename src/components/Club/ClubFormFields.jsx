@@ -68,7 +68,7 @@ export default function ClubFormFields({ form, patch, realCourtsCount = 0 }) {
               {realCourtsCount} {realCourtsCount === 1 ? 'cancha cargada' : 'canchas cargadas'}
             </div>
             <p className="text-[10px] font-mono text-dim mt-1.5 leading-relaxed">
-              Se calcula solo a partir de las canchas que cargaste en "Gestionar canchas" (ficha del club). Para cambiarlo, agregá, sacá o deshabilitá canchas ahí.
+              Se calcula solo a partir de las canchas cargadas en la sección Canchas de Editar club. Para cambiarlo, agregá, sacá o deshabilitá canchas ahí.
             </p>
           </>
         ) : (
@@ -76,7 +76,7 @@ export default function ClubFormFields({ form, patch, realCourtsCount = 0 }) {
             <input className={inputCls} type="number" min="0" max="50" value={form.courts}
               onChange={(e) => patch({ courts: e.target.value })} placeholder="ej: 4" />
             <p className="text-[10px] font-mono text-dim mt-1.5 leading-relaxed">
-              Sólo un número de referencia, hasta que cargues canchas individuales desde "Gestionar canchas" en la ficha del club.
+              Sólo un número de referencia, hasta que cargues canchas individuales en la sección Canchas de Editar club.
             </p>
           </>
         )}

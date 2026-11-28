@@ -182,7 +182,7 @@ export default function ClubProfileView() {
     { v: stats.partidos ?? 0, k: 'Partidos' },
     { v: canchasCount ?? '—', k: 'Canchas', off: canchasCount == null },
     { v: club.followers_count ?? 0, k: 'Seguidores' },
-    { v: desde ?? '—', k: 'En Padeleando desde', off: !desde },
+    { v: desde ?? '—', k: 'Desde', off: !desde },
   ]
 
   function goReservar() {
@@ -194,7 +194,7 @@ export default function ClubProfileView() {
     <div className="bg-base text-content font-sans pb-15">
       <ClubHero club={club} maps={maps} status={status} price={priceFrom(activeCourts)}
         canManage={canManage} bookable={bookable} onReservar={goReservar}
-        follow={<ClubFollowButton club={club} onChange={(st) => setClub((c) => ({ ...c, ...st }))} />} />
+        follow={canManage ? null : <ClubFollowButton club={club} onChange={(st) => setClub((c) => ({ ...c, ...st }))} />} />
 
       <div className="grid grid-cols-3 sm:grid-cols-6 border-b border-border">
         {rail.map((r) => (

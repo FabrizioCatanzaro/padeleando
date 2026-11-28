@@ -4,7 +4,7 @@ import { whatsappLink } from '../clubForm'
 import { formatMoney } from '../../../utils/money'
 import courtBg from '../../../assets/padelcourt.webp'
 
-const ghost = 'inline-flex items-center justify-center gap-2 border border-photo-ink/35 text-photo-ink rounded-[10px] text-sm font-semibold no-underline hover:bg-photo-shade/40 transition-colors'
+const ghost = 'shrink-0 inline-flex items-center justify-center gap-2 border border-photo-ink/35 text-photo-ink rounded-[10px] text-sm font-semibold no-underline hover:bg-photo-shade/40 transition-colors'
 
 // Portada del club: foto propia o la predeterminada, con lo que la gente viene a hacer
 export default function ClubHero({ club, maps, status, price, canManage, onReservar, bookable, follow = null }) {
@@ -23,8 +23,8 @@ export default function ClubHero({ club, maps, status, price, canManage, onReser
         </button>
         {canManage && (
           <div className="flex gap-2 flex-wrap justify-end">
-            <Link to={`/club/${club.id}/editar#portada`} className={`${ghost} bg-photo-shade/55 px-3 py-2 text-[13px]`}>
-              <Camera size={14} /> Cambiar portada
+            <Link to={`/club/${club.id}/editar#portada`} aria-label="Cambiar portada" className={`${ghost} bg-photo-shade/55 px-3 py-2 text-[13px]`}>
+              <Camera size={14} /><span className="hidden sm:inline">Cambiar portada</span>
             </Link>
             <Link to={`/club/${club.id}/editar`}
               className="inline-flex items-center gap-2 bg-brand text-base rounded-lg px-3 py-2 text-[13px] font-bold no-underline">
@@ -72,10 +72,10 @@ export default function ClubHero({ club, maps, status, price, canManage, onReser
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           {bookable && (
             <button type="button" onClick={onReservar}
-              className="inline-flex items-center gap-2 bg-brand text-base border-0 rounded-[10px] px-5 h-[46px] text-sm font-bold cursor-pointer">
+              className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 bg-brand text-base border-0 rounded-[10px] px-5 h-[46px] text-sm font-bold cursor-pointer whitespace-nowrap">
               Reservar cancha
             </button>
           )}

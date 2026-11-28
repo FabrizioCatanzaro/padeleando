@@ -18,7 +18,7 @@ export default function ClubChampions({ club, champions }) {
               className="block rounded-xl border border-border-mid bg-surface p-4 no-underline hover:border-border-strong transition-colors">
               <div className="flex mb-3">
                 {c.players.map((p, i) => (
-                  <span key={i} className={`rounded-full ring-2 ring-surface ${i ? '-ml-2.5' : ''}`}>
+                  <span key={i} className={`rounded-full ring-2 ring-surface ${i ? '-ml-1.5' : ''}`}>
                     <PlayerAvatar name={p.name} src={p.avatar_url} size={38} />
                   </span>
                 ))}
