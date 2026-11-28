@@ -2,9 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Loader2 } from 'lucide-react'
 import { api } from '../../utils/api'
-import EventCard from '../Home/EventCard'
-import SignupFooter from '../Home/SignupFooter'
-import GroupCard from '../shared/GroupCard'
+import TournamentTile from '../shared/tournament/TournamentTile'
+import { SignupFooter, TextFooter } from '../shared/tournament/TileFooters'
+import { cardModel, countLabel } from '../../utils/tournamentCard'
+import CategoryTile from '../shared/category/CategoryTile'
 import CategoryRow from '../shared/CategoryRow'
 import { useAuth } from '../../context/useAuth'
 import { mergeGroups, nextByGroup } from '../../utils/homePanel'
@@ -36,15 +37,19 @@ function MyCategories({ rows, live, upcoming, onOpen }) {
   )
 }
 
-function Grid({ title, rows, footer, onOpen }) {
+function footerFor(kind, t) {
+  if (kind === 'signup') return <SignupFooter t={t} />
+  if (kind === 'live') return <TextFooter strong="Hay un partido en juego" strongCls="text-danger" />
+  return t.player_count > 0 ? <TextFooter>{countLabel(t.player_count, 'jugador', 'jugadores')}</TextFooter> : null
+}
+
+function Grid({ title, rows, kind }) {
   if (rows.length === 0) return null
   return (
-    <section aria-label={title}>
+    <section aria-label={title} className="@container">
       <h2 className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">{title}</h2>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {rows.map((t) => (
-          <EventCard key={t.id} t={t} className="h-full w-full" onClick={() => onOpen(t.id)} footer={footer ? <SignupFooter t={t} /> : null} />
-        ))}
+      <div className="grid gap-3 @2xl:grid-cols-2">
+        {rows.map((t) => <TournamentTile key={t.id} m={cardModel(t)} to={`/view/${t.id}`} footer={footerFor(kind, t)} />)}
       </div>
     </section>
   )
@@ -81,7 +86,6 @@ export default function Explorar() {
   const upcoming = (data.upcoming ?? []).filter((t) => !shown.has(t.id))
   const mineIds = new Set(mine.map((g) => g.id))
   const featured = (data.featured ?? []).filter((g) => !mineIds.has(g.id))
-  const open = (id) => navigate(`/view/${id}`)
 
   if (mine.length + signup.length + live.length + upcoming.length + featured.length === 0) {
     return <p className="font-sans text-[13px] text-secondary min-h-[40vh]">No hay torneos públicos para mostrar ahora.</p>
@@ -91,14 +95,14 @@ export default function Explorar() {
     <AdRail>
       <div className="flex flex-col gap-8">
         <MyCategories rows={mine} live={data.live ?? []} upcoming={data.upcoming ?? []} onOpen={(id) => navigate(`/cat/${id}`)} />
-        <Grid title="INSCRIPCIÓN ABIERTA" rows={signup} footer onOpen={open} />
-        <Grid title="SE ESTÁN JUGANDO" rows={live} onOpen={open} />
-        <Grid title="PRÓXIMOS" rows={upcoming} onOpen={open} />
+        <Grid title="INSCRIPCIÓN ABIERTA" rows={signup} kind="signup" />
+        <Grid title="SE ESTÁN JUGANDO" rows={live} kind="live" />
+        <Grid title="PRÓXIMOS" rows={upcoming} kind="upcoming" />
         {featured.length > 0 && (
-          <section aria-label="Categorías activas">
+          <section aria-label="Categorías activas" className="@container">
             <h2 className="m-0 mb-3 font-sans text-[11px] font-bold tracking-[2px] text-muted">CATEGORÍAS ACTIVAS</h2>
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-              {featured.map((g) => <GroupCard key={g.id} g={g} className="h-full w-full" onClick={() => navigate(`/cat/${g.id}`)} />)}
+            <div className="grid gap-3 @2xl:grid-cols-2">
+              {featured.map((g) => <CategoryTile key={g.id} g={g} to={`/cat/${g.id}`} />)}
             </div>
           </section>
         )}

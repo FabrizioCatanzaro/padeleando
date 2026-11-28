@@ -3,6 +3,7 @@ import { siInstagram, siX, siFacebook, siWhatsapp } from 'simple-icons'
 import { categoryLabel } from '../../utils/category'
 import { countryName } from '../../utils/countries'
 import CountryFlag from '../shared/CountryFlag'
+import { planName } from '../../utils/plan'
 
 const TONE = {
   brand: 'text-brand', gold: 'text-premium-hi', off: 'text-border-strong', default: 'text-white',
@@ -209,7 +210,7 @@ export function PlanBand({ premium, subscription, onManage, onSeePlans }) {
         ? <BadgeCheck size={14} className="text-premium-hi shrink-0" />
         : <Badge size={14} className="text-muted shrink-0" />}
       <span className={`font-condensed font-bold text-[11px] tracking-widest ${premium ? 'text-premium-hi' : 'text-muted'}`}>
-        {premium ? 'PLAN PREMIUM' : 'PLAN FREE'}
+        {premium ? `PLAN ${planName(subscription?.plan).toUpperCase()}` : 'PLAN GRATIS'}
       </span>
       {premium && subscription?.starts_at && (
         <span className="font-mono text-[11px] text-dim">

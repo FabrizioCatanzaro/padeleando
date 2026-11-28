@@ -4,8 +4,9 @@ import { Loader2, Swords, Ticket } from 'lucide-react'
 import { api } from '../../../utils/api'
 import { useGeolocation } from '../../../hooks/useGeolocation'
 import FriendlyOpenCard from '../../Friendly/FriendlyOpenCard'
-import EventCard from '../EventCard'
-import SignupFooter from '../SignupFooter'
+import TournamentTile from '../../shared/tournament/TournamentTile'
+import { SignupFooter } from '../../shared/tournament/TileFooters'
+import { cardModel } from '../../../utils/tournamentCard'
 
 const MAX = 6
 const RADIUS_KM = 15
@@ -22,7 +23,7 @@ function Tab({ on, onClick, icon, label, n }) {
 }
 
 // Amistosos con lugar libre (cerca si hay permiso de ubicación) y torneos con inscripción abierta.
-export default function ParaSumarte({ signup = [], onOpenTournament }) {
+export default function ParaSumarte({ signup = [] }) {
   const [geo] = useGeolocation()
   const [result, setResult] = useState({ key: null, rows: null })
   const [tab, setTab] = useState(null)
@@ -77,10 +78,10 @@ export default function ParaSumarte({ signup = [], onOpenTournament }) {
       )}
       {active === 'torneos' && signup.length > 0 && (
         <>
-          <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-            {signup.slice(0, MAX).map((t) => (
-              <EventCard key={t.id} t={t} className="h-full w-full" onClick={() => onOpenTournament(t.id)} footer={<SignupFooter t={t} />} />
-            ))}
+          <div className="@container">
+            <div className="grid gap-3 @2xl:grid-cols-2">
+              {signup.slice(0, MAX).map((t) => <TournamentTile key={t.id} m={cardModel(t)} to={`/view/${t.id}`} footer={<SignupFooter t={t} />} />)}
+            </div>
           </div>
           <Link to="/torneos" className="inline-block mt-3 font-sans text-[13px] font-bold text-brand no-underline hover:underline">Ver en Torneos →</Link>
         </>

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Check, AlertTriangle, Ticket, ChevronDown, FileText, Clock, MessageCircle } from 'lucide-react';
+import { Check, AlertTriangle, Ticket, ChevronDown, FileText, Clock, MessageCircle, CreditCard } from 'lucide-react';
 import { api } from '../../utils/api';
 import { useAuth } from '../../context/useAuth';
 import { useToast } from '../../context/useToast';
@@ -12,7 +12,7 @@ import RulesModal from '../shared/RulesModal';
 import EditAvailability from './EditAvailability';
 import { resumenDisponibilidad } from '../../utils/disponibilidad';
 import { pideDatos } from '../../utils/copa';
-import { fmtCierre, DISPONIBILIDAD, ESTADO_META } from './format';
+import { fmtCierre, DISPONIBILIDAD, ESTADO_META, montoOnline, pesos, fmtHoraLimite } from './format';
 
 // Tarjeta de inscripción en la página del torneo, para quien no lo organiza.
 // Sin sesión muestra precio y contactos e invita a entrar; con sesión trae el
@@ -41,9 +41,22 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
 
   useEffect(() => { load(); }, [load]);
 
+  // Vuelta de Mercado Pago: el aviso del pago puede tardar unos segundos en llegar.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const pago = params.get('pago');
+    if (!pago) return;
+    showToast(pago === 'error' ? 'El pago no se completó. Podés intentarlo de nuevo.' : 'Pago recibido. El organizador ya puede revisar tu inscripción.',
+      pago === 'error' ? 'error' : undefined);
+    params.delete('pago');
+    navigate({ pathname: location.pathname, search: params.toString() ? `?${params}` : '' }, { replace: true });
+    const id = setTimeout(load, 4000);
+    return () => clearTimeout(id);
+  }, [location.pathname, location.search, navigate, showToast, load]);
+
   const signup = data?.signup ?? { ...signupBase, open: !!signupBase?.open };
   const reg = data?.registration ?? null;
-  const activo = reg && ['pending', 'approved', 'waitlist'].includes(reg.status);
+  const activo = reg && ['awaiting_payment', 'pending', 'approved', 'waitlist'].includes(reg.status);
 
   // Sin inscripción abierta y sin una inscripción propia que mostrar: nada.
   if (!signup.open && !activo && !reg) return null;
@@ -52,6 +65,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
   const cierre = fmtCierre(signup.closes_at);
   const disp = DISPONIBILIDAD[signup.availability] ?? null;
   const precio = formatPrice(signup.price, signup.price_unit ?? signup.unit);
+  const online = montoOnline(signup, 'solo');
   const nivel = levelLabel(signup.level);
   const check = signup.level ? checkRegistrationLevel([user?.category ?? null], signup.level, { solo: true }) : null;
   const rules = signup.rules ?? signupBase?.rules ?? null;
@@ -60,6 +74,11 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
     if (!reg) return;
     setCancelling(true);
     setError(null);
+    if (reg.payment_status === 'approved'
+      && !window.confirm('Cancelás la inscripción y te devolvemos el pago completo a tu medio de pago. ¿Seguimos?')) {
+      setCancelling(false);
+      return;
+    }
     try { await api.registrations.cancel(reg.id); load(); }
     catch (e) { setError(e.message); }
     finally { setCancelling(false); }
@@ -115,11 +134,27 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
         <div className="px-4 pb-4 pt-3 flex flex-col gap-3 border-t border-border">
           <div className="text-[15px] text-white font-bold">{pareja}</div>
           <p className="m-0 text-[13px] text-soft leading-relaxed">
+            {reg.status === 'awaiting_payment' && `Falta el pago. Tenés hasta las ${fmtHoraLimite(reg.payment_expires_at) ?? ''} para pagar; si no, la inscripción se cancela sola.`}
             {reg.status === 'pending' && 'El organizador todavía no decidió. Te avisamos por la app.'}
             {reg.status === 'approved' && 'Ya tenés un lugar en el torneo.'}
             {reg.status === 'waitlist' && 'El cupo está lleno. Si se libera un lugar, el organizador puede sumarlos.'}
             {reg.status === 'rejected' && (reg.reject_reason?.trim() || 'Por motivos que definió el organizador.')}
           </p>
+          {reg.status === 'awaiting_payment' && reg.mp_init_point && (
+            <Btn variant="primary" full icon={CreditCard} onClick={() => { window.location.href = reg.mp_init_point; }}>
+              Pagar {reg.total_amount ? pesos(reg.total_amount) : ''}
+            </Btn>
+          )}
+          {reg.payment_status && reg.payment_status !== 'pending' && (
+            <div className="flex items-start gap-2.5 rounded-lg bg-surface-alt px-3 py-2.5 text-[13px] text-content leading-snug">
+              <CreditCard size={15} className="shrink-0 mt-0.5 text-soft" aria-hidden="true" />
+              <span>
+                {reg.payment_status === 'approved' && `Pagaste ${pesos(reg.total_amount)} por la app.`}
+                {reg.payment_status === 'refunded' && `Te devolvimos ${pesos(reg.total_amount)} a tu medio de pago.`}
+                {reg.payment_status === 'refund_failed' && 'Tu reintegro quedó pendiente: el organizador lo está resolviendo.'}
+              </span>
+            </div>
+          )}
           {activo && pideDatos(tournament) && tournament.status !== 'finished' && (() => {
             // Cada jugador ve y edita sus propios datos: el titular es el 1, el compañero con cuenta el 2.
             const soyP1 = reg.p1_user_id === user?.id;
@@ -157,7 +192,7 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
               }}
             />
           )}
-          {activo && signup.open && (
+          {activo && (signup.open || reg.status === 'awaiting_payment') && (
             <>
               <Btn variant="danger" full onClick={cancelar} loading={cancelling}>Cancelar inscripción</Btn>
               {cierre && <span className="text-[12px] text-dim text-center">Podés cancelar hasta el {cierre}.</span>}
@@ -202,7 +237,12 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
           {precio && (
             <div className="bg-surface-alt rounded-lg px-3 py-2.5">
               <div className="text-[11px] tracking-wide text-dim font-semibold">PRECIO</div>
-              <div className="text-[15px] text-white font-bold mt-0.5">{precio}</div>
+              <div className="text-[15px] text-white font-bold mt-0.5">{online ? `${pesos(online.total)} por jugador` : precio}</div>
+              {online && (
+                <div className="text-[12px] text-secondary">
+                  {online.fee ? `Incluye ${pesos(online.fee)} de cargo de servicio. ` : ''}Se paga en la app.
+                </div>
+              )}
             </div>
           )}
           {nivel && (
@@ -227,7 +267,10 @@ export default function RegistrationCard({ tournament, groupName = null, signup:
             ENTRÁ PARA INSCRIBIRTE
           </Btn>
         )}
-        <p className="m-0 text-[12px] text-secondary text-center">El organizador aprueba cada inscripción.</p>
+        <p className="m-0 text-[12px] text-secondary text-center">
+          {online ? 'Pagás con Mercado Pago al inscribirte. Si el organizador la rechaza, te devolvemos todo.' : 'El organizador aprueba cada inscripción.'}
+        </p>
+        {signup.payment_note && <p className="m-0 text-[12px] text-secondary text-center">Otros medios de pago: {signup.payment_note}</p>}
         {contactos.length > 0 && <div className="flex gap-2 flex-wrap justify-center">{contactos}</div>}
         {rules && (
           <button

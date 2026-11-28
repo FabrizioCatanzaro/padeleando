@@ -31,7 +31,21 @@ export const DISPONIBILIDAD = {
   full: { label: 'CUPO COMPLETO',  color: 'text-cyan border-cyan/40 bg-cyan/10' },
 };
 
+/** $21.200 */
+export const pesos = (n) => `$${Math.round(Number(n)).toLocaleString('es-AR')}`;
+
+/** Lo que paga online cada tipo de inscripción, o null si el torneo no cobra por la app. */
+export const montoOnline = (signup, kind) => (signup?.online ? signup.online_quote?.[kind] ?? null : null);
+
+/** hh:mm de la reserva de pago. */
+export function fmtHoraLimite(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? null : `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+
 export const ESTADO_META = {
+  awaiting_payment: { label: 'Falta el pago', color: 'text-amber-300 border-amber-500/45 bg-amber-500/15' },
   pending:   { label: 'Pendiente',      color: 'text-amber-300 border-amber-500/45 bg-amber-500/15' },
   approved:  { label: 'Aprobada',       color: 'text-green border-green/40 bg-green/10' },
   waitlist:  { label: 'En espera',      color: 'text-cyan border-cyan/40 bg-cyan/10' },

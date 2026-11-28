@@ -1,4 +1,4 @@
-import { DAYS } from './scheduleGrid'
+import { DAYS, dayWindow, dayHoursLabel } from './scheduleGrid'
 
 const timeCls = 'bg-surface border border-border-mid text-white text-[12px] font-sans rounded-sm px-1.5 py-1 outline-none'
 
@@ -51,6 +51,11 @@ export default function ClubScheduleFields({ grid, onChange }) {
                     type="time" value={d.to} className={timeCls}
                     onChange={(e) => setHour(d.key, 'to', e.target.value)}
                   />
+                  {dayWindow(d).end > 1440 && (
+                    <span className="text-[11px] text-brand">
+                      {d.from === d.to ? dayHoursLabel(d) : 'del día siguiente'}
+                    </span>
+                  )}
                 </div>
               ) : (
                 <span className="text-[11.5px] text-dim font-sans">Cerrado</span>

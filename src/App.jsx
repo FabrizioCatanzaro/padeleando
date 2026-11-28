@@ -14,6 +14,7 @@ import Loader       from './components/Loader/Loader'
 // La portada y el login se cargan con el bundle inicial: son el punto de
 // entrada de casi todas las visitas.
 import HomeView     from './components/Home/HomeView'
+import LandingView  from './components/Landing/LandingView'
 import AuthView     from './components/Auth/AuthView'
 
 // El resto viaja en chunks propios. Antes las 39 rutas colapsaban en un único
@@ -33,6 +34,8 @@ const AdminClubs          = lazy(() => import('./components/Admin/AdminClubs'))
 const AdminClubRequests   = lazy(() => import('./components/Admin/AdminClubRequests'))
 const AdminClubClaims     = lazy(() => import('./components/Admin/AdminClubClaims'))
 const ClubProfileView     = lazy(() => import('./components/Club/ClubProfileView'))
+const ClubEditView        = lazy(() => import('./components/Club/ClubEdit/ClubEditView'))
+const ClubTournamentsView = lazy(() => import('./components/Club/ClubTournamentsView'))
 const Setup        = lazy(() => import('./components/Setup/Setup'))
 const MainView     = lazy(() => import('./components/Main/Main'))
 const ReadonlyView = lazy(() => import('./components/ReadonlyView/ReadonlyView'))
@@ -76,15 +79,18 @@ function Layout() {
 
   // El degradado de la portada va en la fila entera para llegar de borde a borde.
   const isHome = pathname === '/'
+  const isAuth = pathname === '/login' || pathname === '/register'
+  // La portada del visitante trae su propia cabecera y ocupa todo el ancho.
+  const isLanding = isHome && !isLoggedIn
 
   return (
-    <div className={`min-h-screen flex flex-col ${withNav ? 'pb-[calc(104px+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
-      <Header />
+    <div className={`min-h-screen flex flex-col ${withNav ? 'pb-[calc(104px+env(safe-area-inset-bottom))] lg:pb-0' : ''} ${isLanding ? 'pb-[calc(76px+env(safe-area-inset-bottom))] lg:pb-0' : ''}`}>
+      {!isLanding && <Header />}
 
-      <div className={`flex-1 flex justify-center ${isHome ? 'home-bg' : ''}`}>
+      <div className={`flex-1 flex justify-center ${isHome && !isLanding ? 'home-bg' : ''}`}>
         {isLoggedIn && <Sidebar />}
 
-        <main className={`flex-1 w-full max-w-7xl min-w-0 min-h-screen ${isLoggedIn ? '' : 'pb-16 xl:pb-0'}`}>
+        <main className={`flex-1 w-full min-w-0 min-h-screen ${isAuth || isLanding ? '' : 'max-w-7xl'} ${isLoggedIn || isLanding ? '' : 'pb-16 xl:pb-0'}`}>
           {/* El Loader reserva 70vh, así que la cabecera no salta cuando entra el chunk. */}
           <Suspense fallback={<Loader />}>
             <Outlet />
@@ -100,6 +106,11 @@ function Layout() {
       <InstallPrompt />
     </div>
   )
+}
+
+function HomeRoute() {
+  const { isLoggedIn } = useAuth()
+  return isLoggedIn ? <HomeView /> : <LandingView />
 }
 
 function PrivateRoute({ children }) {
@@ -123,7 +134,7 @@ export default function App() {
         {/* Las rutas con título fijo lo declaran acá con <Titled>. Las que
             dependen de datos (perfil, categoría, torneo, club) lo fijan desde
             la vista con useDocumentTitle, cuando llega el nombre. */}
-        <Route path="/"                                          element={<Titled><HomeView /></Titled>} />
+        <Route path="/"                                          element={<Titled><HomeRoute /></Titled>} />
         <Route path="/login"                                     element={<Titled title="Iniciar sesión"><AuthView mode="login" /></Titled>} />
         <Route path="/register"                                  element={<Titled title="Crear cuenta"><AuthView mode="register" /></Titled>} />
         <Route path="/reset-password/:token"                     element={<Titled title="Restablecer contraseña"><ResetPassword /></Titled>} />
@@ -135,6 +146,7 @@ export default function App() {
         <Route path="/partidos/mios"                             element={<PrivateRoute><FriendliesView tab="mios" /></PrivateRoute>} />
         <Route path="/amistosos"                                 element={<RedirectAmistosos />} />
         <Route path="/torneos"                                   element={<Titled title="Torneos"><TorneosView tab="explorar" /></Titled>} />
+        <Route path="/torneos/calendario"                        element={<Titled title="Calendario de torneos"><TorneosView tab="calendario" /></Titled>} />
         <Route path="/torneos/mios"                              element={<PrivateRoute><Titled title="Mis torneos"><TorneosView tab="mios" /></Titled></PrivateRoute>} />
         <Route path="/torneos/organizar"                         element={<PrivateRoute><Titled title="Organizar"><TorneosView tab="organizar" /></Titled></PrivateRoute>} />
         <Route path="/padeleros"                                 element={<Navigate to="/padeleros/jugadores" replace />} />
@@ -146,6 +158,8 @@ export default function App() {
         <Route path="/amistoso/invitacion/:token"                element={<FriendlyInvite />} />
         <Route path="/amistoso/:id/editar"                       element={<PrivateRoute><FriendlyEdit /></PrivateRoute>} />
         <Route path="/club/:id"                                  element={<ClubProfileView />} />
+        <Route path="/club/:id/torneos"                          element={<ClubTournamentsView />} />
+        <Route path="/club/:id/editar"                           element={<PrivateRoute><ClubEditView /></PrivateRoute>} />
         <Route path="/view/:id"                                  element={<ReadonlyView />} />
         <Route path="/readonly/:id"                              element={<RedirectToView />} />
         <Route path="/cat/:groupId"                           element={<GroupView />} />

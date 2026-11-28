@@ -101,6 +101,7 @@ export const api = {
   // Portada del visitante: actividad, próximas jornadas, inscripciones y totales en una sola petición.
   home: {
     get: () => req('GET', '/home'),
+    calendar: (from, to) => req('GET', `/home/calendar?from=${from}&to=${to}`),
   },
   groups: {
     list:          ()         => req('GET',    '/groups'),
@@ -137,6 +138,12 @@ export const api = {
     deletePhoto: (id)          => req('DELETE', `/clubs/${id}/photo`),
     uploadHeader: (id, file)   => reqMultipart('POST', `/clubs/${id}/header`, imageForm(file)),
     deleteHeader: (id)         => req('DELETE', `/clubs/${id}/header`),
+    gallery: {
+      upload: (id, file)        => reqMultipart('POST', `/clubs/${id}/photos`, imageForm(file)),
+      remove: (id, photoId)     => req('DELETE', `/clubs/${id}/photos/${photoId}`),
+    },
+    follow:   (id)             => req('POST',   `/clubs/${id}/follow`),
+    unfollow: (id)             => req('DELETE', `/clubs/${id}/follow`),
     requests: {
       create:  (body)          => req('POST',  '/clubs/requests', body),
       list:    (status = 'pending') => req('GET', `/clubs/requests?status=${status}`),
@@ -162,6 +169,7 @@ export const api = {
       create:       (clubId, body)     => req('POST', `/clubs/${clubId}/bookings`, body),
       createManual: (clubId, body)     => req('POST', `/clubs/${clubId}/bookings/manual`, body),
       manage:       (clubId)           => req('GET',   `/clubs/${clubId}/bookings/manage`),
+      occupancy:    (clubId)           => req('GET',   `/clubs/${clubId}/bookings/occupancy`),
       decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
     },
     // Vincular Mercado Pago del club (Premium): connect devuelve la URL de MP a la que redirigir.
@@ -275,7 +283,7 @@ export const api = {
   },
   subscriptions: {
     me:       ()                => req('GET',  '/subscriptions/me'),
-    checkout: (billing_period)  => req('POST', '/subscriptions/checkout', { billing_period }),
+    checkout: (plan, billing_period) => req('POST', '/subscriptions/checkout', { plan, billing_period }),
     sync:     (preapprovalId)   => req('GET',  `/subscriptions/sync${preapprovalId ? `?preapproval_id=${encodeURIComponent(preapprovalId)}` : ''}`),
     claimStart:  (mp_email)     => req('POST', '/subscriptions/claim/start', { mp_email }),
     claimVerify: (code)         => req('POST', '/subscriptions/claim/verify', { code }),
@@ -288,7 +296,7 @@ export const api = {
       req('GET', `/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=${limit}`),
     tournaments:   ({ q = '', status = 'all', page = 1, limit = 25 } = {}) =>
       req('GET', `/admin/tournaments?q=${encodeURIComponent(q)}&status=${status}&page=${page}&limit=${limit}`),
-    grantPremium:  (userId, duration_days, preapproval_id)  => req('POST', `/admin/users/${userId}/grant-premium`, { duration_days, preapproval_id }),
+    grantPremium:  (userId, duration_days, preapproval_id, plan) => req('POST', `/admin/users/${userId}/grant-premium`, { duration_days, preapproval_id, plan }),
     revokePremium: (userId)                 => req('POST', `/admin/users/${userId}/revoke-premium`),
     deleteUser:    (userId)                 => req('DELETE', `/admin/users/${userId}`),
     setGender:     (userId, gender)         => req('PATCH', `/admin/users/${userId}/gender`, { gender }),
@@ -298,6 +306,13 @@ export const api = {
       req('GET', `/admin/broadcasts?page=${page}&limit=${limit}`),
   },
   // Inscripción a torneos (routes/registrations.js del back).
+  payments: {
+    mp:         () => req('GET',    '/payments/mp'),
+    connect:    () => req('GET',    '/payments/mp/connect'),
+    disconnect: () => req('DELETE', '/payments/mp/connect'),
+    settlements: () => req('GET',   '/payments/settlements'),
+    settlementCheckout: (id) => req('POST', `/payments/settlements/${id}/checkout`),
+  },
   registrations: {
     create: (body)          => req('POST',  '/registrations', body),
     mine:   (tournamentId)  => req('GET',   `/registrations/mine/${tournamentId}`),
@@ -309,6 +324,7 @@ export const api = {
     list:   (tournamentId)  => req('GET',   `/registrations/tournament/${tournamentId}`),
     decide: (id, action, reason) => req('PATCH', `/registrations/${id}`, { action, reason }),
     paid:   (id, paid)      => req('PATCH', `/registrations/${id}/paid`, { paid }),
+    refundAll: (tournamentId) => req('POST', `/registrations/tournament/${tournamentId}/refund-all`),
   },
   joinRequests: {
     send:     (tournamentId, playerId) => req('POST',  '/join-requests', { tournamentId, playerId }),

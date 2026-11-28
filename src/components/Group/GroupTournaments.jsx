@@ -3,7 +3,7 @@ import { Plus, ChevronRight, Radio } from 'lucide-react';
 import Btn from '../shared/Btn';
 import TournamentFilters from './TournamentFilters';
 import SortMenu from './SortMenu';
-import TournamentCard from './TournamentCard';
+import GroupTournamentRow from './GroupTournamentRow';
 import { isLive } from '../../utils/helpers';
 
 // Listado de torneos de la categoría: la pestaña por defecto. Salió de GroupView
@@ -92,17 +92,13 @@ export default function GroupTournaments({
         </div>
       )}
 
-      <div className="flex flex-col gap-2.5">
-        {rest.slice(0, visibleCount).map((t, i) => (
-          <TournamentCard
-            key={t.id}
-            t={t}
-            group={group}
-            delay={Math.min(i, 5) * 50}
-            onClick={() => navigate(`/cat/${groupId}/torneo/${t.id}`)}
-          />
-        ))}
-      </div>
+      {rest.length > 0 && (
+        <div className="rounded-xl bg-surface border border-border overflow-hidden">
+          {rest.slice(0, visibleCount).map((t, i) => (
+            <GroupTournamentRow key={t.id} t={t} group={group} to={`/cat/${groupId}/torneo/${t.id}`} first={i === 0} />
+          ))}
+        </div>
+      )}
 
       {visibleCount < rest.length && (
         <div className="flex justify-center mt-4">

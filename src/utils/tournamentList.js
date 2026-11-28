@@ -1,7 +1,4 @@
-import { dayKey, shortDay } from './agenda'
-
-export const FORMAT_LABEL = { liga: 'LIGA', americano: 'AMERICANO', copa: 'COPA' }
-export const FORMAT_CLS   = { liga: 'text-cyan', americano: 'text-brand', copa: 'text-chart-3' }
+import { dayKey } from './agenda'
 
 export function roleOf(t) {
   if (t.plays && t.manages) return 'ambos'
@@ -16,13 +13,6 @@ export function phaseOf(t, today = dayKey()) {
   if (t.status === 'finished') return 'finalizados'
   if (t.event_date && t.event_date > today) return 'proximos'
   return 'en_curso'
-}
-
-export function statusLine(t, phase) {
-  if (t.live) return { text: 'En vivo', cls: 'text-green' }
-  if (phase === 'finalizados') return t.won_final ? { text: 'Campeón', cls: 'text-brand' } : { text: 'Finalizado', cls: 'text-secondary' }
-  if (phase === 'proximos') return { text: [shortDay(t.event_date), t.event_time].filter(Boolean).join(' · '), cls: 'text-white' }
-  return { text: 'En curso', cls: 'text-white' }
 }
 
 export function detailLine(t) {

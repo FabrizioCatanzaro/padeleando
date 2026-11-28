@@ -1,36 +1,32 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { api } from '../../utils/api';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom'
 import { useAuth }     from '../../context/useAuth'
-import { Globe, Lock, X, Search, MapPin, Smile, Check, Loader2, Trophy, BarChart3, Radio, UserRound, Building2, Navigation, ChevronLeft } from 'lucide-react';
-import logoUrl from '../../assets/padeleando-logo.webp'
+import { Globe, Lock, X, Search, MapPin, Smile, Check, Building2, ChevronLeft } from 'lucide-react';
 import FadeInCard from '../shared/FadeInCard'
-import GroupCard from '../shared/GroupCard'
-import VisitorShowcase from './VisitorShowcase';
-import AppPreview from './AppPreview';
+import CategoryTile from '../shared/category/CategoryTile'
 import { Skeleton } from '../shared/Skeleton';
 import ClubSelector from '../shared/ClubSelector';
 import PlayerAvatar from '../shared/PlayerAvatar';
-import { addRecentSearch } from '../../utils/recentSearches';
 import { fmt } from '../../utils/helpers';
 import SignupEditor from '../shared/SignupEditor';
 import StepBar from '../shared/StepBar';
 import { profileContacts } from '../../utils/signup';
 import PremiumModal from '../shared/PremiumModal';
-import { FREE_MAX_GROUPS, isPlanLimit } from '../../utils/plan';
+import { FREE_MAX_GROUPS, isPlanLimit, userHasRole } from '../../utils/plan';
 import { useToast } from '../../context/useToast';
 import Btn from '../shared/Btn';
 import RolePicker from './RolePicker';
 import FirstSteps from './FirstSteps';
 import { buildSteps, isRoleDismissed, isFirstStepsDismissed, dismissFirstSteps, isLevelDismissed, dismissLevel } from '../../utils/onboarding';
-import SearchPalette from './SearchPalette';
 import ParaSumarte from './Inicio/ParaSumarte';
 import { StatRail, LiveBand } from './PanelBands';
 import Pendientes from './Inicio/Pendientes';
 import Agenda from './Inicio/Agenda';
 import ResumenCard from './Inicio/ResumenCard';
 import ClubesCerca from './Inicio/ClubesCerca';
+import ParaSeguir from './Inicio/ParaSeguir';
 import AdBanner from '../shared/AdBanner';
 import AdInline from '../shared/AdInline';
 import { useSummary } from '../../hooks/useSummary';
@@ -47,17 +43,8 @@ const NEW_GROUP_STEPS = [
 
 const EMOJI_LIST =['🔥','⚡','🚻','1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟','🎲','🔝','🚨','🌹','🌼','🥑','🍺','🍷','🧉','🍕','❄️','❤️‍🩹','💫','☢️','💸','🗿','♂️','♀️','🪄','🎉','👑']
 
-const FEATURES = [
-  { icon: Trophy,     title: 'Torneos Americanos o Ligas', desc: 'Elegí el formato, con parejas fijas o jugadores libres, y armá el fixture en minutos.' },
-  { icon: Radio,      title: 'Partidos en vivo',         desc: 'Cargá los resultados al toque, llevá el tiempo del partido y compartí el torneo con un link público.' },
-  { icon: BarChart3,  title: 'Tablas de posiciones y estadísticas', desc: 'Posiciones, estadísticas de rendimiento y mucho más.' },
-  { icon: UserRound,  title: 'Tu perfil de padelero',    desc: 'Historial, rachas, estadísticas personales y tus compañeros más frecuentes.' },
-]
-
 const NEARBY_CACHE_KEY = 'nearby_clubs_v1';
 const NEARBY_TTL       = 10 * 60 * 1000; // 10 min
-const NEARBY_INITIAL   = 4;
-const NEARBY_PAGE_SIZE = 6;
 
 function readNearbyCache() {
   try {
@@ -109,7 +96,6 @@ export default function HomeView() {
 
   const [nearbyClubs,    setNearbyClubs]    = useState([]);
   const [nearbyStatus,   setNearbyStatus]   = useState('idle'); // idle | loading | done | denied | error | unsupported
-  const [nearbyPage,     setNearbyPage]     = useState(NEARBY_INITIAL);
 
   // Onboarding. `pickedRole` sólo existe para que la tarjeta cambie en el mismo
   // render en que el usuario elige, sin esperar al PATCH ni al refresco de /me.
@@ -118,19 +104,12 @@ export default function HomeView() {
   const [stepsDismissed, setStepsDismissed] = useState(isFirstStepsDismissed);
 
   const [homeData, setHomeData] = useState(null);
-  // Arranca en true para todos: si empezara en false, la sección entera no
-  // existiría en el primer render y se insertaría al arrancar la carga,
-  // empujando todo lo de abajo. Ese salto era un CLS de 0,685 —el elemento que
-  // Lighthouse marcaba como desplazado— y no lo causaba el logo.
-  const [homeLoading, setHomeLoading] = useState(true);
 
   // Listado unificado y vitrina de descubrimiento (sólo con sesión).
-  const [paletteOpen,  setPaletteOpen]  = useState(false);
   const [agenda,       setAgenda]       = useState(null);
   const summary = useSummary();
 
   const search = useHomeSearch();
-  const searchInputRef = useRef(null);
   const { showToast } = useToast();
   const navigate = useNavigate();
   const { hash } = useLocation();
@@ -199,25 +178,21 @@ export default function HomeView() {
   // petición. Antes se saltaba con sesión, así que el único que veía las jornadas
   // abiertas era justamente quien no tenía cuenta para anotarse.
   useEffect(() => {
-    setHomeLoading(true);
     api.home.get()
       .then(setHomeData)
-      .catch(() => setHomeData(null))
-      .finally(() => setHomeLoading(false));
+      .catch(() => setHomeData(null));
   }, []);
 
-  // Atajo del buscador. Sin sesión la barra ya está en pantalla y no hace falta.
+  // "Ver todos" del buscador del header llega como ?q=.
+  const qParam = searchParams.get('q');
   useEffect(() => {
-    if (!isLoggedIn) return;
-    const onKey = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        e.preventDefault();
-        setPaletteOpen(true);
-      }
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [isLoggedIn]);
+    if (qParam) search.commit(qParam);
+  }, [qParam]);
+
+  function clearSearch() {
+    search.clear();
+    if (qParam) setSearchParams({}, { replace: true });
+  }
 
   function toggleEmoji(e) {
     setSelectedEmojis(prev =>
@@ -235,7 +210,6 @@ export default function HomeView() {
           writeNearbyCache(data);
           setNearbyClubs(data);
           setNearbyStatus('done');
-          setNearbyPage(NEARBY_INITIAL);
         } catch {
           setNearbyStatus('error');
         }
@@ -312,7 +286,7 @@ export default function HomeView() {
   }
 
   function openNewModal() {
-    if (user?.subscription?.plan !== 'premium' && groups.length >= FREE_MAX_GROUPS) {
+    if (!userHasRole(user, 'organizador') && groups.length >= FREE_MAX_GROUPS) {
       setPremiumReason(quotaReason());
       setShowPremiumModal(true);
       return;
@@ -385,7 +359,6 @@ export default function HomeView() {
     </div>
   );
 
-  const nearbyVisible = nearbyClubs;
   const committedQ = search.committedQ;
   const { users: committedUsers, groups: committedGroups, clubs: committedClubs, tours: committedTours } = search.committed;
 
@@ -412,313 +385,6 @@ export default function HomeView() {
     <div className="text-content font-sans pb-16">
       <div className={`px-4 sm:px-6 py-6 mx-auto ${isLoggedIn ? 'max-w-5xl xl:max-w-[1180px]' : 'max-w-5xl'}`}>
 
-        {/* ── Hero (visitante no logueado) ── */}
-        {!isLoggedIn && !committedQ && (
-          <div className="text-center pt-6 pb-12 sm:pt-12 sm:pb-16">
-            <div className="inline-flex items-center gap-2 mb-6 px-3 py-1.5 rounded-full border border-border-mid">
-              <img src={logoUrl} className="w-4 h-4" width="16" height="16" alt="" />
-              <span className="font-mono text-[11px] tracking-widest text-secondary">PADELEANDO</span>
-            </div>
-            <h1 className="font-condensed font-bold text-3xl sm:text-5xl leading-[1.1] text-white max-w-2xl mx-auto">
-              Organizá y llevá las estadísticas de tus<br className="hidden sm:block" /> torneos de <span className="text-brand">pádel</span>
-            </h1>
-            <p className="text-secondary text-sm font-sans mt-5 max-w-md mx-auto leading-relaxed">
-              Creá torneos Americanos o Ligas, cargá partidos en vivo y llevá estadísticas automáticas. <span className="text-brand">Gratis.</span>
-            </p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 mt-8">
-              <Btn variant="primary" size="lg" icon={Trophy} onClick={() => navigate('/register')}>
-                CREAR TORNEO GRATIS
-              </Btn>
-              <Btn variant="secondary" size="lg" onClick={() => navigate('/tutorial')}>
-                Ver cómo funciona
-              </Btn>
-            </div>
-            {/* Altura fija: los totales llegan con la petición y sin reservarla empujarían el resto. */}
-            <div className="h-11 mt-8 flex items-center justify-center">
-              {homeData?.totals && (
-                <div className="flex items-center gap-5 sm:gap-7 font-mono text-[11px] text-dim">
-                  {[
-                    [homeData.totals.tournaments, 'torneos'],
-                    [homeData.totals.matches,     'partidos'],
-                    [homeData.totals.players,     'jugadores'],
-                    [homeData.totals.clubs,       'clubes'],
-                  ].filter(([n]) => n > 0).map(([n, label]) => (
-                    <div key={label} className="flex flex-col items-center gap-0.5">
-                      <span className="font-condensed font-bold text-lg text-soft leading-none">{n.toLocaleString('es-AR')}</span>
-                      <span className="tracking-widest">{label.toUpperCase()}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <p className="font-mono text-[11px] text-dim mt-4">
-              ¿Ya tenés cuenta?{' '}
-              <button
-                onClick={() => navigate('/login')}
-                className="text-secondary hover:text-brand transition-colors underline underline-offset-2 bg-transparent border-none cursor-pointer p-0"
-              >
-                Iniciá sesión
-              </button>
-            </p>
-          </div>
-        )}
-
-        {/* ── Buscador del visitante ── */}
-        {!isLoggedIn && (
-          <div className="relative mb-8">
-            {!committedQ && (
-              <h2 className="font-condensed font-bold text-sm tracking-widest text-muted mb-2.5">
-                ENCONTRÁ JUGADORES, CATEGORÍAS Y CLUBES
-              </h2>
-            )}
-            <div className="flex gap-2">
-              <div className="relative flex-1">
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted pointer-events-none" />
-                <input
-                  ref={searchInputRef}
-                  className={`w-full bg-surface border border-border-mid text-white pl-10 ${search.q ? 'pr-10' : 'pr-4'} py-3 rounded-lg text-sm outline-none font-sans placeholder:text-muted focus:border-border-strong transition-colors`}
-                  placeholder="Buscar jugadores, torneos, categorías o clubes..."
-                  value={search.q}
-                  onChange={(e) => search.setQ(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter')  { addRecentSearch(search.q); search.commit(); }
-                    if (e.key === 'Escape') search.clear();
-                  }}
-                />
-                {search.q && (
-                  <button
-                    onClick={() => { search.clear(); searchInputRef.current?.focus(); }}
-                    aria-label="Limpiar búsqueda"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center bg-transparent border-0 rounded-full text-muted cursor-pointer hover:text-white hover:bg-border-mid transition-colors"
-                  >
-                    <X size={15} />
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => { addRecentSearch(search.q); search.commit(); }}
-                disabled={search.q.trim().length < 2 || search.committing}
-                aria-label="Buscar"
-                className="bg-surface border border-border-mid text-white px-4 py-3 rounded-lg cursor-pointer hover:border-border-strong transition-colors disabled:opacity-30"
-              >
-                {search.committing ? <Loader2 size={16} className="animate-spin" /> : <Search size={16} />}
-              </button>
-            </div>
-
-            {/* Dropdown de sugerencias */}
-            {search.q.trim().length >= 2 && (search.searching || search.liveCount > 0) && (
-              <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-surface-alt border border-border-strong rounded-lg overflow-hidden shadow-xl max-h-72 overflow-y-auto">
-                {search.searching && search.liveCount === 0 && (
-                  <div className="px-4 py-3 text-xs font-mono text-muted">Buscando...</div>
-                )}
-                {search.live.users.length > 0 && (
-                  <>
-                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">PERFILES</div>
-                    {search.live.users.map((u) => (
-                      <div key={u.id}
-                        onClick={() => { addRecentSearch(search.q); navigate(`/u/${u.username}`); search.clear(); }}
-                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                      >
-                        <span className="font-condensed font-bold text-base text-white">{u.name}</span>
-                        <span className="text-[11px] font-mono text-dim">@{u.username}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {search.live.groups.length > 0 && (
-                  <>
-                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CATEGORÍAS</div>
-                    {search.live.groups.map((g) => (
-                      <div key={g.id}
-                        onClick={() => { addRecentSearch(search.q); navigate(`/cat/${g.id}`); search.clear(); }}
-                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                      >
-                        <span className="font-condensed font-bold text-base text-white">
-                          {g.emojis?.length > 0 && <span className="mr-1">{g.emojis.join(' ')}</span>}{g.name}
-                        </span>
-                        <span className="text-[11px] font-mono text-dim">@{g.owner_username}</span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {search.live.tours.length > 0 && (
-                  <>
-                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">TORNEOS</div>
-                    {search.live.tours.map((t) => (
-                      <div key={t.id}
-                        onClick={() => { addRecentSearch(search.q); navigate(`/view/${t.id}`); search.clear(); }}
-                        className="flex flex-col px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                      >
-                        <span className="font-condensed font-bold text-base text-white truncate">{t.name}</span>
-                        <span className="text-[11px] font-mono text-dim truncate">
-                          {t.group_emojis?.length > 0 && <span className="mr-1">{t.group_emojis.join(' ')}</span>}
-                          {t.group_name}{t.day && <span> · {fmt(t.day)}</span>}
-                        </span>
-                      </div>
-                    ))}
-                  </>
-                )}
-                {search.live.clubs.length > 0 && (
-                  <>
-                    <div className="px-4 pt-3 pb-1 text-[10px] font-mono text-dim tracking-widest border-b border-border-mid">CLUBES</div>
-                    {search.live.clubs.map((c) => (
-                      <div key={c.id}
-                        onClick={() => { addRecentSearch(search.q); navigate(`/club/${c.id}`); search.clear(); }}
-                        className="flex items-center gap-2.5 px-4 py-2.5 cursor-pointer border-b border-border-mid last:border-0 hover:bg-surface transition-colors"
-                      >
-                        {c.photo_url
-                          ? <img src={c.photo_url} alt="" className="w-8 h-8 rounded-md object-cover border border-border-mid shrink-0" />
-                          : <span className="w-8 h-8 rounded-md bg-surface border border-border-mid flex items-center justify-center shrink-0"><Building2 size={15} className="text-muted" /></span>}
-                        <div className="min-w-0">
-                          <div className="font-condensed font-bold text-white truncate">{c.name}</div>
-                          {c.location_name && <div className="text-[11px] font-mono text-dim truncate">{c.location_name}</div>}
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── Vitrinas del visitante: en vivo, próximas, inscripciones y categorías activas ── */}
-        {!isLoggedIn && !committedQ && (
-          <VisitorShowcase data={homeData} loading={homeLoading} />
-        )}
-
-        {/* ── Clubes cerca tuyo (visitante) ── */}
-        {!isLoggedIn && !committedQ && nearbyStatus !== 'unsupported' && (
-          <div className="mb-10">
-            {/* Estados previos a los resultados: misma altura para evitar saltos de layout */}
-            {nearbyStatus !== 'done' && (
-              <div className="border border-border-mid rounded-lg p-6 sm:p-8 text-center bg-surface/40 min-h-[168px] flex flex-col items-center justify-center">
-                {nearbyStatus === 'loading' ? (
-                  <>
-                    <div className="w-11 h-11 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mb-3">
-                      <Loader2 size={20} className="animate-spin" />
-                    </div>
-                    <p className="text-secondary text-sm font-sans">Buscando clubes cercanos...</p>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-11 h-11 rounded-full bg-brand/10 border border-brand/20 flex items-center justify-center text-brand mb-3">
-                      <MapPin size={20} />
-                    </div>
-                    <p className="text-secondary text-sm font-sans mb-4 max-w-xs leading-relaxed">
-                      {nearbyStatus === 'denied'
-                        ? 'La ubicación está bloqueada. Habilitala desde el ícono de candado en la barra del navegador.'
-                        : nearbyStatus === 'error'
-                          ? 'No pudimos obtener tu ubicación. Probá de nuevo.'
-                          : 'Activá tu ubicación para descubrir clubes de pádel cerca tuyo.'}
-                    </p>
-                    <Btn variant="primary" size="md" icon={MapPin} onClick={fetchNearbyClubs}>
-                      {nearbyStatus === 'idle' ? 'VER CLUBES CERCA' : 'REINTENTAR'}
-                    </Btn>
-                  </>
-                )}
-              </div>
-            )}
-            {nearbyStatus === 'done' && (
-              <>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2 font-condensed font-bold text-sm tracking-widest text-muted">
-                    <MapPin size={13} />
-                    CLUBES CERCA TUYO
-                  </div>
-                  <button
-                    onClick={() => { setNearbyStatus('idle'); setNearbyClubs([]); }}
-                    className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none"
-                  >
-                    <X size={15} />
-                  </button>
-                </div>
-                {nearbyVisible.length === 0 ? (
-                  <div className="font-mono text-xs text-dim">No hay clubes en un radio de 20 km.</div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-3">
-                      {nearbyVisible.slice(0, nearbyPage).map((c, i) => (
-                        <FadeInCard
-                          key={c.id}
-                          delay={Math.min(i, 5) * 50}
-                          className="border border-border-mid rounded-lg cursor-pointer overflow-hidden card-link flex items-center gap-3 p-3"
-                          style={{ background: 'linear-gradient(145deg, var(--color-surface) 0%, var(--color-border) 100%)' }}
-                          onClick={() => navigate(`/club/${c.id}`)}
-                        >
-                          {c.photo_url ? (
-                            <img
-                              src={c.photo_url}
-                              alt=""
-                              className="w-14 h-14 rounded-lg object-cover border border-border-mid shrink-0"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 rounded-lg bg-surface border border-border-mid flex items-center justify-center shrink-0">
-                              <Building2 size={20} className="text-muted" />
-                            </div>
-                          )}
-                          <div className="min-w-0 flex-1">
-                            <div className="font-condensed font-bold text-[16px] text-white leading-tight truncate">{c.name}</div>
-                            {c.location_name && (
-                              <div className="flex items-center gap-1 font-mono text-[11px] text-secondary mt-0.5">
-                                <MapPin size={10} className="shrink-0" />
-                                <span className="truncate">{c.location_name}</span>
-                              </div>
-                            )}
-                            <div className="flex items-center gap-3 mt-1">
-                              {c.courts != null && (
-                                <span className="font-mono text-[11px] text-muted">{c.courts} {c.courts === 1 ? 'cancha' : 'canchas'}</span>
-                              )}
-                              {c.distance_km != null && (
-                                <span className="flex items-center gap-1 font-mono text-[11px] text-brand">
-                                  <Navigation size={10} />{c.distance_km} km
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </FadeInCard>
-                      ))}
-                    </div>
-                    {nearbyVisible.length > nearbyPage && (
-                      <button
-                        onClick={() => setNearbyPage(p => p + NEARBY_PAGE_SIZE)}
-                        className="mt-3 flex items-center gap-2 bg-transparent border border-border-mid text-muted px-3.5 py-2 rounded-lg text-xs font-mono cursor-pointer hover:border-border-strong hover:text-soft transition-colors"
-                      >
-                        VER MÁS · {nearbyVisible.length - nearbyPage} restantes
-                      </button>
-                    )}
-                  </>
-                )}
-              </>
-            )}
-          </div>
-        )}
-
-        {/* ── ¿Qué podés hacer? (visitantes) ── */}
-        {!isLoggedIn && !committedQ && (
-          <div className="mt-14 mb-6">
-            <h2 className="font-condensed font-bold text-sm tracking-widest text-muted text-center mb-6">¿QUÉ PODÉS HACER?</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {FEATURES.map((f) => (
-                <div key={f.title} className="border border-border-mid rounded-lg p-4 bg-surface/40 flex flex-col gap-2.5">
-                  <div className="w-9 h-9 rounded-lg bg-brand/10 border border-brand/20 flex items-center justify-center text-brand shrink-0">
-                    <f.icon size={18} />
-                  </div>
-                  <h3 className="font-condensed font-bold text-[15px] text-white leading-tight">{f.title}</h3>
-                  <p className="font-sans text-[13px] text-secondary leading-snug">{f.desc}</p>
-                </div>
-              ))}
-            </div>
-            <AppPreview />
-            <div className="flex justify-center mt-12">
-              <Btn variant="primary" size="lg" icon={Trophy} onClick={() => navigate('/register')}>
-                EMPEZÁ GRATIS
-              </Btn>
-            </div>
-          </div>
-        )}
-
         {/* ── Resultados de búsqueda ── */}
         {committedQ && (
           <div>
@@ -726,7 +392,7 @@ export default function HomeView() {
               <div className="font-condensed font-bold text-sm tracking-widest text-muted">
                 RESULTADOS PARA &quot;{committedQ}&quot;
               </div>
-              <button onClick={search.clear} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
+              <button onClick={clearSearch} className="text-dim hover:text-soft transition-colors cursor-pointer bg-transparent border-none">
                 <X size={16} />
               </button>
             </div>
@@ -756,10 +422,8 @@ export default function HomeView() {
             {!search.committing && committedGroups.length > 0 && (
               <>
                 <div className="font-mono text-[10px] text-dim tracking-widest mb-3">CATEGORÍAS</div>
-                <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-3 mb-8">
-                  {committedGroups.map((g) => (
-                    <GroupCard key={g.id} g={g} onClick={() => navigate(`/cat/${g.id}`)} />
-                  ))}
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,340px),1fr))] gap-3 mb-8">
+                  {committedGroups.map((g) => <CategoryTile key={g.id} g={g} to={`/cat/${g.id}`} />)}
                 </div>
               </>
             )}
@@ -843,14 +507,6 @@ export default function HomeView() {
                   </h1>
                   <p className="font-sans text-[12.5px] text-muted mt-1.5 m-0">{inicioSubtitle}</p>
                 </div>
-                <button
-                  onClick={() => setPaletteOpen(true)}
-                  aria-label="Buscar"
-                  className="h-10 px-3 inline-flex items-center gap-2 bg-surface border border-border-mid rounded-lg text-secondary hover:text-white hover:border-border-strong transition-colors cursor-pointer shrink-0"
-                >
-                  <Search size={16} />
-                  <kbd className="hidden sm:inline font-mono text-[9.5px] tracking-wider border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
-                </button>
               </div>
 
               <StatRail stats={inicioRail} />
@@ -883,7 +539,7 @@ export default function HomeView() {
               <Pendientes friendlies={agenda?.pending?.friendlies} registrations={agenda?.pending?.registrations} />
               <Agenda items={agenda?.items ?? null} />
 
-                <ParaSumarte signup={discoverSignup} onOpenTournament={(id) => navigate(`/view/${id}`)} />
+                <ParaSumarte signup={discoverSignup} />
             </div>
 
             <aside className="hidden xl:flex flex-col gap-7 sticky top-24" aria-label="Tu resumen">
@@ -894,6 +550,7 @@ export default function HomeView() {
                 onFetch={fetchNearbyClubs}
                 onOpen={(id) => navigate(`/club/${id}`)}
               />
+              <ParaSeguir />
               <AdBanner />
             </aside>
             <AdInline />
@@ -902,14 +559,6 @@ export default function HomeView() {
 
       </div>
 
-      {isLoggedIn && (
-        <SearchPalette
-          open={paletteOpen}
-          onClose={() => setPaletteOpen(false)}
-          search={search}
-          onNavigate={(to) => { navigate(to); search.clear(); }}
-        />
-      )}
 
       {/* ── Modal nueva categoría ── */}
       {showNew && (
@@ -1126,7 +775,7 @@ export default function HomeView() {
       )}
 
       {showPremiumModal && (
-        <PremiumModal reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
+        <PremiumModal focus="organizador" reason={premiumReason} onClose={() => { setShowPremiumModal(false); setPremiumReason(null); }} />
       )}
     </div>
   );

@@ -101,7 +101,7 @@ export default function Setup() {
   const [eventTime, setEventTime] = useState("");
   const [group, setGroup]         = useState(null);
   // Vacío a propósito: lo que no se cargue queda en null y se hereda.
-  const [signup, setSignup]       = useState({ open: false, price: null, unit: 'player', contacts: [] });
+  const [signup, setSignup]       = useState({ open: false, price: null, unit: 'player', contacts: [], online: false, fee_payer: 'player', payment_note: '' });
   const [creating, setCreating]   = useState(false);
   const [liga, setLiga] = useState({ liga_mode: 'jornada', allow_rematch: false, winner_format: 'tabla', playoff_size: null });
   const [copa, setCopa] = useState(() => ({ ...defaultCopaConfig('zonas'), points_win: 3, points_loss: 0, premio1: '', premio2: '', premio3: '' }));
@@ -223,6 +223,9 @@ export default function Setup() {
         signup_capacity_unit: signup.capacity_unit ?? null,
         signup_closes_at:     signup.closes_at ?? null,
         rules:                signup.rules ?? null,
+        signup_online:        signup.open && signup.online === true,
+        signup_fee_payer:     signup.fee_payer ?? 'player',
+        signup_payment_note:  signup.payment_note?.trim() || null,
         liga: fmt === 'liga' ? liga : null,
         copa: fmt === 'copa' ? {
           copa_config: copaConfigBody(copa),
@@ -376,6 +379,7 @@ export default function Setup() {
                     rules:    group?.rules ?? null,
                   }}
                   profile={profileContacts(group?.owner_profile)}
+                  cobro={{ connected: !!group?.owner_mp_connected, organizerPlan: !!group?.owner_is_premium, isOwner: !!group?.is_owner }}
                 />
                 <p className="text-[12px] mt-2 mb-0 text-secondary">Lo que cargues vale sólo para este torneo. Lo que dejes vacío se hereda de la categoría.</p>
               </div>

@@ -17,23 +17,26 @@ export function registrationText(n) {
   if (n.type === 'registration_decided') {
     if (n.title === 'approved') return `Tu inscripción a ${torneo(n)} fue aprobada. Ya tenés un lugar.`;
     if (n.title === 'waitlist') return `Tu inscripción a ${torneo(n)} quedó en lista de espera.`;
+    if (n.title === 'cancelled') return `El organizador canceló las inscripciones de ${torneo(n)}. Si pagaste por la app, te devolvemos el pago.`;
     if (n.title === 'rejected') {
       const motivo = n.registration_reason?.trim() || 'Por motivos que definió el organizador.';
       return `Tu inscripción a ${torneo(n)} no fue aprobada. ${motivo}`;
     }
     return `Hay novedades de tu inscripción a ${torneo(n)}.`;
   }
+  if (n.type === 'registration_refund_failed') return `No se pudo devolver un pago de ${torneo(n)}. Devolvelo desde tu Mercado Pago.`;
   return null;
 }
 
 export const isRegistrationNotif = (n) =>
-  n?.type === 'registration_received' || n?.type === 'registration_decided' || n?.type === 'registration_partner';
+  n?.type === 'registration_received' || n?.type === 'registration_decided' || n?.type === 'registration_partner'
+  || n?.type === 'registration_refund_failed';
 
 /** Destino del aviso de inscripción: el organizador va a la solapa INSCRIPCIONES. */
 export function registrationHref(n) {
   if (!n?.group_id || !n?.tournament_id) return null;
   const base = `/cat/${n.group_id}/torneo/${n.tournament_id}`;
-  return n.type === 'registration_received' ? `${base}?tab=registrations` : base;
+  return n.type === 'registration_received' || n.type === 'registration_refund_failed' ? `${base}?tab=registrations` : base;
 }
 
 const REMINDER_TEXT = {
@@ -76,6 +79,8 @@ const BY_TYPE = {
   registration_received: registrationText,
   registration_partner:  registrationText,
   registration_decided:  registrationText,
+  registration_refund_failed: registrationText,
+  commission_due:     (n) => `Tenés comisiones por pagar de ${n.body ?? 'un torneo'}. Pagalas en Torneos › Organizar.`,
   follow:             (n) => `${actor(n)} te empezó a seguir`,
   invitation:         (n) => `${actor(n)} te invitó a unirte a ${grupo(n)}${n.player_name ? ` como ${n.player_name}` : ''}`,
   join_request:       (n) => `${actor(n)} solicitó unirse a ${torneoConCategoria(n)}`,
@@ -84,6 +89,7 @@ const BY_TYPE = {
   ownership_received: (n) => `Ahora sos el dueño de ${grupo(n)}`,
   player_unlinked:    (n) => `${actor(n)} te desvinculó de ${grupo(n)}`,
   new_tournament:     (n) => `${actor(n)} creó ${n.tournament_name ?? 'un torneo'} en ${grupo(n)}`,
+  club_tournament_signup: (n) => `Abrió la inscripción de ${n.tournament_name ?? 'un torneo'} en ${n.body ?? 'un club que seguís'}`,
   club_request:       ()  => 'Novedades sobre tu solicitud de club',
   club_claim:         (n) => n.body ?? 'Novedades sobre tu reclamo de club',
   premium_claim:      ()  => 'Tenés un código premium para reclamar',
@@ -102,6 +108,8 @@ export function notifTitle(n) {
   if (n?.type === 'registration_received') return 'Inscripción nueva';
   if (n?.type === 'registration_partner')  return 'Te inscribieron';
   if (n?.type === 'registration_decided')  return 'Tu inscripción';
+  if (n?.type === 'registration_refund_failed') return 'Reintegro pendiente';
+  if (n?.type === 'commission_due') return 'Comisiones por pagar';
   if (isFriendlyNotif(n)) return 'Amistoso';
   return 'Notificación nueva';
 }

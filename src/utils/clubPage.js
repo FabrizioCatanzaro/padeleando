@@ -14,45 +14,6 @@ function localDate(value) {
 
 export const eventDate = (ev) => localDate(ev?.event_date ?? ev?.created_at);
 
-const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-
-export const eventMonthKey = (ev) => {
-  const d = eventDate(ev);
-  return d ? monthKey(d) : null;
-};
-
-/**
- * Doce meses hasta el actual, con cuántos torneos cayó cada uno. Los meses sin
- * nada quedan en la serie: el hueco es el dato, dice que el club estuvo parado.
- * @param {Array} events torneos del club
- * @param {Date}  [now]  inyectable para poder probarlo
- */
-export function monthBuckets(events = [], now = new Date()) {
-  const counts = new Map();
-  for (const ev of events) {
-    const key = eventMonthKey(ev);
-    if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  const out = [];
-  for (let i = 11; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = monthKey(d);
-    out.push({
-      key,
-      label: d.toLocaleDateString('es-AR', { month: 'short' }).replace('.', ''),
-      full:  d.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' }),
-      n:     counts.get(key) ?? 0,
-    });
-  }
-  return out;
-}
-
-/** Nivel 0-4 de la rampa de calor, relativo al mes más cargado. */
-export function heatLevel(n, max) {
-  if (!n) return 0;
-  return Math.min(4, Math.ceil((n / Math.max(max, 1)) * 4));
-}
-
 /** Categorías que jugaron alguna jornada en el club, de más a menos. */
 export function categoryRows(events = []) {
   const by = new Map();

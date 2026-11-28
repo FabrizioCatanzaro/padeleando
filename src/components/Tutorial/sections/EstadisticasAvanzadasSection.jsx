@@ -7,7 +7,7 @@ export default function EstadisticasAvanzadasSection() {
   return (
     <TutorialSection
       title="Estadísticas avanzadas"
-      description="Es un bloque extra al final del perfil, incluido en el plan Premium. Va más allá del resumen: mide cómo jugás partido a partido y cómo cambia tu rendimiento a lo largo del año."
+      description="Es un bloque extra al final del perfil, incluido en el plan Jugador+. Va más allá del resumen: mide cómo jugás partido a partido y cómo cambia tu rendimiento a lo largo del año."
     >
       <TutorialMedia caption="Bloque de estadísticas avanzadas al final del perfil" name="perfil-stats-avanzadas" />
 
@@ -38,7 +38,7 @@ export default function EstadisticasAvanzadasSection() {
       </h3>
       <Bullets
         items={[
-          'Necesitás plan Premium para tenerlas. Sin Premium no aparecen, ni siquiera para vos.',
+          'Necesitás el plan Jugador+ (o el Combo) para tenerlas. Sin ese plan no aparecen, ni siquiera para vos.',
           'Por defecto son privadas: sólo las ve el dueño del perfil.',
           'Podés hacerlas públicas con el interruptor que aparece arriba del bloque, en tu propio perfil.',
           'Al hacerlas públicas, cualquiera que visite tu perfil las ve, y también quedan incluidas en la imagen que se genera para compartir.',

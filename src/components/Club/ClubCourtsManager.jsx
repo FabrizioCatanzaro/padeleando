@@ -1,40 +1,71 @@
 import { useEffect, useState } from 'react'
-import { LayoutGrid, Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Check, EyeOff } from 'lucide-react'
+import { Plus, Pencil, Trash2, ChevronUp, ChevronDown, X, Check, EyeOff } from 'lucide-react'
 import { api } from '../../utils/api'
 import { useToast } from '../../context/useToast'
 import { formatMoney } from '../../utils/money'
+import { FLOOR_OPTIONS, WALL_OPTIONS, COURT_COLORS, courtSummary, courtFloorColor, courtWallColor, courtColorName } from '../../utils/clubProfile'
+import CourtGlyph from './CourtGlyph'
 
-const FLOORS = [
-  { value: '',                 label: 'Sin especificar' },
-  { value: 'cesped_sintetico', label: 'Césped sintético' },
-  { value: 'cesped_natural',   label: 'Césped natural' },
-  { value: 'cemento',          label: 'Cemento' },
-]
-const FLOOR_LABEL = Object.fromEntries(FLOORS.map((f) => [f.value, f.label]))
-
-const WALLS = [
-  { value: '',        label: 'Sin especificar' },
-  { value: 'cemento',  label: 'Cemento' },
-  { value: 'cristal',  label: 'Cristal' },
-]
-const WALL_LABEL = Object.fromEntries(WALLS.map((w) => [w.value, w.label]))
+const FLOORS = [{ value: '', label: 'Sin especificar' }, ...FLOOR_OPTIONS]
+const WALLS = [{ value: '', label: 'Sin especificar' }, ...WALL_OPTIONS]
 
 const inputCls = 'w-full bg-surface border border-border-mid text-white px-2.5 py-1.5 rounded-sm text-[13px] outline-none font-sans'
 const labelCls = 'block text-[10px] font-mono tracking-widest text-muted mb-1'
 
 function emptyDraft() {
-  return { name: '', floor_type: '', wall_type: '', covered: false, lit: false, external_play: false, price_30: '', price_60: '' }
+  return { name: '', floor_type: '', wall_type: '', covered: false, lit: false, external_play: false, price_30: '', price_60: '', floor_color: '', description: '' }
 }
 
-// Resumen de atributos de una cancha (mismo criterio que ClubInfo)
-function courtSummary(c) {
-  return [
-    c.floor_type ? FLOOR_LABEL[c.floor_type] : null,
-    c.wall_type ? WALL_LABEL[c.wall_type] : null,
-    c.covered ? 'Techada' : null,
-    c.lit ? 'Con iluminación' : null,
-    c.external_play ? 'Juego exterior' : null,
-  ].filter(Boolean)
+function courtBody(c) {
+  return {
+    name: c.name, floor_type: c.floor_type, wall_type: c.wall_type,
+    covered: c.covered, lit: c.lit, external_play: c.external_play,
+    price_30: c.price_30, price_60: c.price_60,
+    floor_color: c.floor_color || null, description: c.description || null,
+  }
+}
+
+// Seis colores rápidos y el selector del sistema para cualquier otro
+function FloorColorField({ draft, onChange }) {
+  const color = courtFloorColor(draft)
+  const name = draft.floor_color ? (courtColorName(draft.floor_color) ?? 'Color personalizado') : 'Según el tipo de piso'
+  return (
+    <fieldset className="col-span-2 border-0 p-0 m-0 min-w-0">
+      <legend className={labelCls}>COLOR DEL PISO</legend>
+      <div className="flex items-center gap-3 flex-wrap">
+        <CourtGlyph color={color} wall={courtWallColor(draft)} className="w-8 h-14 shrink-0" />
+        <div className="flex flex-col gap-2 min-w-0">
+          <div className="flex gap-1.5 flex-wrap">
+            {COURT_COLORS.map((c) => {
+              const on = draft.floor_color === c.hex
+              return (
+                <button key={c.hex} type="button" onClick={() => onChange({ ...draft, floor_color: c.hex })}
+                  aria-pressed={on} aria-label={c.label} title={c.label}
+                  className={`w-8 h-8 rounded-full cursor-pointer border-2 ${on ? 'border-brand' : 'border-border-strong'}`}
+                  style={{ background: c.hex }} />
+              )
+            })}
+            <label title="Elegir otro color"
+              className="relative w-8 h-8 rounded-full border border-dashed border-dim flex items-center justify-center text-content cursor-pointer overflow-hidden">
+              <Plus size={14} />
+              <input type="color" value={draft.floor_color || COURT_COLORS[0].hex} aria-label="Elegir otro color de piso"
+                onChange={(e) => onChange({ ...draft, floor_color: e.target.value })}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full" />
+            </label>
+          </div>
+          <span className="text-[11px] text-dim">
+            {name}{draft.floor_color && <> · <span className="text-white tabular-nums">{draft.floor_color.toUpperCase()}</span></>}
+            {draft.floor_color && (
+              <button type="button" onClick={() => onChange({ ...draft, floor_color: '' })}
+                className="ml-2 text-brand bg-transparent border-0 p-0 cursor-pointer hover:underline text-[11px]">
+                Quitar
+              </button>
+            )}
+          </span>
+        </div>
+      </div>
+    </fieldset>
+  )
 }
 
 // Formulario chico para crear o editar una cancha (mismos campos, distinto submit).
@@ -61,6 +92,7 @@ function CourtForm({ draft, onChange, onSubmit, onCancel, submitLabel, busy }) {
             {WALLS.map((w) => <option key={w.value} value={w.value}>{w.label}</option>)}
           </select>
         </div>
+        <FloorColorField draft={draft} onChange={onChange} />
         <div>
           <label className={labelCls}>PRECIO TURNO 30 MIN</label>
           <input className={inputCls} type="number" min="0" value={draft.price_30}
@@ -89,6 +121,12 @@ function CourtForm({ draft, onChange, onSubmit, onCancel, submitLabel, busy }) {
             onChange={(e) => onChange({ ...draft, external_play: e.target.checked })} />
           <span className="text-xs font-sans text-muted">Juego exterior (hay lugar para seguir la jugada saliendo por la puerta)</span>
         </label>
+        <div className="col-span-2">
+          <label className={labelCls}>DESCRIPCIÓN (opcional)</label>
+          <textarea className={`${inputCls} resize-y`} rows={2} maxLength={200} value={draft.description}
+            onChange={(e) => onChange({ ...draft, description: e.target.value })}
+            placeholder="ej: césped de 2025, tribuna para 30 personas" />
+        </div>
       </div>
       <div className="flex gap-2 mt-3">
         <button type="button" disabled={busy || !draft.name.trim()} onClick={onSubmit}
@@ -131,7 +169,7 @@ export default function ClubCourtsManager({ clubId, onCourtsChange }) {
   async function submitAdd() {
     setBusyId('new')
     try {
-      const created = await api.clubs.courts.create(clubId, draft)
+      const created = await api.clubs.courts.create(clubId, courtBody(draft))
       const next = [...courts, created]
       setCourts(next)
       onCourtsChange?.(next)
@@ -152,6 +190,8 @@ export default function ClubCourtsManager({ clubId, onCourtsChange }) {
       external_play: !!court.external_play,
       price_30: court.price_30 ?? '',
       price_60: court.price_60 ?? '',
+      floor_color: court.floor_color ?? '',
+      description: court.description ?? '',
     })
     setAdding(false)
   }
@@ -159,7 +199,7 @@ export default function ClubCourtsManager({ clubId, onCourtsChange }) {
   async function submitEdit(courtId) {
     setBusyId(courtId)
     try {
-      const updated = await api.clubs.courts.update(clubId, courtId, { ...editDraft, active: true })
+      const updated = await api.clubs.courts.update(clubId, courtId, { ...courtBody(editDraft), active: true })
       const next = courts.map((c) => (c.id === courtId ? updated : c))
       setCourts(next)
       onCourtsChange?.(next)
@@ -172,12 +212,7 @@ export default function ClubCourtsManager({ clubId, onCourtsChange }) {
   async function toggleActive(court) {
     setBusyId(court.id)
     try {
-      const updated = await api.clubs.courts.update(clubId, court.id, {
-        name: court.name, floor_type: court.floor_type, wall_type: court.wall_type,
-        covered: court.covered, lit: court.lit, external_play: court.external_play,
-        price_30: court.price_30, price_60: court.price_60,
-        active: !court.active,
-      })
+      const updated = await api.clubs.courts.update(clubId, court.id, { ...courtBody(court), active: !court.active })
       const next = courts.map((c) => (c.id === court.id ? updated : c))
       setCourts(next)
       onCourtsChange?.(next)
@@ -237,13 +272,13 @@ export default function ClubCourtsManager({ clubId, onCourtsChange }) {
           ) : (
             <div key={court.id}
               className={`flex items-center gap-2.5 border border-border-mid rounded-lg px-3 py-2 ${court.active ? '' : 'opacity-50'}`}>
-              <LayoutGrid size={15} className="text-muted shrink-0" />
+              <CourtGlyph color={courtFloorColor(court)} wall={courtWallColor(court)} className="w-4 h-7 shrink-0" />
               <div className="min-w-0 flex-1">
                 <div className="text-[13px] text-white font-sans truncate">
                   {court.name}
                   {!court.active && <span className="text-[10px] font-mono text-muted ml-1.5">(deshabilitada)</span>}
                 </div>
-                <div className="text-[11px] font-mono text-dim truncate">
+                <div className="text-[11px] font-mono text-dim">
                   {[
                     ...courtSummary(court),
                     court.price_30 != null ? `${formatMoney(court.price_30)} (30 min)` : null,

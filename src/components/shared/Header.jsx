@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
-import { User, CircleHelp, Bell, Download, Volume2, VolumeX, UserPlus, Check, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
+import { User, CircleHelp, Bell, Search, Download, Volume2, VolumeX, UserPlus, Check, LayoutGrid, CreditCard, Shield, LogOut, Building2, AlarmClock } from 'lucide-react'
 import { useAuth } from '../../context/useAuth'
 import { usePwaInstall } from '../../hooks/usePwaInstall'
 import useHideOnScroll from '../../hooks/useHideOnScroll'
@@ -15,7 +15,9 @@ import { useAlerts } from '../../context/useAlerts'
 import { playTone, TONES } from '../../utils/sound'
 import { notifTitle, notifSummary, registrationText, registrationHref, isRegistrationNotif, torneoConCategoria, isFriendlyNotif, friendlyText, friendlyHref } from '../../utils/notifText'
 import ShareAppModal from './ShareAppModal'
+import HeaderSearch from './HeaderSearch'
 import { useSummary } from '../../hooks/useSummary'
+import { userHasRole } from '../../utils/plan'
 
 // Preferencia de sonido de la campana, apagada por defecto.
 const SOUND_KEY = 'notif_sound'
@@ -81,6 +83,17 @@ function NotifItemText({ n, onNavigate }) {
         <span className="text-white font-semibold">{n.group_name ?? 'una categoría'}</span>
       )}</>
   );
+  if (n.type === 'club_tournament_signup') return (
+    <>Abrió la inscripción de{' '}
+      {n.tournament_id && n.group_id ? (
+        <span
+          onClick={(e) => { e.stopPropagation(); onNavigate(`/cat/${n.group_id}/torneo/${n.tournament_id}`); }}
+          className="text-white font-semibold cursor-pointer hover:text-brand transition-colors"
+        >{n.tournament_name ?? 'un torneo'}</span>
+      ) : (
+        <span className="text-white font-semibold">{n.tournament_name ?? 'un torneo'}</span>
+      )}{' '}en <span className="text-white font-semibold">{n.body ?? 'un club que seguís'}</span></>
+  );
   if (n.type === 'collab_invite') return (
     <>{actor} te invitó a co-organizar{' '}
       {n.group_id ? (
@@ -133,6 +146,7 @@ function NotifItemText({ n, onNavigate }) {
 
 export default function Header() {
   const [menuOpen,      setMenuOpen]      = useState(false)
+  const [searchOpen,    setSearchOpen]    = useState(false)
   const [notifOpen,     setNotifOpen]     = useState(false)
   const [notifCount,    setNotifCount]    = useState(0)
   const [notifs,        setNotifs]        = useState([])
@@ -164,6 +178,19 @@ export default function Header() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  // Atajo del buscador en cualquier página.
+  useEffect(() => {
+    if (!isLoggedIn) return
+    const onKey = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [isLoggedIn])
 
   // Cada 45 s y sólo con la pestaña visible.
   useEffect(() => {
@@ -302,7 +329,7 @@ export default function Header() {
             className="flex items-center gap-3 px-4 py-3 border-b border-border-mid cursor-pointer hover:bg-border-mid transition-colors"
             onClick={() => go(`/u/${user?.username}`)}
           >
-            <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={user?.subscription?.plan === 'premium'} />
+            <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={38} premium={userHasRole(user, 'jugador')} />
             <div className="min-w-0">
               <div className="text-sm text-white font-sans font-semibold truncate">{user?.name}</div>
               <div className="text-[11px] font-mono text-dim truncate">
@@ -409,7 +436,24 @@ export default function Header() {
         <img className="h-9" src={logoTxtUrl} width="174" height="36" alt="Padeleando" />
       </div>
 
+      {isLoggedIn && (
+        <div className="hidden lg:flex flex-1 justify-center px-6">
+          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar"
+            className="w-full max-w-[440px] h-10 px-3 flex items-center gap-2.5 rounded-lg border border-border-mid bg-surface text-muted font-sans text-[13px] cursor-pointer hover:border-border-strong hover:text-content transition-colors">
+            <Search size={16} className="shrink-0" />
+            <span className="flex-1 text-left truncate">Buscar jugadores, torneos, clubes…</span>
+            <kbd className="font-mono text-[10px] border border-border-strong rounded px-1.5 py-0.5 text-dim">⌘K</kbd>
+          </button>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
+        {isLoggedIn && (
+          <button type="button" onClick={() => setSearchOpen(true)} aria-label="Buscar"
+            className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-transparent border-0 text-content cursor-pointer hover:text-white">
+            <Search size={19} />
+          </button>
+        )}
         {/* Bell — notificaciones */}
         {isLoggedIn && (
           <div className="relative" ref={notifRef}>
@@ -494,7 +538,7 @@ export default function Header() {
             className={`relative flex items-center bg-transparent rounded-full cursor-pointer transition-opacity hover:opacity-80 ${isLoggedIn ? 'p-0 border-0' : 'p-2 border border-border-strong text-muted hover:text-soft rounded-lg'}`}
           >
             {isLoggedIn
-              ? <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={46} premium={user?.subscription?.plan === 'premium'} />
+              ? <PlayerAvatar name={user?.name} src={user?.avatar_url ?? null} size={46} premium={userHasRole(user, 'jugador')} />
               : <User size={18} />}
           </button>
 
@@ -517,6 +561,7 @@ export default function Header() {
       </div>
 
       {shareAppOpen && <ShareAppModal onClose={() => setShareAppOpen(false)} />}
+      {searchOpen && <HeaderSearch onClose={() => setSearchOpen(false)} />}
     </div>
   )
 }
@@ -552,7 +597,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
 
   return (
     <div
-      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n)) || isFriendlyNotif(n)) ? 'cursor-pointer hover:bg-white/5' : ''}`}
+      className={`flex items-start gap-3 px-4 py-3 border-b border-border-mid last:border-b-0 transition-colors ${unread ? 'bg-brand/5' : ''} ${(n.type === 'admin_message' || n.type === 'premium_claim' || (n.type === 'booking_requested' || n.type === 'booking_decided' || n.type === 'booking_cancelled') || ((n.type === 'club_request' || n.type === 'club_claim') && isAdminViewer) || (isRegistrationNotif(n) && registrationHref(n)) || isFriendlyNotif(n) || n.type === 'commission_due') ? 'cursor-pointer hover:bg-white/5' : ''}`}
       onClick={
         n.type === 'admin_message' ? () => onNavigate('/notifications')
           : n.type === 'club_request' && isAdminViewer ? () => onNavigate('/admin/clubs/requests')
@@ -562,6 +607,7 @@ function DropdownNotifItem({ n, onNavigate, onFollow, onInvitation, onJoinReques
           : n.type === 'premium_claim' ? () => onNavigate('/admin/users')
           : isRegistrationNotif(n) && registrationHref(n) ? () => onNavigate(registrationHref(n))
           : isFriendlyNotif(n) ? () => onNavigate(friendlyHref(n))
+          : n.type === 'commission_due' ? () => onNavigate('/torneos/organizar')
           : undefined
       }
     >

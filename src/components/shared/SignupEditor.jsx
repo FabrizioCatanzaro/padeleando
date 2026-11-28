@@ -1,4 +1,6 @@
-import { Plus, X } from 'lucide-react';
+import { useState } from 'react';
+import { Plus, X, Link2 } from 'lucide-react';
+import { quote, priceForNet, rateLabel } from '../../utils/commission';
 import { CONTACT_META, CONTACT_TYPES, formatPrice } from '../../utils/signup';
 import { levelLabel } from '../../utils/category';
 import LevelPicker from './LevelPicker';
@@ -45,8 +47,109 @@ function Segmentos({ label, opciones, value, onChange }) {
   );
 }
 
+const pesos = (n) => `$${Math.round(n).toLocaleString('es-AR')}`;
+
+function Linea({ label, valor, fuerte = false }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 text-[13px]">
+      <span className="text-secondary">{label}</span>
+      <span className={fuerte ? 'text-white font-bold' : 'text-soft'}>{valor}</span>
+    </div>
+  );
+}
+
+// Cobro por la app: sólo en un torneo. El Mercado Pago es siempre el del dueño de la categoría.
+function CobroOnline({ value, set, cobro, price, unit }) {
+  const [neto, setNeto] = useState('');
+  const payer = value.fee_payer ?? 'player';
+  const perPlayer = price == null ? null : (unit === 'pair' ? price / 2 : price);
+  const q = perPlayer > 0 ? quote({ price: perPlayer, payer, organizerPlan: cobro.organizerPlan }) : null;
+
+  if (!cobro.connected) {
+    return (
+      <div className="flex flex-col gap-2 rounded-lg border border-dashed border-border-strong px-3 py-3">
+        <span className="text-[13px] text-soft leading-snug">
+          {!cobro.isOwner
+            ? 'Para cobrar por la app, el dueño de la categoría tiene que vincular su Mercado Pago.'
+            : cobro.onConnect
+              ? 'Vinculá tu Mercado Pago y cobrá la inscripción por la app: el jugador paga al anotarse y la plata entra a tu cuenta.'
+              : 'Para cobrar por la app, vinculá tu Mercado Pago en Torneos › Organizar. Después lo activás desde Gestión del torneo.'}
+        </span>
+        {cobro.isOwner && cobro.onConnect && (
+          <button type="button" onClick={cobro.onConnect}
+            className="self-start inline-flex items-center gap-2 min-h-[36px] px-3 rounded-lg bg-brand text-base border-0 font-sans font-bold text-[13px] cursor-pointer">
+            <Link2 size={14} /> Vincular Mercado Pago
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-3">
+      <label className="flex items-center justify-between gap-3 rounded-lg border border-border-mid px-3 py-2.5 cursor-pointer">
+        <span className="flex flex-col gap-0.5 min-w-0">
+          <span className="text-[14px] font-semibold text-white">{value.online ? 'Se cobra por la app' : 'No se cobra por la app'}</span>
+          <span className="text-[12px] text-secondary leading-snug">
+            {value.online ? 'El jugador paga al anotarse con Mercado Pago.' : 'El pago se coordina con vos, por fuera de la app.'}
+          </span>
+        </span>
+        <input type="checkbox" role="switch" checked={!!value.online} onChange={(e) => set({ online: e.target.checked })}
+          aria-label="Cobrar por la app" className="w-5 h-5 shrink-0 accent-brand cursor-pointer" />
+      </label>
+
+      {value.online && (
+        <>
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] text-secondary">El cargo de servicio lo paga</span>
+            <Segmentos label="El cargo de servicio lo paga" value={payer} onChange={(v) => set({ fee_payer: v })}
+              opciones={[['player', 'El jugador'], ['organizer', 'Vos']]} />
+          </div>
+
+          {q ? (
+            <div className="flex flex-col gap-1.5 rounded-lg bg-surface-alt border border-border px-3 py-3">
+              <span className="text-[11px] font-mono tracking-widest text-dim uppercase mb-1">Por jugador</span>
+              <Linea label="Precio" valor={pesos(q.base)} />
+              <Linea label={`Comisión de Padeleando (${rateLabel(cobro.organizerPlan)})`} valor={pesos(q.fee)} />
+              <Linea label="El jugador paga y entra a tu Mercado Pago" valor={pesos(q.total)} fuerte />
+              <Linea label="Te queda después de pagar la comisión" valor={q.net > 0 ? pesos(q.net) : 'Nada: subí el precio'} fuerte />
+              <p className="m-0 mt-1 text-[11.5px] text-dim leading-snug">
+                La comisión se paga después: al cerrar la inscripción te llega una liquidación con el total del torneo y tenés 7 días para pagarla desde Torneos › Organizar. Mercado Pago descuenta además su propia comisión, según el medio de pago y el plazo de acreditación de tu cuenta.
+              </p>
+            </div>
+          ) : (
+            <span className="text-[12px] text-danger">Cargá un precio mayor a 0 para cobrar por la app.</span>
+          )}
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[13px] text-secondary">¿Querés recibir un monto justo?</span>
+            <div className="relative w-32">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-secondary" aria-hidden="true">$</span>
+              <input type="number" min="1" inputMode="numeric" aria-label="Lo que querés recibir por jugador"
+                value={neto} onChange={(e) => setNeto(e.target.value)} placeholder="Por jugador" className={`${INPUT} w-full pl-7`} />
+            </div>
+            <button type="button" disabled={!(Number(neto) > 0)}
+              onClick={() => {
+                const p = priceForNet(Number(neto), { payer, organizerPlan: cobro.organizerPlan });
+                if (p) set({ price: unit === 'pair' ? p * 2 : p, unit });
+              }}
+              className="min-h-[40px] px-3 rounded-lg border border-border-strong bg-transparent text-[13px] text-soft hover:text-white disabled:opacity-50 cursor-pointer">
+              Calcular precio
+            </button>
+          </div>
+
+          <p className="m-0 text-[12px] text-secondary leading-snug">
+            Si rechazás una inscripción, si el jugador cancela antes del cierre o si reintegrás todo, la app le devuelve el pago completo desde tu cuenta de Mercado Pago.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 // Inscripción de un torneo o de una categoría. `inherited` es lo de la categoría; null en un campo = heredarlo.
-export default function SignupEditor({ value, onChange, inherited = null, profile = [], conReglamento = true }) {
+// `cobro` sólo llega en un torneo: { connected, organizerPlan, isOwner, onConnect }.
+export default function SignupEditor({ value, onChange, inherited = null, profile = [], conReglamento = true, cobro = null }) {
   const set = (patch) => onChange({ ...value, ...patch });
   const contacts = value.contacts ?? [];
   const usedTypes = new Set(contacts.map((c) => c.type));
@@ -149,6 +252,27 @@ export default function SignupEditor({ value, onChange, inherited = null, profil
               <span className="text-[12px] text-secondary">Usa el precio de la categoría: {inheritedPrice}.</span>
             )}
           </Bloque>
+
+          {cobro && (
+            <Bloque titulo="Cobro por la app" ayuda="Opcional. Si no cobrás por la app, el jugador te paga como acuerden.">
+              <CobroOnline
+                value={value} set={set} cobro={cobro}
+                price={value.price ?? inherited?.price ?? null}
+                unit={value.price != null ? (value.unit ?? 'player') : (inherited?.unit ?? 'player')}
+              />
+            </Bloque>
+          )}
+
+          {cobro && (
+            <Bloque titulo="Otros medios de pago" ayuda="Se muestra en la inscripción. Por ejemplo: transferencia o efectivo el día del torneo.">
+              <textarea
+                value={value.payment_note ?? ''} maxLength={200} rows={2} aria-label="Otros medios de pago"
+                onChange={(e) => set({ payment_note: e.target.value })}
+                placeholder="Transferencia al alias padeleando.torneo"
+                className="bg-surface border border-border-mid text-white px-3 py-2 font-sans text-[14px] rounded-lg outline-none focus:border-brand resize-y"
+              />
+            </Bloque>
+          )}
 
           <Bloque titulo="Contacto" ayuda="Para consultas antes de inscribirse. Las redes de tu perfil se suman solas.">
             <div className="flex flex-col gap-2">

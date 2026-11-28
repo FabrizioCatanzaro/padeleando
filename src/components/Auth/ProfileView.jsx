@@ -32,6 +32,7 @@ import ProfileStory from '../Snapshot/ProfileStory';
 import useHideOnScroll from '../../hooks/useHideOnScroll';
 import AdRail from '../shared/AdRail'
 import AdInline from '../shared/AdInline'
+import { userHasRole, isPaidPlan, userPlan } from '../../utils/plan';
 
 const MAX_AVATAR_BYTES   = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
@@ -378,7 +379,7 @@ export default function ProfileView() {
             name={owner.name}
             src={avatarThumbUrl(displayAvatar, 28)}
             size={28}
-            premium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
+            premium={isOwnProfile ? userHasRole(user, 'jugador') : owner.is_premium}
           />
           <div className="min-w-0 flex-1">
             <div className="font-condensed font-bold text-[13px] text-white leading-tight truncate">{owner.name}</div>
@@ -415,7 +416,7 @@ export default function ProfileView() {
           isOwnProfile={isOwnProfile}
           avatarSrc={avatarThumbUrl(displayAvatar, 190)}
           nivel={headerNivel}
-          isPremium={isOwnProfile ? user?.subscription?.plan === 'premium' : owner.is_premium}
+          isPremium={isOwnProfile ? userHasRole(user, 'jugador') : owner.is_premium}
           onAvatarOpen={() => displayAvatar && setAvatarZoom(true)}
           onPickAvatar={pickAvatar}
           onDeleteAvatar={() => setConfirmAvatarDelete(true)}
@@ -434,7 +435,7 @@ export default function ProfileView() {
           actions={heroActions}
           planChip={isOwnProfile ? (
             <PlanBand
-              premium={user?.subscription?.plan === 'premium'}
+              premium={isPaidPlan(userPlan(user))}
               subscription={user?.subscription}
               onManage={() => navigate('/subscription/manage')}
               onSeePlans={() => setShowPremiumModal(true)}
@@ -768,7 +769,7 @@ export default function ProfileView() {
         />
       )}
 
-      {showPremiumModal && <PremiumModal onClose={() => setShowPremiumModal(false)} />}
+      {showPremiumModal && <PremiumModal focus="jugador" onClose={() => setShowPremiumModal(false)} />}
 
 
       {showShare && (

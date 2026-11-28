@@ -16,7 +16,7 @@ export default function InstallPrompt() {
   const { pathname } = useLocation()
   const { isLoggedIn } = useAuth()
   // Con la barra de navegación de la app el cartel sube para no taparla.
-  const aboveNav = isLoggedIn && showsBottomNav(pathname)
+  const aboveNav = isLoggedIn ? showsBottomNav(pathname) : pathname === '/'
 
   useEffect(() => {
     if (!available || isSnoozed()) return
