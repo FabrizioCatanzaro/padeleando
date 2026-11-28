@@ -44,6 +44,8 @@
   /* Tinta y sombra sobre fotos: no cambian con el tema. */
   --color-photo-ink: #ffffff;
   --color-photo-shade: #000000;
+  /* Borde de cristal en el dibujo de una cancha. */
+  --color-court-glass: #9fd4ff;
 
   /* Dorado de premium. Ya se usaba a mano en PlayerAvatar; acá pasa a token
      para que el tema claro pueda oscurecerlo. Medido contra la marca: ΔE 19,7

@@ -15,8 +15,6 @@ import Loader from '../Loader/Loader'
 import LazyNotFound from '../NotFound/LazyNotFound'
 import ClubRequestModal from './ClubRequestModal'
 import ClubClaimModal from './ClubClaimModal'
-import ClubEditModal from './ClubEditModal'
-import ClubCourtsModal from './ClubCourtsModal'
 import ClubAgenda from './ClubAgenda'
 import ClubBooking from './ClubBooking'
 import ClubBookingManage from './ClubBookingManage'
@@ -67,15 +65,9 @@ export default function ClubProfileView() {
   const [loading, setLoading] = useState(true)
   const [error, setError]   = useState(null)
   const [showEditRequest, setShowEditRequest] = useState(false)
-  const [showEditClub, setShowEditClub] = useState(false)
   const [showClaim, setShowClaim] = useState(false)
-  const [showCourtsManager, setShowCourtsManager] = useState(false)
   const [showMpPremium, setShowMpPremium] = useState(false)
 
-  // Referencia estable: una arrow inline volvería a disparar el fetch de ClubCourtsManager
-  const handleCourtsChange = useCallback((courts_list) => {
-    setClub((c) => (c ? { ...c, courts_list } : c))
-  }, [])
   const handlePendingBookingsChange = useCallback((pending_bookings_count) => {
     setClub((c) => (c && c.pending_bookings_count !== pending_bookings_count ? { ...c, pending_bookings_count } : c))
   }, [])
@@ -90,7 +82,7 @@ export default function ClubProfileView() {
     return [...BASE_TABS.slice(0, i + 1), MANAGE_TAB, ...BASE_TABS.slice(i + 1)]
   }, [canManageBookings])
   function handlePedir() {
-    if (canManage) { setShowEditClub(true); return }
+    if (canManage) { navigate(`/club/${id}/editar`); return }
     if (!isLoggedIn) { navigate('/login'); return }
     setShowEditRequest(true)
   }
@@ -407,7 +399,7 @@ export default function ClubProfileView() {
           {tab === 'info'   && (
             <ClubInfo
               club={club} mapsUrl={maps} desde={desde} admin={isAdmin} canManage={canManage}
-              onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => setShowCourtsManager(true)}
+              onPedir={handlePedir} onReclamar={handleReclamar} onGestionarCanchas={() => navigate(`/club/${id}/editar#canchas`)}
               onConectarMp={handleConectarMp} onDesconectarMp={handleDesconectarMp} onPedirPremiumMp={() => setShowMpPremium(true)}
             />
           )}
@@ -419,17 +411,6 @@ export default function ClubProfileView() {
         <ClubRequestModal club={club} onClose={() => setShowEditRequest(false)} />
       )}
 
-      {showEditClub && (
-        <ClubEditModal
-          club={club}
-          onClose={() => setShowEditClub(false)}
-          onSaved={() => fetchData(id)}
-        />
-      )}
-
-      {showCourtsManager && (
-        <ClubCourtsModal clubId={club.id} onClose={() => setShowCourtsManager(false)} onCourtsChange={handleCourtsChange} />
-      )}
 
       {showClaim && (
         <ClubClaimModal

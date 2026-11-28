@@ -6,22 +6,11 @@ import BookingGridDesktop from './BookingGridDesktop'
 import BookingFlowMobile from './BookingFlowMobile'
 import BookingFormModal from './BookingFormModal'
 import BookingManualBlockModal from './BookingManualBlockModal'
+import { courtSummary, courtFloorColor } from '../../utils/clubProfile'
 
 const HORIZON_DAYS = 7
 const MAX_SLOTS_PER_BOOKING = 8 // igual al tope del backend (routes/clubs.js)
 
-// Etiquetas duplicadas de ClubInfo y ClubCourtsManager (son de UI)
-const FLOOR_LABEL = { cesped_sintetico: 'Césped sintético', cesped_natural: 'Césped natural', cemento: 'Cemento' };
-const WALL_LABEL  = { cemento: 'Paredes de cemento', cristal: 'Paredes de cristal' };
-function courtSummary(c) {
-  return [
-    c.floor_type ? FLOOR_LABEL[c.floor_type] : null,
-    c.wall_type ? WALL_LABEL[c.wall_type] : null,
-    c.covered ? 'Techada' : null,
-    c.lit ? 'Con iluminación' : null,
-    c.external_play ? 'Juego exterior' : null,
-  ].filter(Boolean);
-}
 
 function dayLabel(dateStr, i) {
   if (i === 0) return 'Hoy'
@@ -50,6 +39,7 @@ export default function ClubBooking({ club, canManage = false }) {
         price_60: c.price_60,
         // El precio no va acá: se muestra en el botón o panel de selección
         summary: courtSummary(c).join(' · '),
+        floorColor: courtFloorColor(c),
       }))
     }
     return [{

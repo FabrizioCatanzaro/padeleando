@@ -3,21 +3,10 @@ import { MapPin, Phone, MessageCircle, Globe, Instagram, Facebook, Clock, Layout
 import { scheduleLines, whatsappLink, socialUrl, socialLabel } from './clubForm';
 import { missingFields } from '../../utils/clubPage';
 import { formatMoney } from '../../utils/money';
+import { courtSummary } from '../../utils/clubProfile';
 import PlayerAvatar from '../shared/PlayerAvatar';
 
 const SOCIAL_ICON = { instagram: Instagram, facebook: Facebook, website: Globe };
-const FLOOR_LABEL = { cesped_sintetico: 'Césped sintético', cesped_natural: 'Césped natural', cemento: 'Cemento' };
-const WALL_LABEL  = { cemento: 'Paredes de cemento', cristal: 'Paredes de cristal' };
-// Resumen de cancha duplicado de ClubCourtsManager (son etiquetas de UI)
-function courtSummary(c) {
-  return [
-    c.floor_type ? FLOOR_LABEL[c.floor_type] : null,
-    c.wall_type ? WALL_LABEL[c.wall_type] : null,
-    c.covered ? 'techada' : null,
-    c.lit ? 'con iluminación' : null,
-    c.external_play ? 'juego exterior' : null,
-  ].filter(Boolean);
-}
 
 function Bloque({ titulo, children }) {
   return (
