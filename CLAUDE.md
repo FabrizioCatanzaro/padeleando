@@ -6,8 +6,9 @@ PADELEANDO is a full-stack web app for managing padel tennis tournaments. It sup
 
 ---
 
-## Current Status (updated 2026-11-27)
+## Current Status (updated 2026-11-28)
 
+- **In progress: Perfil de club** — branch `feat/club-perfil` (both repos), the six stages committed, pending the real test. Resumen · Reservar · Fotos · Gestión, `/club/:id/torneos`, `/club/:id/editar`, gallery, follow, floor color per court and opening hours past midnight (see [Perfil de club](#perfil-de-club)). Mockup: https://claude.ai/artifact/M7X6TF6Pdi8pCbkXiYND9m
 - **In progress: Cards de torneo** — branch `feat/cards-torneo` (both repos). One card system for every tournament list plus a Calendario tab (see [Cards de torneo](#cards-de-torneo)). Mockup: https://claude.ai/artifact/BtVLoLqXkyWLei3ogEyLYT
 - **In progress: Home público** — branch `feat/home-publico` (both repos). New landing for visitors at `/` (see [Portada del visitante](#portada-del-visitante)). Mockup: https://claude.ai/artifact/NQ7phGaJwe1fwSHBSA4FTY
 - **In progress: Planes por rol** — branch `feat/planes` (both repos). Stages 1 and 2 of 5 done: plans by role (Jugador+, Organizador, Combo, Club disabled) and online signup payment with commission (see [Cobro online](#cobro-online)). Next: launch period, boost, referrals. Business model: Project doc `claude/modelo-de-negocio.md`. Pending before release: the six Mercado Pago preapproval plans (`MP_PLAN_ID_<PLAN>_<PERIOD>`).
@@ -218,7 +219,7 @@ Rules that keep the three from drifting:
 - `<main>` is `min-h-screen`, so the footer never shows on the first screen while a page loads: before, it showed and then jumped down, 0.03–0.23 CLS on every mobile page.
 - On mobile the Layout adds `pb-[calc(104px+env(safe-area-inset-bottom))]`. Anything fixed to the bottom (sticky bars, `InstallPrompt`) must sit above the bar with the same offset. `GroupView` and `TournamentPage` show their own tabs at the top for this reason.
 - Ads: `AdBanner` keeps the real proportion of the originals (2304:1856, 300×242 at 300 px): Cloudinary `c_limit` with a 300/600/900 `srcset` and `object-contain`, so a banner is never cropped; one in another proportion gets bars. It mounts only the active image and the next one, starts on a random banner, rotates every 7 s only while on screen and stays still with `prefers-reduced-motion`. The images live in Cloudinary under `ads/`, and every banner links to `publicidad@padeleando.ar`.
-- **Where ads go.** From 1280 px, a 300 px right column. `AdRail` wraps the content below the page's header and tabs: Partidos, Torneos › Explorar and Mis torneos, Padeleros › Organizadores and Clubes, Notificaciones, FAQ and the legal pages, plus the wide pages (category, tournament and `/view`, profile, club), whose hero and tabs stay full width. Inicio, Organizar and Jugadores have their own right column with the ad at the bottom; `FriendlyDetail` puts it at the foot of its 320 px column. The Layout has no ad column.
+- **Where ads go.** From 1280 px, a 300 px right column. `AdRail` wraps the content below the page's header and tabs: Partidos, Torneos › Explorar and Mis torneos, Padeleros › Organizadores and Clubes, Notificaciones, FAQ and the legal pages, plus the wide pages (category, tournament and `/view`, profile), whose hero and tabs stay full width. Inicio, Organizar, Jugadores, the club's Resumen and `/club/:id/torneos` have their own right column with the ad at the bottom; the club's Reservar tab shows the banner at the end, at every width, so the grid gets the full width; `FriendlyDetail` puts it at the foot of its 320 px column. The Layout has no ad column.
 - Below 1280 px, `AdInline` shows the banner centered at 300 px at the end of the content, before the footer: Inicio, Torneos, Partidos, Padeleros › Organizadores and Clubes, category, tournament (only when the viewer can't manage it, so `/view` and players), profile, club and FAQ. Not in Notificaciones, nor in a tournament you manage. Never a fixed bar: the bottom nav owns the bottom edge.
 - No ads on full-screen forms (`HIDE_BOTTOM_NAV`), Setup, `/nivel`, login and register, admin, subscription or TV mode.
 - Put `AdInline` inside the view, after its data arrived: content loading above it would push it down and count as CLS. Wide content inside `AdRail` must scroll inside its column (the bracket uses `xl:overflow-x-auto`): at 1280 px with a session the central column is about 630 px.
@@ -239,6 +240,18 @@ Rules that keep the three from drifting:
 - The tile shows the organizer (avatar, name, category) and the club (logo, name, address).
 - Categories follow the same language: `shared/category/CategoryTile` (Explorar › Categorías activas and the Home search; replaced `GroupCard`) and `shared/CategoryRow` (Tus categorías and the profile). Both show the category's `level` with `LevelTag` and the organizer by name; the role pill (`ROLE_META`) is in sentence case.
 - `/torneos/calendario` (`Torneos/Calendario.jsx`, public): one `GET /api/home/calendar` per month, cached per month. From 1024 px a month grid; below, a strip of the month's days and "Ver mes". Dots use the format colors.
+
+### Perfil de club
+
+- `/club/:id` (`ClubProfileView`): `ClubHero` (cover or `padelcourt.webp`, open status, price from, Reservar, Seguir, WhatsApp, maps), the rail, and the tabs Resumen · Reservar · Fotos (only with photos) · Gestión de reservas (`can_manage_bookings`). `?tab=` opens any of them. Reservar and Gestión load with `React.lazy`.
+- Resumen (`components/Club/Resumen/`): `ClubNextUp`, `ClubEvents` (3 tournaments, open friendlies, canchas abiertas "Pronto"), `ClubFreeToday`, `ClubActivityCharts` (CSS bars; the owner also sees the occupancy heatmap from `GET /clubs/:id/bookings/occupancy`), `ClubCourts`, `ClubChampions`, the gallery and ranking "Próximamente". `ClubAside` carries hours, contact, services, how to get there, Mercado Pago, owner and the change request.
+- Everything the Resumen shows comes in `GET /clubs/:id/events` (`friendlies`, `champions`, `activity`) and `GET /clubs/:id`. "Jugadores" is `activity.jugadores_total`: people by identity, not `players` rows.
+- `/club/:id/torneos` (`ClubTournamentsView`) replaces the old Agenda and Categorías tabs: state chips with counts, format, category, organizer and year, grouped by month, 10 at a time. Pure filters in `utils/clubTournaments.js`.
+- `/club/:id/editar` (`ClubEdit/ClubEditView`) replaces the edit and courts modals for the owner and the admin; `ClubEditModal` is only the admin's "new club". It hides the bottom nav. Courts and photos save on the spot; the rest with the save bar.
+- Services are a fixed catalog (`AMENITIES` in `utils/clubProfile.js`, mirror of the API's `lib/clubProfile.js`, icons in `amenityIcons.js`) plus free text. `courtSummary`, `courtFloorColor` and `priceFrom` live there too: never duplicate the court labels again.
+- Floor color: 6 quick swatches or the system picker. Without one, the floor type decides. `CourtGlyph` draws the court.
+- Gallery: 4 photos free, 16 with the Club plan (the category owner rule, here the club owner). While the Club plan is disabled everyone has 4. A downgrade keeps the photos.
+- **A club day can end after midnight.** A closing time lower than the opening is the next day; equal means 24 h (`dayWindow`). `businessDaySlots` gives `{ date, time, nextDay }` with the real date of each slot, and the next day starts after that early-morning spill. "Hoy" stays on the previous club day until it closes (`businessToday`). The API gets the real date of the first slot and the times in order.
 
 ### Portada del visitante
 
