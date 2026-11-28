@@ -83,6 +83,17 @@ function NotifItemText({ n, onNavigate }) {
         <span className="text-white font-semibold">{n.group_name ?? 'una categoría'}</span>
       )}</>
   );
+  if (n.type === 'club_tournament_signup') return (
+    <>Abrió la inscripción de{' '}
+      {n.tournament_id && n.group_id ? (
+        <span
+          onClick={(e) => { e.stopPropagation(); onNavigate(`/cat/${n.group_id}/torneo/${n.tournament_id}`); }}
+          className="text-white font-semibold cursor-pointer hover:text-brand transition-colors"
+        >{n.tournament_name ?? 'un torneo'}</span>
+      ) : (
+        <span className="text-white font-semibold">{n.tournament_name ?? 'un torneo'}</span>
+      )}{' '}en <span className="text-white font-semibold">{n.body ?? 'un club que seguís'}</span></>
+  );
   if (n.type === 'collab_invite') return (
     <>{actor} te invitó a co-organizar{' '}
       {n.group_id ? (

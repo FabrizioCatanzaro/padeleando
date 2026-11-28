@@ -277,6 +277,24 @@ function NotifText({ n, navigate }) {
       </div>
     );
   }
+  if (n.type === 'club_tournament_signup') {
+    return (
+      <div className="text-[13px] text-secondary">
+        Abrió la inscripción de{' '}
+        {n.tournament_id && n.group_id ? (
+          <span
+            onClick={() => navigate(`/cat/${n.group_id}/torneo/${n.tournament_id}`)}
+            className="text-white font-semibold cursor-pointer hover:text-brand transition-colors"
+          >
+            {n.tournament_name ?? 'un torneo'}
+          </span>
+        ) : (
+          <span className="text-white font-semibold">{n.tournament_name ?? 'un torneo'}</span>
+        )}
+        {' '}en <span className="text-white font-semibold">{n.body ?? 'un club que seguís'}</span>
+      </div>
+    );
+  }
   if (n.type === 'new_tournament') {
     return (
       <div className="text-[13px] text-secondary">

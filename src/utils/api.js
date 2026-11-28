@@ -138,6 +138,12 @@ export const api = {
     deletePhoto: (id)          => req('DELETE', `/clubs/${id}/photo`),
     uploadHeader: (id, file)   => reqMultipart('POST', `/clubs/${id}/header`, imageForm(file)),
     deleteHeader: (id)         => req('DELETE', `/clubs/${id}/header`),
+    gallery: {
+      upload: (id, file)        => reqMultipart('POST', `/clubs/${id}/photos`, imageForm(file)),
+      remove: (id, photoId)     => req('DELETE', `/clubs/${id}/photos/${photoId}`),
+    },
+    follow:   (id)             => req('POST',   `/clubs/${id}/follow`),
+    unfollow: (id)             => req('DELETE', `/clubs/${id}/follow`),
     requests: {
       create:  (body)          => req('POST',  '/clubs/requests', body),
       list:    (status = 'pending') => req('GET', `/clubs/requests?status=${status}`),

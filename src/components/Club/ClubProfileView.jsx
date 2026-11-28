@@ -18,6 +18,8 @@ import ClubActivityCharts from './Resumen/ClubActivityCharts'
 import ClubCourts from './Resumen/ClubCourts'
 import ClubChampions from './Resumen/ClubChampions'
 import ClubAside from './Resumen/ClubAside'
+import ClubFollowButton from './ClubFollowButton'
+import ClubGallery from './ClubGallery'
 import PremiumModal from '../shared/PremiumModal'
 import AdBanner from '../shared/AdBanner'
 import AdInline from '../shared/AdInline'
@@ -48,7 +50,7 @@ const BASE_TABS = [
 ]
 // Solo quien gestiona las reservas ve la pestaña de gestión
 const MANAGE_TAB = { id: 'gestion', label: 'Gestión de reservas' }
-const TAB_IDS = ['resumen', 'reservar', 'gestion']
+const TAB_IDS = ['resumen', 'reservar', 'fotos', 'gestion']
 
 export default function ClubProfileView() {
   const { id } = useParams()
@@ -77,7 +79,12 @@ export default function ClubProfileView() {
   const canManage = isAdmin || !!club?.is_owner
   // Lo calcula el back (can_manage_bookings): el admin solo gestiona clubes sin dueño
   const canManageBookings = !!club?.can_manage_bookings
-  const tabs = useMemo(() => (canManageBookings ? [...BASE_TABS, MANAGE_TAB] : BASE_TABS), [canManageBookings])
+  const photoCount = club?.photos?.length ?? 0
+  const tabs = useMemo(() => [
+    ...BASE_TABS,
+    ...(photoCount ? [{ id: 'fotos', label: 'Fotos' }] : []),
+    ...(canManageBookings ? [MANAGE_TAB] : []),
+  ], [canManageBookings, photoCount])
   const grid = useMemo(() => parseScheduleToGrid(club?.schedule), [club?.schedule])
   function handlePedir() {
     if (canManage) { navigate(`/club/${id}/editar`); return }
@@ -174,6 +181,7 @@ export default function ClubProfileView() {
     { v: events.activity?.jugadores_total ?? stats.jugadores ?? 0, k: 'Jugadores' },
     { v: stats.partidos ?? 0, k: 'Partidos' },
     { v: canchasCount ?? '—', k: 'Canchas', off: canchasCount == null },
+    { v: club.followers_count ?? 0, k: 'Seguidores' },
     { v: desde ?? '—', k: 'En Padeleando desde', off: !desde },
   ]
 
@@ -185,9 +193,10 @@ export default function ClubProfileView() {
   return (
     <div className="bg-base text-content font-sans pb-15">
       <ClubHero club={club} maps={maps} status={status} price={priceFrom(activeCourts)}
-        canManage={canManage} bookable={bookable} onReservar={goReservar} />
+        canManage={canManage} bookable={bookable} onReservar={goReservar}
+        follow={<ClubFollowButton club={club} onChange={(st) => setClub((c) => ({ ...c, ...st }))} />} />
 
-      <div className="grid grid-cols-3 sm:grid-cols-5 border-b border-border">
+      <div className="grid grid-cols-3 sm:grid-cols-6 border-b border-border">
         {rail.map((r) => (
           <div key={r.k} className="px-4 py-3.5 min-w-0 border-r border-b sm:border-b-0 border-border">
             <div className={`font-condensed font-black text-[20px] leading-none tabular-nums truncate ${r.off ? 'text-muted' : 'text-white'}`}>{r.v}</div>
@@ -203,6 +212,9 @@ export default function ClubProfileView() {
               tab === t.id ? 'text-brand border-b-brand' : 'text-muted border-b-transparent hover:text-brand'
             }`}>
             {t.label}
+            {t.id === 'fotos' && (
+              <span className={`font-sans text-[11px] rounded px-1.5 py-0.5 ${tab === t.id ? 'bg-brand text-base' : 'bg-border-mid text-secondary'}`}>{photoCount}</span>
+            )}
             {t.id === 'gestion' && club.pending_bookings_count > 0 && (
               <span className={`font-sans text-[11px] rounded px-1.5 py-0.5 ${tab === t.id ? 'bg-brand text-base' : 'bg-border-mid text-secondary'}`}>
                 {club.pending_bookings_count}
@@ -222,6 +234,19 @@ export default function ClubProfileView() {
               <ClubActivityCharts club={club} activity={events.activity} grid={grid} showOccupancy={canManageBookings && bookable} />
               <ClubCourts club={club} canManage={canManage} />
               <ClubChampions club={club} champions={events.champions} />
+              {photoCount > 0 && (
+                <section aria-labelledby="club-photos">
+                  <div className="flex justify-between items-baseline gap-3 mb-3.5">
+                    <h2 id="club-photos" className="m-0 font-condensed font-bold text-[15px] text-white">Fotos</h2>
+                    {photoCount > 4 && (
+                      <button type="button" onClick={() => setTab('fotos')} className="text-[13px] font-bold text-brand bg-transparent border-0 p-0 cursor-pointer hover:underline">
+                        Ver las {photoCount} fotos
+                      </button>
+                    )}
+                  </div>
+                  <ClubGallery photos={club.photos} max={4} onMore={() => setTab('fotos')} />
+                </section>
+              )}
               <section aria-labelledby="club-rank" className="rounded-xl border border-border-mid bg-surface p-4 sm:p-5 flex items-start gap-3">
                 <span className="text-[11px] font-bold text-premium-ink bg-premium rounded px-2 py-0.5 shrink-0">Próximamente</span>
                 <span className="min-w-0">
@@ -236,6 +261,7 @@ export default function ClubProfileView() {
             <AdInline className="w-full mt-2" />
           </div>
         )}
+        {tab === 'fotos' && <ClubGallery photos={club.photos} />}
         <Suspense fallback={<Loader minHeight="60vh" />}>
           {tab === 'reservar' && (
             <>

@@ -11,6 +11,7 @@ import { clubToForm, formToClub } from '../clubForm'
 import { AMENITY_ICON } from '../amenityIcons'
 import ClubFormFields from '../ClubFormFields'
 import ClubCourtsManager from '../ClubCourtsManager'
+import ClubPhotosEditor from './ClubPhotosEditor'
 import courtBg from '../../../assets/padelcourt.webp'
 import Loader from '../../Loader/Loader'
 import LazyNotFound from '../../NotFound/LazyNotFound'
@@ -219,6 +220,10 @@ export default function ClubEditView() {
 
         <Card id="canchas" title="Canchas" hint="Cada cancha se guarda apenas la confirmás. El material, el color y la descripción se ven en el perfil y al reservar.">
           <ClubCourtsManager clubId={club.id} onCourtsChange={handleCourtsChange} />
+        </Card>
+
+        <Card id="fotos" title="Fotos del club" hint="Mostrá el lugar: las canchas, el buffet, los vestuarios. Se suben y se borran en el momento.">
+          <ClubPhotosEditor club={club} onChange={(photos) => setClub((c) => ({ ...c, photos }))} />
         </Card>
 
         {club.has_owner && (

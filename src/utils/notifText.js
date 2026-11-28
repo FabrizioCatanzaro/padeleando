@@ -89,6 +89,7 @@ const BY_TYPE = {
   ownership_received: (n) => `Ahora sos el dueño de ${grupo(n)}`,
   player_unlinked:    (n) => `${actor(n)} te desvinculó de ${grupo(n)}`,
   new_tournament:     (n) => `${actor(n)} creó ${n.tournament_name ?? 'un torneo'} en ${grupo(n)}`,
+  club_tournament_signup: (n) => `Abrió la inscripción de ${n.tournament_name ?? 'un torneo'} en ${n.body ?? 'un club que seguís'}`,
   club_request:       ()  => 'Novedades sobre tu solicitud de club',
   club_claim:         (n) => n.body ?? 'Novedades sobre tu reclamo de club',
   premium_claim:      ()  => 'Tenés un código premium para reclamar',
