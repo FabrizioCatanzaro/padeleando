@@ -193,3 +193,31 @@ export function slotRange(slots, slotMinutes) {
   const nextDate = last.nextDay ? last.date : addDaysStr(last.date, 1)
   return { start: first.time, end: minToHHMM(endMin), crossesTo: crosses ? nextDate : null }
 }
+
+const hourLabel = (hhmm) => (hhmm.endsWith(':00') ? String(Number(hhmm.slice(0, 2))) : hhmm)
+
+// Abierto ahora (con la madrugada del día anterior) o cuándo abre
+export function openStatus(grid, now = new Date()) {
+  if (!grid) return null
+  const idx = dayGridIndex(todayLocalStr(now))
+  const nowMin = now.getHours() * 60 + now.getMinutes()
+  if (grid.every((d) => { const w = dayWindow(d); return w && w.end - w.start === DAY_MIN })) return { open: true, allDay: true }
+  const prev = dayWindow(grid[(idx + 6) % 7])
+  if (prev && prev.end > DAY_MIN && nowMin < prev.end - DAY_MIN) return { open: true, closes: minToHHMM(prev.end) }
+  const cur = dayWindow(grid[idx])
+  if (cur && nowMin >= cur.start && nowMin < cur.end) return { open: true, closes: minToHHMM(cur.end) }
+  if (cur && nowMin < cur.start) return { open: false, opens: minToHHMM(cur.start), when: 'hoy' }
+  for (let i = 1; i <= 7; i++) {
+    const w = dayWindow(grid[(idx + i) % 7])
+    if (w) return { open: false, opens: minToHHMM(w.start), when: i === 1 ? 'mañana' : `el ${DAYS[(idx + i) % 7].abbr.toLowerCase()}` }
+  }
+  return { open: false }
+}
+
+export function openStatusLabel(st) {
+  if (!st) return null
+  if (st.allDay) return 'Abierto las 24 h'
+  if (st.open) return `Abierto ahora · cierra a las ${hourLabel(st.closes)}`
+  if (st.opens) return `Cerrado · abre ${st.when} a las ${hourLabel(st.opens)}`
+  return 'Cerrado'
+}

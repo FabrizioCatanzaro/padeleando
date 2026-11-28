@@ -60,3 +60,33 @@ test('slotRange avisa cuando el rango cruza la medianoche', () => {
   assert.equal(slotRange(slots.slice(29, 30), 30).crossesTo, null);
   assert.equal(shortDayLabel('2026-11-29'), 'dom 29');
 });
+
+import { openStatus, openStatusLabel } from '../src/components/Club/scheduleGrid.js';
+import { freeStartTimes } from '../src/components/Club/freeSlots.js';
+
+test('openStatus: abierto, madrugada y próxima apertura', () => {
+  const sat = (h, m = 0) => new Date(2026, 10, 28, h, m);
+  assert.equal(openStatusLabel(openStatus(lateWeek, sat(15))), 'Abierto ahora · cierra a las 2');
+  assert.equal(openStatusLabel(openStatus(lateWeek, new Date(2026, 10, 29, 1, 0))), 'Abierto ahora · cierra a las 2');
+  assert.equal(openStatusLabel(openStatus(lateWeek, new Date(2026, 10, 29, 3, 0))), 'Cerrado · abre hoy a las 9');
+  assert.equal(openStatusLabel(openStatus(lateWeek, new Date(2026, 10, 29, 22, 30))), 'Cerrado · abre mañana a las 9');
+  const always = Array.from({ length: 7 }, () => day('00:00', '00:00'));
+  assert.equal(openStatusLabel(openStatus(always, sat(4))), 'Abierto las 24 h');
+  const onlyMon = Array.from({ length: 7 }, (_, i) => day('18:30', '23:00', i === 0));
+  assert.equal(openStatusLabel(openStatus(onlyMon, sat(12))), 'Cerrado · abre el lun a las 18:30');
+  assert.equal(openStatus(null), null);
+});
+
+test('freeStartTimes: saca los pasados y los llenos', () => {
+  const slots = businessDaySlots(lateWeek, '2026-11-28', 30);
+  const courts = [{ id: 'a' }, { id: 'b' }];
+  const bookings = [
+    { status: 'confirmed', date: '2026-11-28', start_time: '22:00:00', court_id: 'a' },
+    { status: 'confirmed', date: '2026-11-28', start_time: '22:00:00', court_id: 'b' },
+    { status: 'confirmed', date: '2026-11-29', start_time: '00:30:00', court_id: 'a' },
+  ];
+  const out = freeStartTimes(slots, courts, bookings, new Date(2026, 10, 28, 21, 10));
+  assert.equal(out[0].time, '21:30');
+  assert.equal(out.some((s) => s.time === '22:00'), false);
+  assert.equal(out.find((s) => s.time === '00:30').free, 1);
+});

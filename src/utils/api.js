@@ -163,6 +163,7 @@ export const api = {
       create:       (clubId, body)     => req('POST', `/clubs/${clubId}/bookings`, body),
       createManual: (clubId, body)     => req('POST', `/clubs/${clubId}/bookings/manual`, body),
       manage:       (clubId)           => req('GET',   `/clubs/${clubId}/bookings/manage`),
+      occupancy:    (clubId)           => req('GET',   `/clubs/${clubId}/bookings/occupancy`),
       decide:       (clubId, groupId, body) => req('PATCH', `/clubs/${clubId}/bookings/${groupId}`, body),
     },
     // Vincular Mercado Pago del club (Premium): connect devuelve la URL de MP a la que redirigir.

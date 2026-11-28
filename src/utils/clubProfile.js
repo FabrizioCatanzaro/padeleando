@@ -72,3 +72,12 @@ export function courtSummary(c) {
     c.external_play ? 'Juego exterior' : null,
   ].filter(Boolean)
 }
+
+// Precio de una hora más barato entre las canchas activas; sin precio de 60 se estima con el de 30
+export function priceFrom(courts = []) {
+  const prices = courts
+    .filter((c) => c.active !== false)
+    .map((c) => (c.price_60 != null ? Number(c.price_60) : c.price_30 != null ? Number(c.price_30) * 2 : null))
+    .filter((p) => p != null && p > 0)
+  return prices.length ? Math.min(...prices) : null
+}
